@@ -118,7 +118,7 @@ class TimeZoom_gui():
 
     def updateChronoBinSize(self):
         self.view.currentBinSize_s = float(self.binSizeMicros_sv.get())/1E6
-        self.controller.updateNavigation()
+        self.controller.update_navigation()
 
     def copyData(self, target):
         target.chronoStart_sv.set(self.chronoStart_sv.get())

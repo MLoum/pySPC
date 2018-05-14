@@ -78,7 +78,11 @@ def correlate(np.ndarray[DTYPE_t, ndim=1] timestamps, np.ndarray[DTYPE_t2, ndim=
         idx_tau = 0
         j = n + 1
         while(idx_tau < nbOfTau):
-            while(timestamps[j] - timestamps[n]  < taus[idx_tau]):
+            # First tau is not necesseraly 1
+            while timestamps[j] - timestamps[n]  < taus[0] - 1:
+                j += 1
+
+            while timestamps[j] - timestamps[n]  < taus[idx_tau]:
                 G[idx_tau] += 1
                 j += 1
                 # if j == nbOfPhoton:

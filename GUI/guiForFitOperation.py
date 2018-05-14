@@ -146,8 +146,8 @@ class guiForFitOperation():
         else :
             xlimMaxFit = float(self.idx_lim_for_fit_max_sv.get())
 
-        self.controller.fit(self.fitModeName, mode="guess", modelName=self.comboBoxStringVar.get(),
-                            params=None, idxStart=xlimMinFit, idxEnd=xlimMaxFit)
+        self.controller.fit(self.fitModeName, mode="guess", model_name=self.comboBoxStringVar.get(),
+                            params=None, idx_start=xlimMinFit, idx_end=xlimMaxFit)
 
 
     def fit(self):
@@ -170,8 +170,8 @@ class guiForFitOperation():
         else :
             xlimMaxFit = float(self.idx_lim_for_fit_max_sv.get())
 
-        self.controller.fit(self.fitModeName, mode="fit", modelName=self.comboBoxStringVar.get(),
-                            params=params, idxStart=xlimMinFit, idxEnd=xlimMaxFit)
+        self.controller.fit(self.fitModeName, mode="fit", model_name=self.comboBoxStringVar.get(),
+                            params=params, idx_start=xlimMinFit, idx_end=xlimMaxFit)
 
     def setParamsFromFit(self, params):
         i = 0

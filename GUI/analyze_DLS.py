@@ -62,10 +62,10 @@ class DLS_Analyze_gui():
         label = ttk.Label(self.frameDLS_Correlate, text='Start Time (µs)')
         label.grid(row=0, column=0)
 
-        self.maxStartTime_micro_sv = tk.StringVar()
-        e = ttk.Entry(self.frameDLS_Correlate, textvariable=self.maxStartTime_micro_sv, justify=tk.CENTER, width=7)
+        self.start_time_micro_sv = tk.StringVar()
+        e = ttk.Entry(self.frameDLS_Correlate, textvariable=self.start_time_micro_sv, justify=tk.CENTER, width=7)
         e.grid(row=0, column=1)
-        self.maxStartTime_micro_sv.set('1')
+        self.start_time_micro_sv.set('1')
 
 
         label = ttk.Label(self.frameDLS_Correlate, text='Max Correl Time (ms)')
@@ -79,10 +79,10 @@ class DLS_Analyze_gui():
         label = ttk.Label(self.frameDLS_Correlate, text='Precision')
         label.grid(row=2, column=0)
 
-        self.maxCorelPrecision_sv = tk.StringVar()
-        e = ttk.Entry(self.frameDLS_Correlate, textvariable=self.maxCorelPrecision_sv, justify=tk.CENTER, width=7)
+        self.corel_precision_sv = tk.StringVar()
+        e = ttk.Entry(self.frameDLS_Correlate, textvariable=self.corel_precision_sv, justify=tk.CENTER, width=7)
         e.grid(row=2, column=1)
-        self.maxCorelPrecision_sv.set('10')
+        self.corel_precision_sv.set('10')
 
         b = ttk.Button(self.frameDLS_Correlate, text="Correlate", width=12, command=self.launchCorrelationDLS)
         b.grid(row=3, column=0)
@@ -94,7 +94,7 @@ class DLS_Analyze_gui():
 
 
     def launchCorrelationDLS(self):
-        self.controller.view.currentOperation = "FCS"
-        self.controller.updateAnalyze()
+        self.controller.view.currentOperation = "DLS"
+        self.controller.update_analyze()
 
 

@@ -28,12 +28,15 @@ class InteractiveGraph():
         self.masterFrame = masterFrame
         self.view = view
         self.controller = controller
-        self.appearenceParam = view.appearenceParam
+        self.appearanceParam = view.appearenceParam
 
         self.ctrl_is_held = False
         self.shift_is_held = False
 
-        self.data = None
+        self.data_x = None
+        self.data_y = None
+        self.data_fit = None
+        self.data_residual = None
 
         self.frame= tk.Frame(self.masterFrame)
         self.frame.pack(side="top", fill="both", expand=True)

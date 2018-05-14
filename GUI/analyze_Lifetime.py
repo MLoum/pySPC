@@ -143,7 +143,7 @@ class lifeTimeAnalyze_gui():
     def launchMicroTimeHisto(self):
         #FIXME
         self.currentOperation = "micro"
-        self.controller.updateAnalyze()
+        self.controller.update_analyze()
         # self.mainGUI.controller.drawMicroTimeHisto(self.mainGUI.currentChannel, self.mainGUI.currentTimeWindow[0], self.mainGUI.currentTimeWindow[1])
         # print("launchMicroTimeHisto")
 

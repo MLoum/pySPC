@@ -148,12 +148,12 @@ class View():
     def on_MicroTimevisibility(self, event):
         if self.is_a_FileLoaded:
             self.currentTab = "micro"
-            self.controller.changeTab()
+            self.controller.change_tab()
 
     def on_MacroTimevisibility(self, event):
         if self.is_a_FileLoaded:
             self.currentTab = "macro"
-            self.controller.changeTab()
+            self.controller.change_tab()
 
     def zoomOnMainChrono(self, t1_ms, t2_ms):
         self.controller.drawMainChronogram(self.currentChannel, t1_ms, t2_ms, self.currentBinSize_s)

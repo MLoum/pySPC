@@ -54,15 +54,15 @@ class Data():
         if file_extension == ".spc" :
             timestamps, detectors, nanotimes, timestamps_unit, meta = self.loadSPC_Bh_File(filePath)
             #Done inside the loadSPC_Bh_File function
-            self.expParam.fillWithSPCMetaData(meta, timestamps_unit)
+            self.expParam.fill_with_SPC_meta_data(meta, timestamps_unit)
 
         elif file_extension == ".pt3" :
             timestamps, detectors, nanotimes, meta = pqreader.load_pt3(filePath)
-            self.expParam.fillWithPt3MetaData(meta)
+            self.expParam.fill_with_pt3_meta_data(meta)
 
         elif file_extension == ".ttt" :
             timestamps, detectors, nanotimes, timestamps_unit, meta = nist_fpga.load_ttt(filePath)
-            self.expParam.fillWith_ttt_MetaData(meta)
+            self.expParam.fill_with_ttt_meta_data(meta)
 
 
         # self.photons = np.empty(len(timestamps), self.photonDataType)
@@ -140,7 +140,7 @@ class Data():
             c.nbOfTick = c.photons['timestamps'].size
             c.CPS = float(c.nbOfTick) / (c.endTick - c.startTick) / self.expParam.mAcrotime_clickEquivalentIn_second
             self.channels.append(c)
-            self.results.addChannel()
+            self.results.add_channel()
             # TODO  ???
             soft_channel_value += 1
             numChannel += 1
@@ -201,7 +201,7 @@ class Data():
         path_set = os.path.splitext(filePath)[0] + '.set'
         if(os.path.isfile(path_set)):
                 meta = bhreader.load_set(path_set)
-                self.expParam.fillWithSPCMetaData(meta, None)
+                self.expParam.fill_with_SPC_meta_data(meta, None)
         else :
             return "default set File missing"
 
@@ -314,7 +314,7 @@ class Data():
         maxCorrelationTimeInTick = int (maxCorrelationTime_ms/1000.0 / self.expParam.mAcrotime_clickEquivalentIn_second)
         self.results.FCS_Measurements[numChannel].correlateMonoProc(timeStamps_reduc, timeStamps_reduc,  maxCorrelationTimeInTick)
 
-    def DLS(self, numChannel_1, numChannel_2, startTick, endTick, maxCorrelationTime_ms=1000):
+    def DLS(self, numChannel_1, numChannel_2, startTick, endTick, max_correlation_time_ms=1000, start_time_mu_s=1, precision=10):
         numChannel = numChannel_1
 
         timeStamps = self.channels[numChannel].photons['timestamps']
@@ -325,8 +325,12 @@ class Data():
         if self.results.DLS_Measurements[numChannel] == None:
             self.results.DLS_Measurements[numChannel] = DLS.DLS_Measurements()
 
-        maxCorrelationTimeInTick = int (maxCorrelationTime_ms/1000.0 / self.expParam.mAcrotime_clickEquivalentIn_second)
-        self.results.DLS_Measurements[numChannel].correlateMonoProc(timeStamps_reduc, timeStamps_reduc,  maxCorrelationTimeInTick)
+        max_correlation_time_tick = int (max_correlation_time_ms / 1000.0 / self.expParam.mAcrotime_clickEquivalentIn_second)
+
+        start_time_tick = int(start_time_mu_s/1E6 / self.expParam.mAcrotime_clickEquivalentIn_second)
+
+
+        self.results.DLS_Measurements[numChannel].correlateMonoProc(timeStamps_reduc, timeStamps_reduc,  max_correlation_time_tick, startCorrelationTimeInTick=start_time_tick, nbOfPointPerCascade_aka_B=int(precision))
 
 
     def generatepoissonNoise(self, meanRateInTick, t_start_click, t_end_click):

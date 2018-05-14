@@ -78,7 +78,7 @@ class Graph_navigation(InteractiveGraph):
             xmax, xmin = xmin, xmax
         #print(xmin, xmax)
         self.view.currentTimeWindow = [xmin, xmax]
-        self.controller.updateNavigation()
+        self.controller.update_navigation()
 
     def scrollEvent(self, event):
         if self.ctrl_is_held==True:
@@ -98,7 +98,7 @@ class Graph_navigation(InteractiveGraph):
                 self.view.currentTimeWindow[0] = max(0, self.view.currentTimeWindow[0])
                 # self.currentTimeWindow[1] = min(self.currentTimeWindow[1], )
 
-            self.controller.updateNavigation()
+            self.controller.update_navigation()
         else:
             #On translate
             if event.button == 'up':
@@ -116,5 +116,5 @@ class Graph_navigation(InteractiveGraph):
                 if self.view.currentTimeWindow[0] < 0:
                     self.view.currentTimeWindow[0] = 0
 
-            self.controller.updateNavigation()
+            self.controller.update_navigation()
 

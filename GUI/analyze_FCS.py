@@ -69,7 +69,7 @@ class FCS_Analyze_gui():
 
     def launchAutoCorrelationFCS(self):
         self.controller.view.currentOperation = "FCS"
-        self.controller.updateAnalyze()
+        self.controller.update_analyze()
 
     def launchCrossCorrelationFCS(self):
         # TODO askSimpleDialog for Cross

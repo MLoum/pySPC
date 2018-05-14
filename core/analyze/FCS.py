@@ -132,6 +132,7 @@ class CorrelationMeasurement(Measurements):
         taus[:B] = np.arange(B) + 1
         for n in range(1, self.nbOfcascade):
             taus[n * B:(n + 1) * B] = taus[:B] * np.power(2, n) + taus[n * B - 1]
+        taus += startCorrelationTimeInTick
         self.timeAxis = taus
 
     def setParams(self, params):

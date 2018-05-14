@@ -67,7 +67,7 @@ class Menu():
 
 
     def quit(self):
-        self.mainGUI.onQuit()
+        self.mainGUI.on_quit()
 
 
     def askGeneratePoissonianNoise(self):
@@ -75,20 +75,20 @@ class Menu():
         if d.result != None:
             time_s, count_per_secound = d.result
 
-            self.controller.generatePoissonNoiseFile(time_s, count_per_secound)
+            self.controller.generate_poisson_noise_file(time_s, count_per_secound)
 
 
     def saveState(self, event):
         filePath = filedialog.askopenfilename(title="Save State", initialdir=self.mainGUI.saveDir)
         if filePath == None or filePath == '':
             return None
-        self.controller.saveState(filePath)
+        self.controller.save_state(filePath)
 
     def loadState(self, event):
         filePath = filedialog.askopenfilename(title="Load State", initialdir=self.mainGUI.saveDir)
         if filePath == None or filePath == '':
             return None
-        self.controller.loadState(filePath)
+        self.controller.load_state(filePath)
 
     def openPreferences(self, event):
         pass

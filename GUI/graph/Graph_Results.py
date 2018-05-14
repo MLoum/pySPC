@@ -27,11 +27,10 @@ class Graph_Results(InteractiveGraph):
     def __init__(self, masterFrame, view, controller, figsize, dpi):
         #super().__init__(masterFrame, view, controller, figsize, dpi)
 
-
         self.masterFrame = masterFrame
         self.view = view
         self.controller = controller
-        self.appearenceParam = view.appearenceParam
+        self.appearanceParam = view.appearenceParam
 
         self.x_selec_min = None
         self.x_selec_max = None
@@ -42,192 +41,106 @@ class Graph_Results(InteractiveGraph):
         self.ctrl_is_held = False
         self.shift_is_held = False
 
+
+
         self.type = None
 
-        self.frame= tk.Frame(self.masterFrame)
+        self.frame = tk.Frame(self.masterFrame)
         self.frame.pack(side="top", fill="both", expand=True)
 
         self.figure = plt.Figure(figsize=figsize, dpi=dpi)
         #[left, bottom, width, height]
-        self.ax = self.figure.add_axes([0.08, 0.3, 0.9, 0.65],
-                           xticklabels=[])
+        self.ax = self.figure.add_axes([0.08, 0.3, 0.9, 0.65], xticklabels=[])
         self.axResidual = self.figure.add_axes([0.08, 0.1, 0.9, 0.25])
 
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.frame)
         self.canvas.get_tk_widget().pack(side='top', fill='both', expand=1)
 
-
-        #self.ax.axis('off')
-        #self.figure.tight_layout()
-
         self.createCallBacks()
         self.createWidgets()
 
-    def plot(self, type, data):
-        self.type = type
+    def plot(self, type_, data, is_plot_fit=False):
+        self.type = type_
         self.data = data
         self.ax.clear()
         self.axResidual.clear()
 
-        if type == "lifetime":
-            # data is of type "lifeTimeMeasurements" (cf correspondinf class in core/analyse)
-            lf = data
+        self.data_y = y = data.data
+        self.data_x = x = data.timeAxis
+        self.data_fit = fit_y = data.eval_y_axis
+        fit_x = data.eval_x_axis
+        self.data_residual = residuals_y = data.residuals
 
-            y = lf.data
-            x = lf.timeAxis
+        # Default :
+        plt_function = self.ax.plot
+        plt_residual_fct = self.axResidual.plot
 
+        self.ax.set_xlim(x[0], x[-1])
+
+        if type_ == "lifetime":
             self.ax.set_xlabel("Microtime")
             self.ax.set_ylabel("Intensity")
             self.axResidual.set_xlabel("Microtime")
             self.axResidual.set_ylabel("Residual")
 
-            self.ax.set_xlim(x[0], x[-1])
+            # TODO : semilogy
 
-            #NB : semilogy
+            plt_function = self.ax.plot
+            plt_residual_fct = self.axResidual.plot
 
-            if self.x_selec_min is None :
-                self.ax.plot(x, y)
-            else :
-                x1 = np.searchsorted(x, self.x_selec_min)
-                x2 = np.searchsorted(x, self.x_selec_max)
-                self.ax.plot(x[:x1], y[:x1], alpha=self.appearenceParam.alphaNonSelectedGraph)
-                self.ax.plot(x[x1:x2], y[x1:x2], alpha=1)
-                self.ax.plot(x[x2:], y[x2:], alpha=self.appearenceParam.alphaNonSelectedGraph)
-
-            self.axResidual.plot(x, np.zeros(np.size(y)))
-            self.figure.canvas.draw()
-
-        elif type == "FCS":
-            FCS_Measurements = data
-
-            y = FCS_Measurements.data
-            x = FCS_Measurements.timeAxis
-
-            self.ax.set_xlim(x[0], x[-1])
-
-            if self.x_selec_min is None :
-                self.ax.semilogx(x, y)
-            else :
-                x1 = np.searchsorted(x, self.x_selec_min)
-                x2 = np.searchsorted(x, self.x_selec_max)
-                self.ax.semilogx(x[:x1], y[:x1], alpha=self.appearenceParam.alphaNonSelectedGraph)
-                self.ax.semilogx(x[x1:x2], y[x1:x2], alpha=1)
-                self.ax.semilogx(x[x2:], y[x2:], alpha=self.appearenceParam.alphaNonSelectedGraph)
-
-            self.axResidual.plot(x, np.zeros(np.size(y)))
-            self.figure.canvas.draw()
-
-        elif type == "DLS":
-            DLS_Measurements = data
-
-            y = DLS_Measurements.data
-            x = DLS_Measurements.timeAxis
-
-            self.ax.set_xlim(x[0], x[-1])
-
-            if self.x_selec_min is None :
-                self.ax.semilogx(x, y)
-            else :
-                # x1 = np.searchsorted(x, self.x_selec_min)
-                # x2 = np.searchsorted(x, self.x_selec_max)
-                x1 = DLS_Measurements.idxStart
-                x2 = DLS_Measurements.idxEnd
-                self.ax.semilogx(x[:x1], y[:x1], alpha=self.appearenceParam.alphaNonSelectedGraph)
-                self.ax.semilogx(x[x1:x2], y[x1:x2], alpha=1)
-                self.ax.semilogx(x[x2:], y[x2:], alpha=self.appearenceParam.alphaNonSelectedGraph)
-
-            self.axResidual.plot(x, np.zeros(np.size(y)))
-            self.figure.canvas.draw()
-
-    def plotFit(self, type, data):
-        self.type = type
-        self.ax.clear()
-        self.axResidual.clear()
-        if type == "lifetime":
-            # data is of type "lifeTimeMeasurements" (cf correspondinf class in core/analyse)
-            lf = data
-
-            self.ax.set_xlabel("Microtime (ns)")
-            self.ax.set_ylabel("Intensity")
-            self.axResidual.set_xlabel("Microtime")
+        elif type_ == "FCS":
+            self.ax.set_xlabel("time lag µs")
+            self.ax.set_ylabel("Correlation")
+            self.axResidual.set_xlabel("time lag µs")
             self.axResidual.set_ylabel("Residual")
 
-            y = lf.data
-            x = lf.timeAxis
+            plt_function = self.ax.semilogx
+            plt_residual_fct = self.axResidual.semilogx
 
-            #TODO ZOOM
-            self.ax.set_xlim(x[0], x[-1])
-            self.axResidual.set_xlim(x[0], x[-1])
+        elif type_ == "DLS":
+            self.ax.set_xlabel("time lag µs")
+            self.ax.set_ylabel("Correlation")
+            self.axResidual.set_xlabel("time lag µs")
+            self.axResidual.set_ylabel("Residual")
 
-            if self.x_selec_min is None :
-                # (Re)plot data
-                self.ax.plot(x, y)
+            plt_function = self.ax.semilogx
+            plt_residual_fct = self.axResidual.semilogx
 
-                # Plot fit
-                self.ax.set_xlim(lf.eval_x_axis[0], lf.eval_x_axis[-1])
-                self.ax.plot(lf.eval_x_axis, lf.eval_y_axis, self.appearenceParam.lineTypeFitLifetime)
+        if self.x_selec_min is None :
+            # There is no time selection on the graph
+            plt_function(x, y)
+            plt_residual_fct(x, np.zeros(np.size(y)))
+            if is_plot_fit:
+                self.ax.set_xlim(fit_x[0], fit_x[-1])
+                plt_function(fit_x, fit_y, self.appearanceParam.line_type_fit_lifetime)
+                plt_residual_fct(fit_x, residuals_y)
+        else:
 
-                self.axResidual.plot(lf.eval_x_axis,
-                                     lf.residuals)
+            x1 = np.searchsorted(x, self.x_selec_min)
+            x2 = np.searchsorted(x, self.x_selec_max)
+            plt_function(x[:x1], y[:x1], alpha=self.appearanceParam.alphaNonSelectedGraph)
+            plt_function(x[x1:x2], y[x1:x2], alpha=1)
+            plt_function(x[x2:], y[x2:], alpha=self.appearanceParam.alphaNonSelectedGraph)
+            plt_residual_fct(x, np.zeros(np.size(y)))
 
-            else :
-                #(Re)plot data
-                # x1 = np.searchsorted(x, self.x_selec_min)
-                # x2 = np.searchsorted(x, self.x_selec_max)
-                x1 = lf.idxStart
-                x2 = lf.idxEnd
-                self.ax.plot(x[:x1], y[:x1], alpha=self.appearenceParam.alphaNonSelectedGraph)
-                self.ax.plot(x[x1:x2], y[x1:x2], alpha=1)
-                self.ax.plot(x[x2:], y[x2:], alpha=self.appearenceParam.alphaNonSelectedGraph)
+            # Plot Fit
+            if is_plot_fit:
+                plt_function(fit_x, fit_y, self.appearanceParam.line_type_fit_lifetime)
+                plt_residual_fct(fit_x, residuals_y)
 
-                # Plot fit
-                self.ax.plot(lf.eval_x_axis, lf.eval_y_axis, self.appearenceParam.lineTypeFitLifetime)
+        self.figure.canvas.draw()
 
-                self.axResidual.plot(lf.eval_x_axis,
-                                     lf.residuals)
-            self.figure.canvas.draw()
 
-        if type == "DLS":
-            # data is of type "lifeTimeMeasurements" (cf correspondinf class in core/analyse)
-            DLS_Measurements = data
-
-            y = DLS_Measurements.data
-            x = DLS_Measurements.timeAxis
-
-            self.ax.set_xlim(x[0], x[-1])
-            self.axResidual.set_xlim(x[0], x[-1])
-
-            # self.ax.plot(lf.timeAxis, lf.data)
-
-            if self.x_selec_min is None:
-                # (Re)plot data
-                self.ax.semilogx(x, y)
-
-                # Plot fit
-                self.ax.set_xlim(x[0], x[-1])
-                self.ax.semilogx(lf.eval_x_axis, lf.eval_y_axis, self.appearenceParam.lineTypeFitLifetime)
-
-                self.axResidual.semilogx(lf.eval_x_axis,
-                                     lf.residuals)
-
-            else:
-                # (Re)plot data
-                # x1 = np.searchsorted(x, self.x_selec_min)
-                # x2 = np.searchsorted(x, self.x_selec_max)
-                x1 = DLS_Measurements.idxStart
-                x2 = DLS_Measurements.idxEnd
-                self.ax.semilogx(x[:x1], y[:x1], alpha=self.appearenceParam.alphaNonSelectedGraph)
-                self.ax.semilogx(x[x1:x2], y[x1:x2], alpha=1)
-                self.ax.semilogx(x[x2:], y[x2:], alpha=self.appearenceParam.alphaNonSelectedGraph)
-
-                # Plot fit
-                self.ax.semilogx(DLS_Measurements.eval_x_axis, DLS_Measurements.eval_y_axis, self.appearenceParam.lineTypeFitLifetime)
-
-                self.axResidual.semilogx(DLS_Measurements.eval_x_axis,
-                                         DLS_Measurements.residuals)
-
-            self.figure.canvas.draw()
-
+    def export(self, mode, filePath):
+        if mode == "text":
+            data = np.column_stack((self.data_x, self.data_y, self.data_fit, self.data_residual))
+            np.savetxt(filePath, data)
+        if mode == "script":
+            f = open(filePath, mode="w")
+            header = "import matplotlib.pyplot as plt" \
+                     "import numpy as np"
+            f.writelines(header)
+            f.close()
 
 
 
@@ -246,7 +159,7 @@ class Graph_Results(InteractiveGraph):
         self.x_selec_min = xmin
         self.x_selec_max = xmax
         #Update GUI
-        self.controller.setLimX_fit(self.x_selec_min, self.x_selec_max)
+        self.controller.set_lim_X_fit(self.x_selec_min, self.x_selec_max)
         self.plot(self.type, self.data)
 
 

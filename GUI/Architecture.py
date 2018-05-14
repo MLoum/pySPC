@@ -95,8 +95,8 @@ class Architecture():
         self.navigation_area = self.navigation_area_docked
         self.analyze_area = self.analyze_area_docked
 
-        self.controller.updateNavigation()
-        self.controller.updateAnalyze()
+        self.controller.update_navigation()
+        self.controller.update_analyze()
 
 
     def undock(self):
@@ -113,8 +113,8 @@ class Architecture():
         self.navigation_area = self.navigation_area_window
         self.analyze_area = self.analyze_area_window
 
-        self.controller.updateNavigation()
-        self.controller.updateAnalyze()
+        self.controller.update_navigation()
+        self.controller.update_analyze()
 
 
     def toggleDock(self):

@@ -5,7 +5,8 @@ class appearenceParam():
         self.IR_trace = "k--"
         self.alphaNonSelectedGraph = 0.4
 
-        self.lineTypeFitLifetime = "r-"
+        self.line_type_fit_lifetime = "r-"
+        self.line_type_fit_FCS = "r-"
 
 
     def saveToIniFile(self):

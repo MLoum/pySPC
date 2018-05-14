@@ -1,7 +1,5 @@
 from .analyze import lifetime
 
-
-
 class Results(object):
 
     def __init__(self):
@@ -10,7 +8,7 @@ class Results(object):
         """
         self.maxNbOfChannel = 8
 
-        self.lifeTimeMeasurements = [None] * self.maxNbOfChannel  #lifetime.lifeTimeMeasurements()
+        self.lifeTimeMeasurements = [None] * self.maxNbOfChannel  # lifetime.lifeTimeMeasurements()
         self.FCS_Measurements = [None] * self.maxNbOfChannel  # lifetime.lifeTimeMeasurements()
         self.DLS_Measurements = [None] * self.maxNbOfChannel  # lifetime.lifeTimeMeasurements()
         self.chronograms = [None] * self.maxNbOfChannel
@@ -23,37 +21,19 @@ class Results(object):
         self.intensityHistogram = [None] * self.maxNbOfChannel
         self.correlationCurve = [None] * self.maxNbOfChannel
 
-
-    def changeNbOfDetector(self):
+    def change_nb_of_detector(self):
         pass
 
-    def addChannel(self):
+    def add_channel(self):
         self.intensityHistogram.append(0)
         self.correlationCurve.append(0)
         self.chronograms.append(0)
-        #self.microtimeHistograms.append(0)
-
-
+        # self.microtimeHistograms.append(0)
 
 class Chronogram():
     def __init__(self):
-        xAxis = None
-        data = None
-        tickStart = None
-        tickEnd = None
-        nbOfBin = None
-
-class FCS_Curve():
-    def __init__(self):
-        xAxis = None
-        data = None
-        fitCurve = None
-        stdDev = None
-
-class PCH():
-    def __init__(self):
-        xAxis = None
-        data = None
-        fitCurve = None
-        stdDev = None
-        nbOfBin = None
+        self.xAxis = None
+        self.data = None
+        self.tickStart = None
+        self.tickEnd = None
+        self.nbOfBin = None

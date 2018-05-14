@@ -121,7 +121,7 @@ class Analyze_area():
             self.view.currentOperation = "FCS"
         elif currentNumTab == 4:
             self.view.currentOperation = "DLS"
-        self.view.controller.updateAnalyze()
+        # self.view.controller.update_analyze()
 
     def changeAnalyzeSource(self):
         #TODO
