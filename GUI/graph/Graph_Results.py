@@ -1,4 +1,5 @@
 import tkinter as tk
+
 from tkinter import ttk
 
 
@@ -24,10 +25,10 @@ class Graph_Results(InteractiveGraph):
     doc todo
     """
 
-    def __init__(self, masterFrame, view, controller, figsize, dpi):
+    def __init__(self, master_frame, view, controller, figsize, dpi):
         #super().__init__(masterFrame, view, controller, figsize, dpi)
 
-        self.masterFrame = masterFrame
+        self.masterFrame = master_frame
         self.view = view
         self.controller = controller
         self.appearanceParam = view.appearenceParam
@@ -53,22 +54,30 @@ class Graph_Results(InteractiveGraph):
         self.ax = self.figure.add_axes([0.08, 0.3, 0.9, 0.65], xticklabels=[])
         self.axResidual = self.figure.add_axes([0.08, 0.1, 0.9, 0.25])
 
+        self.ax.tick_params(
+            axis='x',  # changes apply to the x-axis
+            which='both',  # both major and minor ticks are affected
+            bottom=False,  # ticks along the bottom edge are off
+            top=False,  # ticks along the top edge are off
+            labelbottom=False)  # labels along the bottom edge are off
+
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.frame)
         self.canvas.get_tk_widget().pack(side='top', fill='both', expand=1)
 
         self.createCallBacks()
         self.createWidgets()
 
-    def plot(self, type_, data, is_plot_fit=False):
+    def plot(self, type_, data, is_plot_fit=False, is_zoom_x_selec=False, is_autoscale=False):
         self.type = type_
         self.data = data
+        self.is_plot_fit = is_plot_fit
         self.ax.clear()
         self.axResidual.clear()
 
         self.data_y = y = data.data
         self.data_x = x = data.timeAxis
         self.data_fit = fit_y = data.eval_y_axis
-        fit_x = data.eval_x_axis
+        self.fit_x = fit_x = data.eval_x_axis
         self.data_residual = residuals_y = data.residuals
 
         # Default :
@@ -76,6 +85,7 @@ class Graph_Results(InteractiveGraph):
         plt_residual_fct = self.axResidual.plot
 
         self.ax.set_xlim(x[0], x[-1])
+        self.axResidual.set_xlim(x[0], x[-1])
 
         if type_ == "lifetime":
             self.ax.set_xlabel("Microtime")
@@ -118,6 +128,14 @@ class Graph_Results(InteractiveGraph):
 
             x1 = np.searchsorted(x, self.x_selec_min)
             x2 = np.searchsorted(x, self.x_selec_max)
+
+            self.x_selection_area = x[x1:x2]
+            self.y_selection_area = y[x1:x2]
+
+            if is_zoom_x_selec:
+                self.ax.set_xlim(x[x1], x[x2])
+                self.axResidual.set_xlim(x[x1], x[x2])
+
             plt_function(x[:x1], y[:x1], alpha=self.appearanceParam.alphaNonSelectedGraph)
             plt_function(x[x1:x2], y[x1:x2], alpha=1)
             plt_function(x[x2:], y[x2:], alpha=self.appearanceParam.alphaNonSelectedGraph)
@@ -130,13 +148,19 @@ class Graph_Results(InteractiveGraph):
 
         self.figure.canvas.draw()
 
+    def replot(self, is_zoom_x_selec=False, is_autoscale=False):
+        self.plot(self.type, self.data, self.is_plot_fit, is_zoom_x_selec, is_autoscale)
 
-    def export(self, mode, filePath):
+    def export(self, mode, file_path):
+
         if mode == "text":
-            data = np.column_stack((self.data_x, self.data_y, self.data_fit, self.data_residual))
-            np.savetxt(filePath, data)
-        if mode == "script":
-            f = open(filePath, mode="w")
+            if self.data_fit is None:
+                data = np.column_stack((self.data_x, self.data_y))
+            else:
+                data = np.column_stack((self.x_selection_area, self.y_selection_area, self.data_fit, self.data_residual))
+            np.savetxt(file_path.name, data)
+        elif mode == "script":
+            f = open(file_path.name, "w")
             header = "import matplotlib.pyplot as plt" \
                      "import numpy as np"
             f.writelines(header)
@@ -165,3 +189,4 @@ class Graph_Results(InteractiveGraph):
 
     def scrollEvent(self, event):
         pass
+

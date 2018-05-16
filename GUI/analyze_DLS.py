@@ -14,7 +14,7 @@ class guiForFitOperation_DLS(guiForFitOperation):
         if self.comboBoxStringVar.get() == "Cumulant":
             self.listLabelStringVariableFit[0].set("B")
             self.listLabelStringVariableFit[1].set("beta")
-            self.listLabelStringVariableFit[2].set("Gamma")
+            self.listLabelStringVariableFit[2].set("tau")
             self.listLabelStringVariableFit[3].set("mu2")
             self.listLabelStringVariableFit[4].set("mu3")
             self.listLabelStringVariableFit[5].set("mu4")
@@ -27,7 +27,7 @@ class guiForFitOperation_DLS(guiForFitOperation):
                 self.listEntryParamFit[i].state(['disabled'])
 
 
-            self.setFitFormula(r"B + \beta e^{-2 \Gamma t} (1 + \frac{\mu_2}{2!} t^2 + \frac{\mu_3}{3!} t^3 + \frac{\mu_3}{4!} t^4)^2")
+            self.setFitFormula(r"B + \beta e^{-t/\tau} (1 + \frac{\mu_2}{2!} t^2 + \frac{\mu_3}{3!} t^3 + \frac{\mu_3}{4!} t^4)^2,  \tau=1/2\Gamma " )
 
         elif self.comboBoxStringVar.get() == "Inv TL":
             for i in range(nbFitParam) :

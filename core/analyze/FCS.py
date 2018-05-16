@@ -65,18 +65,20 @@ class OneSpeDiffusion(Model):
 
 
 class CorrelationMeasurement(Measurements):
-    def __init__(self, data_=None, timeAxis_=None):
-        super().__init__(data_, timeAxis_)
+    def __init__(self, data_=None, time_axis_=None):
+        super().__init__(data_, time_axis_)
 
-    def correlateMonoProc(self, timestamps1, timestamps2, maxCorrelationTimeInTick, startCorrelationTimeInTick=1, nbOfPointPerCascade_aka_B=10):
+    def correlateMonoProc(self, timestamps1, timestamps2, maxCorrelationTimeInTick, startCorrelationTimeInTick=1, nbOfPointPerCascade_aka_B=10, tick_duration_micros=1):
+        self.tick_duration_micros = tick_duration_micros
         self.maxTimeInTick = timestamps1[-1]
         self.numLastPhoton = np.searchsorted(timestamps1, self.maxTimeInTick - maxCorrelationTimeInTick)
         self.endTimeCorrelation_tick = timestamps1[self.numLastPhoton]
 
-        self.createListTimeCorrelation(startCorrelationTimeInTick, maxCorrelationTimeInTick, pointPerDecade=nbOfPointPerCascade_aka_B)
+        self.create_list_time_correlation(startCorrelationTimeInTick, maxCorrelationTimeInTick, pointPerDecade=nbOfPointPerCascade_aka_B)
         self.data = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)
         correlate(timestamps1, self.data, self.timeAxis, self.numLastPhoton)
-        self.normalizeCorrelation()
+        self.normalize_correlation()
+        self.scale_time_axis()
 
     def correlateFCS_multi(self, timestamps1, timestamps2, maxCorrelationTimeInTick):
         self.maxTimeInTick = timestamps1[-1]
@@ -86,13 +88,13 @@ class CorrelationMeasurement(Measurements):
         nbOfChunk = 10
         timeStamp1_chunck = np.array_split(timestamps1, nbOfChunk)
         timeStamp2_chunck = np.array_split(timestamps2, nbOfChunk)
-        self.createListTimeCorrelation(maxCorrelationTimeInTick, pointPerDecade=10)
+        self.create_list_time_correlation(maxCorrelationTimeInTick, pointPerDecade=10)
         correlation_chunck = np.zeros(self.nbOfCorrelationPoint, nbOfChunk)
         #
         # pool = Pool(processes=3)
         # print(pool.map(target = correlate, numbers))
 
-    def normalizeCorrelation(self):
+    def normalize_correlation(self):
         self.data = self.data.astype(np.float64)
         B = self.pointPerDecade
         for n in range(1, self.nbOfcascade):
@@ -109,7 +111,10 @@ class CorrelationMeasurement(Measurements):
         # #self.data = G
         # self.timeAxis = np.arange(maxCorrelationTimeInTick)
 
-    def createListTimeCorrelation(self, startCorrelationTimeInTick, maxCorrelationTime_tick, pointPerDecade):
+    def scale_time_axis(self):
+        self.timeAxis = self.tick_duration_micros * self.timeAxis.astype(np.float64)
+
+    def create_list_time_correlation(self, startCorrelationTimeInTick, maxCorrelationTime_tick, pointPerDecade):
 
         B = self.pointPerDecade = pointPerDecade
         # How many "cascade" do we need ?
@@ -150,8 +155,8 @@ class CorrelationMeasurement(Measurements):
 
 class FCSMeasurements(CorrelationMeasurement):
 
-    def __init__(self, correlationCurve=None, timeAxis_= None):
-        super().__init__(correlationCurve, timeAxis_)
+    def __init__(self, correlationCurve=None, time_axis_= None):
+        super().__init__(correlationCurve, time_axis_)
 
 
     def setParams(self, params):

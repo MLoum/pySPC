@@ -13,6 +13,7 @@
 # c’est une bonne pratique, pas un dogme religieux.
 
 import tkinter as Tk
+
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
@@ -183,17 +184,20 @@ class Controller:
 
     def set_lim_X_fit(self, idxStart, idxEnd):
         self.view.archi.analyze_area.FCS_TimeAnalyze_gui.guiForFitOperation_FCS.idx_lim_for_fit_min_sv.set(
-            str(idxStart))
-        self.view.archi.analyze_area.FCS_TimeAnalyze_gui.guiForFitOperation_FCS.idx_lim_for_fit_max_sv.set(str(idxEnd))
+            "%.2f"%(idxStart))
+        self.view.archi.analyze_area.FCS_TimeAnalyze_gui.guiForFitOperation_FCS.idx_lim_for_fit_max_sv.set("%.2f"%(idxEnd))
 
         self.view.archi.analyze_area.lifeTimeAnalyze_gui.guiForFitOperation_Lifetime.idx_lim_for_fit_min_sv.set(
-            str(idxStart))
+            "%.2f"%(idxStart))
         self.view.archi.analyze_area.lifeTimeAnalyze_gui.guiForFitOperation_Lifetime.idx_lim_for_fit_max_sv.set(
-            str(idxEnd))
+            "%.2f"%(idxEnd))
 
         self.view.archi.analyze_area.DLS_TimeAnalyze_gui.guiForFitOperation_DLS.idx_lim_for_fit_min_sv.set(
-            str(idxStart))
-        self.view.archi.analyze_area.DLS_TimeAnalyze_gui.guiForFitOperation_DLS.idx_lim_for_fit_max_sv.set(str(idxEnd))
+            "%.2f"%(idxStart))
+        self.view.archi.analyze_area.DLS_TimeAnalyze_gui.guiForFitOperation_DLS.idx_lim_for_fit_max_sv.set("%.2f"%(idxEnd))
+
+    def replot_result(self, is_zoom_x_selec=False, is_autoscale=False):
+        self.view.archi.analyze_area.resultArea_gui.graph_results.replot(is_zoom_x_selec, is_autoscale)
 
     def fit(self, analyze_type, mode, model_name, params, idx_start=0, idx_end=-1):
         """
@@ -237,7 +241,8 @@ class Controller:
                 data.setModel(model_name)
                 data.setParams(params)
                 fitResults = data.fit(idx_start, idx_end)
-                # gui.setParamsFromFit(data.params)
+                # TODO set option to tell if user want fit results exported to fit params
+                gui.setParamsFromFit(data.params)
                 self.view.archi.analyze_area.resultArea_gui.setTextResult(fitResults.fit_report())
 
             self.view.archi.analyze_area.resultArea_gui.graph_results.plot(fit_plot_mode, data, is_plot_fit=True)
@@ -246,6 +251,9 @@ class Controller:
         channel = self.view.currentChannel
         lf = self.model.results.lifeTimeMeasurements[channel]
         lf.generateArtificialIR(main_width, secondary_width, secondary_amplitude, time_offset)
+
+    def export_graph_result(self, mode, file_path):
+        self.view.archi.analyze_area.resultArea_gui.graph_results.export(mode, file_path)
 
     def save_state(self, savefile_path):
         self.shelf = shelve.open(savefile_path, 'n')  # n for new

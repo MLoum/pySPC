@@ -94,7 +94,7 @@ class Menu():
         pass
 
     def askOpenSPC_file(self):
-        filePath = filedialog.askopenfilename(title="Open SPC File")  #
+        filePath = filedialog.askopenfilename(title="Open SPC File")
         #TODO logic in controller ?
         if filePath == None or filePath == '':
             return None

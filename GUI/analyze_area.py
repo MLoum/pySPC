@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog
 
 
 from .analyze_Lifetime import lifeTimeAnalyze_gui
@@ -16,14 +17,14 @@ class Analyze_area():
         self.appearenceParam = appearenceParam
 
     def populate(self):
-        self.frameCommon = tk.LabelFrame(self.masterFrame, text="Common", borderwidth=self.appearenceParam.frameLabelBorderWidth)
-        self.frameCommon.pack(side="top", fill="both", expand=True)
+        self.frame_common = tk.LabelFrame(self.masterFrame, text="Common", borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frame_common.pack(side="top", fill="both", expand=True)
 
         #combo box anlayse Source
-        label = ttk.Label(self.frameCommon, text='Source')
+        label = ttk.Label(self.frame_common, text='Source')
         label.pack(side=tk.LEFT, padx=2, pady=2)
         self.analyzeComboBoxSource_sv = tk.StringVar()
-        cb = ttk.Combobox(self.frameCommon, width=25, justify=tk.CENTER, textvariable=self.analyzeComboBoxSource_sv, values='')
+        cb = ttk.Combobox(self.frame_common, width=25, justify=tk.CENTER, textvariable=self.analyzeComboBoxSource_sv, values='')
         cb.bind('<<ComboboxSelected>>', self.changeAnalyzeSource)
         cb['values'] = ('Whole', 'Time Zoom', 'Selection')
         self.analyzeComboBoxSource_sv.set('Time Zoom')
@@ -34,14 +35,58 @@ class Analyze_area():
         If your program cannot accurately depict the relative progress that this widget is supposed to display, use mode='indeterminate'. In this mode, a rectangle bounces back and forth between the ends of the widget once you use the .start() method.
         If your program has some measure of relative progress, use mode='determinate'. In this mode, your program can move the indicator to a specified position along the widget's track.
         """
-        self.analyzePgb = ttk.Progressbar(self.frameCommon, orient="horizontal", length=15)
+        self.analyzePgb = ttk.Progressbar(self.frame_common, orient="horizontal", length=15)
         self.analyzePgb.pack(side=tk.LEFT, fill=tk.X)
         #self.analyzePgb.ste
 
         #Live Analysis ?
         self.isLive = tk.IntVar()
-        self.isLiveCheckBox =  ttk.Checkbutton(self.frameCommon, text="Live ?", variable=self.isLive)
+        self.isLiveCheckBox =  ttk.Checkbutton(self.frame_common, text="Live ?", variable=self.isLive)
         self.isLiveCheckBox.pack(side=tk.LEFT, fill=tk.X)
+
+        # Graph
+        self.frame_common_graph = tk.LabelFrame(self.frame_common, text="Graph command", borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frame_common_graph.pack(side="top", fill="both", expand=True)
+
+        label = ttk.Label(self.frame_common_graph, text='x1')
+        label.grid(row=0, column=0)
+
+        self.x1_graph_sv = tk.StringVar()
+        e = ttk.Entry(self.frame_common_graph, textvariable=self.x1_graph_sv, justify=tk.CENTER, width=7)
+        e.grid(row=0, column=1)
+
+        label = ttk.Label(self.frame_common_graph, text='x2')
+        label.grid(row=0, column=2)
+
+        self.x2_graph_sv = tk.StringVar()
+        e = ttk.Entry(self.frame_common_graph, textvariable=self.x2_graph_sv, justify=tk.CENTER, width=7)
+        e.grid(row=0, column=3)
+
+        label = ttk.Label(self.frame_common_graph, text='y1')
+        label.grid(row=1, column=0)
+
+        self.y1_graph_sv = tk.StringVar()
+        e = ttk.Entry(self.frame_common_graph, textvariable=self.y1_graph_sv, justify=tk.CENTER, width=7)
+        e.grid(row=1, column=1)
+
+        label = ttk.Label(self.frame_common_graph, text='y2')
+        label.grid(row=1, column=2)
+
+        self.y2_graph_sv = tk.StringVar()
+        e = ttk.Entry(self.frame_common_graph, textvariable=self.y2_graph_sv, justify=tk.CENTER, width=7)
+        e.grid(row=1, column=3)
+
+        b = ttk.Button(self.frame_common_graph, text="to xSelec", width=10, command=self.scale_graph_result_to_x_selec)
+        b.grid(row=0, column=4)
+
+        b = ttk.Button(self.frame_common_graph, text="Autoscale", width=10, command=self.autoscale_graph_result)
+        b.grid(row=1, column=4)
+
+        b = ttk.Button(self.frame_common_graph, text="Export", width=10, command=self.export_graph_result)
+        b.grid(row=0, column=5)
+
+
+
 
         self.frameOperation = tk.LabelFrame(self.masterFrame, text="Operation", borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameOperation.pack(side="top", fill="both", expand=True)
@@ -126,3 +171,16 @@ class Analyze_area():
     def changeAnalyzeSource(self):
         #TODO
         pass
+
+    def scale_graph_result_to_x_selec(self):
+        self.controller.replot_result(is_zoom_x_selec=True, is_autoscale=False)
+
+    def autoscale_graph_result(self):
+        self.controller.replot_result(is_zoom_x_selec=False, is_autoscale=True)
+
+    def export_graph_result(self):
+        file_path = filedialog.asksaveasfile(title="Export Graph")
+        if file_path == None or file_path == '':
+            return None
+
+        self.controller.export_graph_result(mode="text", file_path=file_path)

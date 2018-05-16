@@ -59,12 +59,12 @@ class OneExpDecay(Model):
 #TODO creer une classe mère pour les analyses.
 class lifeTimeMeasurements(Measurements):
 
-    def __init__(self, lifetimeHistogram_=None, timeAxis_= None):
-        super().__init__(lifetimeHistogram_, timeAxis_)
+    def __init__(self, lifetimeHistogram_=None, time_axis_= None):
+        super().__init__(lifetimeHistogram_, time_axis_)
 
         self.IR = None
         self.data = lifetimeHistogram_
-        self.timeAxis = timeAxis_
+        self.timeAxis = time_axis_
 
         self.eval_x_axis = None
         self.eval_y_axis = None

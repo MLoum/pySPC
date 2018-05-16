@@ -210,12 +210,12 @@ class Data():
         return timestamps, detector, nanotime, timestamps_unit, meta
 
     def searchIdxOfPhotonWithTimeSupTo_t1_and_InfTo_t2(self, array, t1, t2):
-        #Find indices where elements should be inserted to maintain order
+        # Find indices where elements should be inserted to maintain order
         return np.searchsorted(array, (t1,t2))
         pass
 
     #TODO put into a file in analyze and call it Bin.
-    def chronogram(self, numChannel, startTick, endTick, binInTick):
+    def chronogram(self, numChannel, startTick, endTick, bin_in_tick):
         """
         The x axis is in ->microsecond<-
         """
@@ -225,14 +225,14 @@ class Data():
         endTick = np.uint64(endTick)
 
         #TODO Expliquer le +1, je pense que c'est du à des pb de valeurs arrondies... Au pire la derniere case est vide.
-        nbOfBin = int((endTick - startTick)/ binInTick) + 1
+        nbOfBin = int((endTick - startTick) / bin_in_tick) + 1
         # Find indices where elements should be inserted to maintain order
         idxStart, idxEnd = np.searchsorted(timeStamps, (startTick, endTick))
 
         timesStamps = np.copy(timeStamps[idxStart:idxEnd])
         timesStamps -= startTick
 
-        numStartBin = int (startTick / binInTick)
+        numStartBin = int (startTick / bin_in_tick)
         #numEndBin = int( endTick / binInTick)
         numEndBin = numStartBin + nbOfBin
 
@@ -254,14 +254,18 @@ class Data():
         chronogram.tickStart, chronogramtickEnd, chronogram.nbOfBin = startTick, endTick, int(nbOfBin)
         #chronogram.data, chronogram.xAxis = np.histogram(numOfBinForEachPhoton, int(nbOfBin))
 
-        chronogram.data = np.zeros(chronogram.nbOfBin + 1, dtype=np.int)
-        bin.bin(timesStamps, chronogram.data, binInTick)
-        #chronogram.data
+        # chronogram.data = np.zeros(chronogram.nbOfBin + 1, dtype=np.int)
+        # bin.bin(timesStamps, chronogram.data, bin_in_tick)
+
+        num_bin = (timesStamps / bin_in_tick).astype(np.int64)
+        chronogram.data = np.bincount(num_bin)
+
+        # chronogram.data
         #TODO UNDERSTAND We have to cut by one element the x axis because it is on element longer than the data (NB : there is no copy, just "a view")
-        chronogram.data = chronogram.data[:-1]
+        # chronogram.data = chronogram.data[:-1]
 
         chronogram.xAxis = np.arange(numStartBin, numEndBin, dtype=np.float64)
-        chronogram.xAxis *= binInTick
+        chronogram.xAxis *= bin_in_tick
         chronogram.xAxis += chronogram.tickStart
         chronogram.xAxis *= self.expParam.mAcrotime_clickEquivalentIn_second * 1E6
 
@@ -330,7 +334,12 @@ class Data():
         start_time_tick = int(start_time_mu_s/1E6 / self.expParam.mAcrotime_clickEquivalentIn_second)
 
 
-        self.results.DLS_Measurements[numChannel].correlateMonoProc(timeStamps_reduc, timeStamps_reduc,  max_correlation_time_tick, startCorrelationTimeInTick=start_time_tick, nbOfPointPerCascade_aka_B=int(precision))
+        self.results.DLS_Measurements[numChannel].correlateMonoProc(timeStamps_reduc,
+                                                                    timeStamps_reduc,  max_correlation_time_tick,
+                                                                    startCorrelationTimeInTick=start_time_tick,
+                                                                    nbOfPointPerCascade_aka_B=int(precision),
+                                                                    tick_duration_micros=
+                                                                    self.expParam.mAcrotime_clickEquivalentIn_second*1E6)
 
 
     def generatepoissonNoise(self, meanRateInTick, t_start_click, t_end_click):
@@ -341,13 +350,59 @@ class Data():
         :param t_end:
         :return:
         """
-        #http://preshing.com/20111007/how-to-generate-random-timings-for-a-poisson-process/
-        #ratePerClick = ratePerS / self.expParam.mAcrotime_clickEquivalentIn_second
-        #TODOname of ratePerClick
+        # http://preshing.com/20111007/how-to-generate-random-timings-for-a-poisson-process/
+        # ratePerClick = ratePerS / self.expParam.mAcrotime_clickEquivalentIn_second
+        # TODO name of ratePerClick
         nbOfTickToGenerate = int((t_end_click - t_start_click)*meanRateInTick)
-        arrivalTimes = t_start_click +  np.cumsum(-(np.log(1.0 - np.random.random(nbOfTickToGenerate)) / meanRateInTick).astype(np.uint64))
+        arrivalTimes = t_start_click + np.cumsum(-(np.log(1.0 - np.random.random(nbOfTickToGenerate)) / meanRateInTick).astype(np.uint64))
         lastSample = np.searchsorted(arrivalTimes, t_end_click)
         return arrivalTimes[:lastSample]
-        #nbCorrelationPoint = int(maxCorrelationTime_s / self.expParam.mAcrotime_clickEquivalentIn_second)
+        # nbCorrelationPoint = int(maxCorrelationTime_s / self.expParam.mAcrotime_clickEquivalentIn_second)
+
+    def filter_bin_and_threshold(self, num_channel, threshold, bin_in_tick, replacement_mode="nothing"):
+        time_stamps = self.channels[num_channel].photons['timestamps']
+        # Binning
+        num_bin_for_each_photons = (time_stamps / bin_in_tick).astype(np.int64)
+        binned_timestamps = np.bincount(num_bin_for_each_photons)
+        # Filter
+        idx_bin_to_filter = np.where(binned_timestamps > threshold)
+        is_photons_to_be_filtered = np.isin(num_bin_for_each_photons, idx_bin_to_filter)
+        idx_photons_to_filter = np.nonzero(is_photons_to_be_filtered)
+
+        # TODO Use mask ?
+
+        if replacement_mode is "nothing":
+            self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
+                                                           idx_photons_to_filter)
+        elif replacement_mode is "poissonian_noise":
+            # Strategy, put artificial poisson noise at the end of the photons list and sort the photon list
+            nb_of_time_bin_to_generate = np.size(idx_bin_to_filter)
 
 
+    def filter_time_selection(self, num_channel, t1_tick, t2_tick, is_keep=True, replacement_mode="nothing"):
+        timeStamps = self.channels[num_channel].photons['timestamps']
+
+        if is_keep:
+            idx_photons_to_be_filtered = np.where(t1_tick > timeStamps > t2_tick)
+        else:
+            idx_photons_to_be_filtered = np.where(t1_tick < timeStamps < t2_tick)
+
+        if replacement_mode is "nothing":
+            self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
+                                                           idx_photons_to_be_filtered)
+        elif replacement_mode is "poissonian_noise":
+            pass
+
+    def filter_micro_time(self, num_channel, micro_t1, micro_t2, is_keep=True, replacement_mode="nothing"):
+        nanotimes = self.channels[num_channel].photons['nanotimes']
+
+        if is_keep:
+            idx_photons_to_be_filtered = np.where(micro_t1 > nanotimes > micro_t2)
+        else:
+            idx_photons_to_be_filtered = np.where(micro_t1 < nanotimes < micro_t2)
+
+        if replacement_mode is "nothing":
+            self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
+                                                           idx_photons_to_be_filtered)
+        elif replacement_mode is "poissonian_noise":
+            pass
