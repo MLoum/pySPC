@@ -26,8 +26,8 @@ class Graph_timeZoom(InteractiveGraph):
         :return:
     """
 
-    def __init__(self, masterFrame, view, controller, figsize, dpi):
-        super().__init__(masterFrame, view, controller, figsize, dpi)
+    def __init__(self, master_frame, view, controller, figsize, dpi):
+        super().__init__(master_frame, view, controller, figsize, dpi)
         #self.ax.axis('off')
         self.figure.tight_layout()
 

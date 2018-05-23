@@ -39,7 +39,9 @@ class Results_area():
 
 
     def setTextResult(self, text):
+        self.resultFitTextArea.delete('1.0', tk.END)
         self.resultFitTextArea.insert(tk.INSERT, text)
+
 
 
 

@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import simpledialog
 from .guiForFitOperation import guiForFitOperation
-
+from core import Experiment
 
 class guiForFitOperation_Lifetime(guiForFitOperation):
 
@@ -84,36 +84,46 @@ class lifeTimeAnalyze_gui():
         b.pack(side=tk.LEFT, padx=2, pady=2)
 
         self.isSemiLog = tk.IntVar()
-        self.isDrawIRCheckBox = ttk.Checkbutton(self.frameMicro_graph, text="SemiLog ?", variable=self.isSemiLog)
-        self.isDrawIRCheckBox.pack(side=tk.TOP, fill=tk.X)
+        self.is_draw_IR_check_box = ttk.Checkbutton(self.frameMicro_graph, text="SemiLog ?", variable=self.isSemiLog)
+        self.is_draw_IR_check_box.pack(side=tk.TOP, fill=tk.X)
 
         #PTOFS
 
 
         #IR
-        b = ttk.Button(self.frameMicro_IR, text="Open", width=6, command=self.openIR_file)
-        b.pack(side=tk.TOP, padx=2, pady=2)
-
-        b = ttk.Button(self.frameMicro_IR, text="Generate", width=6, command=self.openIR_file)
-        b.pack(side=tk.TOP, padx=2, pady=2)
-
         self.isDraw_IR = tk.IntVar()
-        self.isDrawIRCheckBox = ttk.Checkbutton(self.frameMicro_IR, text="Draw ?", variable=self.isDraw_IR)
-        self.isDrawIRCheckBox.pack(side=tk.TOP, fill=tk.X)
+        self.is_draw_IR_check_box = ttk.Checkbutton(self.frameMicro_IR, text="Use IR ?", variable=self.isDraw_IR, command=self.is_use_IR)
+        self.is_draw_IR_check_box.grid(row=0, column=0)
+
+        b = ttk.Button(self.frameMicro_IR, text="Open file",  command=self.openIR_file)
+        b.grid(row=0, column=1)
+
+        b = ttk.Button(self.frameMicro_IR, text="Generate",  command=self.generateIR_file)
+        b.grid(row=0, column=2)
+
+        label = tk.Label(self.frameMicro_IR, text="Shift :")
+        label.grid(row=1, column=0)
 
         self.shiftIR_amount = tk.IntVar()
         w = ttk.Scale(self.frameMicro_IR, from_=0, to=200, orient=tk.HORIZONTAL, variable=self.shiftIR_amount, command=self.changeIR_shift)
-        w.pack(side=tk.TOP, padx=2, pady=2)
+        w.grid(row=1, column=1)
 
-
-        b = ttk.Button(self.frameMicro_IR, text="Shift", width=6, command=self.autoShiftIR)
-        b.pack(side=tk.TOP, padx=2, pady=2)
+        b = ttk.Button(self.frameMicro_IR, text="Auto",  command=self.autoShiftIR)
+        b.grid(row=1, column=2)
 
         #FIT
         self.guiForFitOperation_Lifetime = guiForFitOperation_Lifetime(self.frameMicro_fit, self.controller, ('One Decay', 'Two Decays', 'Rotation'),  nbParamFit=8)
         self.guiForFitOperation_Lifetime.populate()
 
     def openIR_file(self):
+        file_path = filedialog.askopenfilename(title="OPen IR File", initialdir=self.mainGUI.saveDir)
+        if file_path == None or file_path == '':
+            return None
+        ir_exp = Experiment.Experiment()
+        # ir_exp..new_exp("file", [file_path])
+
+
+    def is_use_IR(self):
         pass
 
     def generateIR_file(self):

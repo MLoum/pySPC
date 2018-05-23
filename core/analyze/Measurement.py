@@ -11,16 +11,14 @@ def update_param_vals(pars, prefix, **kwargs):
             pars[pname].value = val
     return pars
 
+class Measurements:
 
-#TODO creer une classe mère pour les analyses.
-class Measurements():
-
-    def __init__(self, data_=None, timeAxis_= None):
+    def __init__(self, data_=None, time_axis_= None):
         self.params = Parameters()
         self.modelName = ""
         self.model = None
 
-        self.timeAxis = timeAxis_
+        self.timeAxis = time_axis_
 
         self.data = data_
 
@@ -51,8 +49,6 @@ class Measurements():
 
         #self.evalParams(idxStart, idxEnd)
         return self.fitResults
-
-
 
     def evalParams(self, idxStart=0, idxEnd=-1):
         self.findIdxOfFitLim(idxStart, idxEnd)
