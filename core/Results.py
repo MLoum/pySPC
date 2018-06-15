@@ -1,4 +1,4 @@
-from .analyze import lifetime
+# from core.analyze import lifetime
 
 class Results(object):
 
@@ -8,7 +8,7 @@ class Results(object):
         """
         self.maxNbOfChannel = 8
 
-        self.lifeTimeMeasurements = [None] * self.maxNbOfChannel  # lifetime.lifeTimeMeasurements()
+        self.lifetimes = [None] * self.maxNbOfChannel  # lifetime.lifeTimeMeasurements()
         self.FCS_Measurements = [None] * self.maxNbOfChannel  # lifetime.lifeTimeMeasurements()
         self.DLS_Measurements = [None] * self.maxNbOfChannel  # lifetime.lifeTimeMeasurements()
         self.chronograms = [None] * self.maxNbOfChannel

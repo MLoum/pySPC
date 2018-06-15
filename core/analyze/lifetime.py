@@ -126,7 +126,7 @@ class lifeTimeMeasurements(Measurements):
     #     self.params = self.model.guess(self.lifetimeHistogram)
     #     self.evalParams(idxStart, idxEnd)
 
-    def setParams(self, params):
+    def set_params(self, params):
         if self.modelName == "One Decay":
             self.params['t0'].set(value=params[0],  vary=True, min=0, max=None)
             self.params['amp'].set(value=params[1], vary=True, min=0, max=None)
@@ -134,7 +134,7 @@ class lifeTimeMeasurements(Measurements):
             self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
 
 
-    def setModel(self, modelName):
+    def set_model(self, modelName):
         #il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *
         if modelName == "One Decay":
             self.modelName = modelName

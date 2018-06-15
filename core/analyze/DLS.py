@@ -43,8 +43,8 @@ class Cumulant(Model):
         B, beta, tau, mu2, mu3, mu4 = 0., 0., 0., 0., 0., 0.
 
         if x is not None:
-            B = data[-1] #TODO moyenne des dix (?) derniers points
-            beta = data[0] - 1
+            B = np.mean(data[-10:-1]) #TODO moyenne des dix (?) derniers points
+            beta = np.mean(data[0:10]) - 1
             #TODO Gamma l'inverse du temps pour laquelle l'amplitude est divisée par e^2
             # t0 = np.argmax(data)
             # amp = np.max(data)
@@ -69,17 +69,17 @@ class DLS_Measurements(CorrelationMeasurement):
     def __init__(self, data_=None, time_axis_= None):
         super().__init__(data_, time_axis_)
 
-    def setParams(self, params):
+    def set_params(self, params):
         if self.modelName == "Cumulant":
             self.params['B'].set(value=params[0],  vary=True, min=0, max=None)
             self.params['beta'].set(value=params[1], vary=True, min=0, max=None)
             self.params['tau'].set(value=params[2], vary=True, min=0, max=None)
-            self.params['mu2'].set(value=params[4], vary=True, min=0, max=None)
-            self.params['mu3'].set(value=params[5], vary=True, min=None, max=None)
-            self.params['mu4'].set(value=params[6], vary=True, min=0, max=None)
+            self.params['mu2'].set(value=params[3], vary=True, min=0, max=None)
+            self.params['mu3'].set(value=params[4], vary=True, min=None, max=None)
+            self.params['mu4'].set(value=params[5], vary=True, min=0, max=None)
 
 
-    def setModel(self, modelName):
+    def set_model(self, modelName):
         if modelName == "Cumulant":
             self.modelName = modelName
             self.model = Cumulant()

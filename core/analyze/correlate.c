@@ -518,8 +518,8 @@ static CYTHON_INLINE float __PYX_NAN() {
   #endif
 #endif
 
-#define __PYX_HAVE__correlate
-#define __PYX_HAVE_API__correlate
+#define __PYX_HAVE__core__analyze__correlate
+#define __PYX_HAVE_API__core__analyze__correlate
 #include <string.h>
 #include <stdio.h>
 #include "numpy/arrayobject.h"
@@ -979,23 +979,23 @@ typedef npy_double __pyx_t_5numpy_double_t;
  */
 typedef npy_longdouble __pyx_t_5numpy_longdouble_t;
 
-/* "correlate.pyx":17
+/* "core/analyze/correlate.pyx":17
  * # every type in the numpy module there's a corresponding compile-time
  * # type with a _t-suffix.
  * ctypedef np.uint64_t DTYPE_t             # <<<<<<<<<<<<<<
  * 
  * DTYPE2 = np.int
  */
-typedef __pyx_t_5numpy_uint64_t __pyx_t_9correlate_DTYPE_t;
+typedef __pyx_t_5numpy_uint64_t __pyx_t_4core_7analyze_9correlate_DTYPE_t;
 
-/* "correlate.pyx":23
+/* "core/analyze/correlate.pyx":23
  * # every type in the numpy module there's a corresponding compile-time
  * # type with a _t-suffix.
  * ctypedef np.int_t DTYPE_t2             # <<<<<<<<<<<<<<
  * 
  * # @cython.boundscheck(False)
  */
-typedef __pyx_t_5numpy_int_t __pyx_t_9correlate_DTYPE_t2;
+typedef __pyx_t_5numpy_int_t __pyx_t_4core_7analyze_9correlate_DTYPE_t2;
 /* Declarations.proto */
 #if CYTHON_CCOMPLEX
   #ifdef __cplusplus
@@ -1217,6 +1217,9 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject
 /* PyObjectCallOneArg.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg);
 
+/* None.proto */
+static CYTHON_INLINE long __Pyx_mod_long(long, long);
+
 #define __Pyx_BufPtrStrided1d(type, buf, i0, s0) (type)((char*)buf + i0 * s0)
 /* PyThreadStateGet.proto */
 #if CYTHON_FAST_THREAD_STATE
@@ -1372,6 +1375,13 @@ typedef struct {
 /* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value);
 
+/* Print.proto */
+static int __Pyx_Print(PyObject*, PyObject *, int);
+#if CYTHON_COMPILING_IN_PYPY || PY_MAJOR_VERSION >= 3
+static PyObject* __pyx_print = 0;
+static PyObject* __pyx_print_kwargs = 0;
+#endif
+
 /* RealImag.proto */
 #if CYTHON_CCOMPLEX
   #ifdef __cplusplus
@@ -1476,6 +1486,9 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_enum__NPY_TYPES(enum NPY_TYPES v
 /* CIntFromPy.proto */
 static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
 
+/* PrintOne.proto */
+static int __Pyx_PrintOne(PyObject* stream, PyObject *o);
+
 /* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value);
 
@@ -1547,14 +1560,14 @@ static PyTypeObject *__pyx_ptype_5numpy_ndarray = 0;
 static PyTypeObject *__pyx_ptype_5numpy_ufunc = 0;
 static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *, char *, char *, int *); /*proto*/
 
-/* Module declarations from 'correlate' */
-static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_9correlate_DTYPE_t = { "DTYPE_t", NULL, sizeof(__pyx_t_9correlate_DTYPE_t), { 0 }, 0, IS_UNSIGNED(__pyx_t_9correlate_DTYPE_t) ? 'U' : 'I', IS_UNSIGNED(__pyx_t_9correlate_DTYPE_t), 0 };
-static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_9correlate_DTYPE_t2 = { "DTYPE_t2", NULL, sizeof(__pyx_t_9correlate_DTYPE_t2), { 0 }, 0, IS_UNSIGNED(__pyx_t_9correlate_DTYPE_t2) ? 'U' : 'I', IS_UNSIGNED(__pyx_t_9correlate_DTYPE_t2), 0 };
-#define __Pyx_MODULE_NAME "correlate"
-extern int __pyx_module_is_main_correlate;
-int __pyx_module_is_main_correlate = 0;
+/* Module declarations from 'core.analyze.correlate' */
+static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_4core_7analyze_9correlate_DTYPE_t = { "DTYPE_t", NULL, sizeof(__pyx_t_4core_7analyze_9correlate_DTYPE_t), { 0 }, 0, IS_UNSIGNED(__pyx_t_4core_7analyze_9correlate_DTYPE_t) ? 'U' : 'I', IS_UNSIGNED(__pyx_t_4core_7analyze_9correlate_DTYPE_t), 0 };
+static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_4core_7analyze_9correlate_DTYPE_t2 = { "DTYPE_t2", NULL, sizeof(__pyx_t_4core_7analyze_9correlate_DTYPE_t2), { 0 }, 0, IS_UNSIGNED(__pyx_t_4core_7analyze_9correlate_DTYPE_t2) ? 'U' : 'I', IS_UNSIGNED(__pyx_t_4core_7analyze_9correlate_DTYPE_t2), 0 };
+#define __Pyx_MODULE_NAME "core.analyze.correlate"
+extern int __pyx_module_is_main_core__analyze__correlate;
+int __pyx_module_is_main_core__analyze__correlate = 0;
 
-/* Implementation of 'correlate' */
+/* Implementation of 'core.analyze.correlate' */
 static PyObject *__pyx_builtin_range;
 static PyObject *__pyx_builtin_ValueError;
 static PyObject *__pyx_builtin_RuntimeError;
@@ -1564,13 +1577,16 @@ static const char __pyx_k_i[] = "i";
 static const char __pyx_k_j[] = "j";
 static const char __pyx_k_n[] = "n";
 static const char __pyx_k_np[] = "np";
+static const char __pyx_k_end[] = "end";
 static const char __pyx_k_int[] = "int";
+static const char __pyx_k_file[] = "file";
 static const char __pyx_k_main[] = "__main__";
 static const char __pyx_k_size[] = "size";
 static const char __pyx_k_taus[] = "taus";
 static const char __pyx_k_test[] = "__test__";
 static const char __pyx_k_DTYPE[] = "DTYPE";
 static const char __pyx_k_numpy[] = "numpy";
+static const char __pyx_k_print[] = "print";
 static const char __pyx_k_range[] = "range";
 static const char __pyx_k_DTYPE2[] = "DTYPE2";
 static const char __pyx_k_import[] = "__import__";
@@ -1586,6 +1602,7 @@ static const char __pyx_k_RuntimeError[] = "RuntimeError";
 static const char __pyx_k_correlate_pyx[] = "correlate.pyx";
 static const char __pyx_k_numLastPhoton[] = "numLastPhoton";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
+static const char __pyx_k_core_analyze_correlate[] = "core.analyze.correlate";
 static const char __pyx_k_ndarray_is_not_C_contiguous[] = "ndarray is not C contiguous";
 static const char __pyx_k_numpy_core_multiarray_failed_to[] = "numpy.core.multiarray failed to import";
 static const char __pyx_k_unknown_dtype_code_in_numpy_pxd[] = "unknown dtype code in numpy.pxd (%d)";
@@ -1604,8 +1621,11 @@ static PyObject *__pyx_kp_u_Non_native_byte_order_not_suppor;
 static PyObject *__pyx_n_s_RuntimeError;
 static PyObject *__pyx_n_s_ValueError;
 static PyObject *__pyx_n_s_cline_in_traceback;
+static PyObject *__pyx_n_s_core_analyze_correlate;
 static PyObject *__pyx_n_s_correlate;
 static PyObject *__pyx_kp_s_correlate_pyx;
+static PyObject *__pyx_n_s_end;
+static PyObject *__pyx_n_s_file;
 static PyObject *__pyx_n_s_i;
 static PyObject *__pyx_n_s_idx_tau;
 static PyObject *__pyx_n_s_import;
@@ -1622,6 +1642,7 @@ static PyObject *__pyx_n_s_numLastPhoton;
 static PyObject *__pyx_n_s_numpy;
 static PyObject *__pyx_kp_s_numpy_core_multiarray_failed_to;
 static PyObject *__pyx_kp_s_numpy_core_umath_failed_to_impor;
+static PyObject *__pyx_n_s_print;
 static PyObject *__pyx_n_s_range;
 static PyObject *__pyx_n_s_size;
 static PyObject *__pyx_n_s_taus;
@@ -1629,7 +1650,7 @@ static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_timestamps;
 static PyObject *__pyx_n_s_uint64;
 static PyObject *__pyx_kp_u_unknown_dtype_code_in_numpy_pxd;
-static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_timestamps, PyArrayObject *__pyx_v_G, PyArrayObject *__pyx_v_taus, int __pyx_v_numLastPhoton); /* proto */
+static PyObject *__pyx_pf_4core_7analyze_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_timestamps, PyArrayObject *__pyx_v_G, PyArrayObject *__pyx_v_taus, int __pyx_v_numLastPhoton); /* proto */
 static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags); /* proto */
 static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info); /* proto */
 static PyObject *__pyx_tuple_;
@@ -1644,7 +1665,7 @@ static PyObject *__pyx_tuple__9;
 static PyObject *__pyx_tuple__10;
 static PyObject *__pyx_codeobj__11;
 
-/* "correlate.pyx":69
+/* "core/analyze/correlate.pyx":69
  * @cython.wraparound(False)
  * @cython.nonecheck(False)
  * def correlate(np.ndarray[DTYPE_t, ndim=1] timestamps, np.ndarray[DTYPE_t2, ndim=1] G, np.ndarray[DTYPE_t2, ndim=1] taus, int numLastPhoton):             # <<<<<<<<<<<<<<
@@ -1653,9 +1674,9 @@ static PyObject *__pyx_codeobj__11;
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_9correlate_1correlate(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static PyMethodDef __pyx_mdef_9correlate_1correlate = {"correlate", (PyCFunction)__pyx_pw_9correlate_1correlate, METH_VARARGS|METH_KEYWORDS, 0};
-static PyObject *__pyx_pw_9correlate_1correlate(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_4core_7analyze_9correlate_1correlate(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static PyMethodDef __pyx_mdef_4core_7analyze_9correlate_1correlate = {"correlate", (PyCFunction)__pyx_pw_4core_7analyze_9correlate_1correlate, METH_VARARGS|METH_KEYWORDS, 0};
+static PyObject *__pyx_pw_4core_7analyze_9correlate_1correlate(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyArrayObject *__pyx_v_timestamps = 0;
   PyArrayObject *__pyx_v_G = 0;
   PyArrayObject *__pyx_v_taus = 0;
@@ -1725,14 +1746,14 @@ static PyObject *__pyx_pw_9correlate_1correlate(PyObject *__pyx_self, PyObject *
   __pyx_L5_argtuple_error:;
   __Pyx_RaiseArgtupleInvalid("correlate", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 69, __pyx_L3_error)
   __pyx_L3_error:;
-  __Pyx_AddTraceback("correlate.correlate", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("core.analyze.correlate.correlate", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_timestamps), __pyx_ptype_5numpy_ndarray, 1, "timestamps", 0))) __PYX_ERR(0, 69, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_G), __pyx_ptype_5numpy_ndarray, 1, "G", 0))) __PYX_ERR(0, 69, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_taus), __pyx_ptype_5numpy_ndarray, 1, "taus", 0))) __PYX_ERR(0, 69, __pyx_L1_error)
-  __pyx_r = __pyx_pf_9correlate_correlate(__pyx_self, __pyx_v_timestamps, __pyx_v_G, __pyx_v_taus, __pyx_v_numLastPhoton);
+  __pyx_r = __pyx_pf_4core_7analyze_9correlate_correlate(__pyx_self, __pyx_v_timestamps, __pyx_v_G, __pyx_v_taus, __pyx_v_numLastPhoton);
 
   /* function exit code */
   goto __pyx_L0;
@@ -1743,7 +1764,7 @@ static PyObject *__pyx_pw_9correlate_1correlate(PyObject *__pyx_self, PyObject *
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_timestamps, PyArrayObject *__pyx_v_G, PyArrayObject *__pyx_v_taus, int __pyx_v_numLastPhoton) {
+static PyObject *__pyx_pf_4core_7analyze_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_timestamps, PyArrayObject *__pyx_v_G, PyArrayObject *__pyx_v_taus, int __pyx_v_numLastPhoton) {
   CYTHON_UNUSED int __pyx_v_nbOfPhoton;
   int __pyx_v_nbOfTau;
   int __pyx_v_n;
@@ -1786,21 +1807,21 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
   __pyx_pybuffernd_taus.rcbuffer = &__pyx_pybuffer_taus;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_timestamps.rcbuffer->pybuffer, (PyObject*)__pyx_v_timestamps, &__Pyx_TypeInfo_nn___pyx_t_9correlate_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 69, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_timestamps.rcbuffer->pybuffer, (PyObject*)__pyx_v_timestamps, &__Pyx_TypeInfo_nn___pyx_t_4core_7analyze_9correlate_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 69, __pyx_L1_error)
   }
   __pyx_pybuffernd_timestamps.diminfo[0].strides = __pyx_pybuffernd_timestamps.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_timestamps.diminfo[0].shape = __pyx_pybuffernd_timestamps.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_G.rcbuffer->pybuffer, (PyObject*)__pyx_v_G, &__Pyx_TypeInfo_nn___pyx_t_9correlate_DTYPE_t2, PyBUF_FORMAT| PyBUF_STRIDES| PyBUF_WRITABLE, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 69, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_G.rcbuffer->pybuffer, (PyObject*)__pyx_v_G, &__Pyx_TypeInfo_nn___pyx_t_4core_7analyze_9correlate_DTYPE_t2, PyBUF_FORMAT| PyBUF_STRIDES| PyBUF_WRITABLE, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 69, __pyx_L1_error)
   }
   __pyx_pybuffernd_G.diminfo[0].strides = __pyx_pybuffernd_G.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_G.diminfo[0].shape = __pyx_pybuffernd_G.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_taus.rcbuffer->pybuffer, (PyObject*)__pyx_v_taus, &__Pyx_TypeInfo_nn___pyx_t_9correlate_DTYPE_t2, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 69, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_taus.rcbuffer->pybuffer, (PyObject*)__pyx_v_taus, &__Pyx_TypeInfo_nn___pyx_t_4core_7analyze_9correlate_DTYPE_t2, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 69, __pyx_L1_error)
   }
   __pyx_pybuffernd_taus.diminfo[0].strides = __pyx_pybuffernd_taus.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_taus.diminfo[0].shape = __pyx_pybuffernd_taus.rcbuffer->pybuffer.shape[0];
 
-  /* "correlate.pyx":70
+  /* "core/analyze/correlate.pyx":70
  * @cython.nonecheck(False)
  * def correlate(np.ndarray[DTYPE_t, ndim=1] timestamps, np.ndarray[DTYPE_t2, ndim=1] G, np.ndarray[DTYPE_t2, ndim=1] taus, int numLastPhoton):
  *     cdef int nbOfPhoton = np.size(timestamps)             # <<<<<<<<<<<<<<
@@ -1859,7 +1880,7 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_nbOfPhoton = __pyx_t_5;
 
-  /* "correlate.pyx":71
+  /* "core/analyze/correlate.pyx":71
  * def correlate(np.ndarray[DTYPE_t, ndim=1] timestamps, np.ndarray[DTYPE_t2, ndim=1] G, np.ndarray[DTYPE_t2, ndim=1] taus, int numLastPhoton):
  *     cdef int nbOfPhoton = np.size(timestamps)
  *     cdef int nbOfTau = np.size(taus)             # <<<<<<<<<<<<<<
@@ -1918,28 +1939,59 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_nbOfTau = __pyx_t_5;
 
-  /* "correlate.pyx":77
+  /* "core/analyze/correlate.pyx":77
  *     cdef int j, i, idx_tau
  * 
  *     for n in range(numLastPhoton):             # <<<<<<<<<<<<<<
- *         idx_tau = 0
- *         j = n + 1
+ *         if n%100000==0:
+ *             print(n)
  */
   __pyx_t_5 = __pyx_v_numLastPhoton;
   for (__pyx_t_6 = 0; __pyx_t_6 < __pyx_t_5; __pyx_t_6+=1) {
     __pyx_v_n = __pyx_t_6;
 
-    /* "correlate.pyx":78
+    /* "core/analyze/correlate.pyx":78
  * 
  *     for n in range(numLastPhoton):
+ *         if n%100000==0:             # <<<<<<<<<<<<<<
+ *             print(n)
+ *         idx_tau = 0
+ */
+    __pyx_t_7 = ((__Pyx_mod_long(__pyx_v_n, 0x186A0) == 0) != 0);
+    if (__pyx_t_7) {
+
+      /* "core/analyze/correlate.pyx":79
+ *     for n in range(numLastPhoton):
+ *         if n%100000==0:
+ *             print(n)             # <<<<<<<<<<<<<<
+ *         idx_tau = 0
+ *         j = n + 1
+ */
+      __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 79, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      if (__Pyx_PrintOne(0, __pyx_t_1) < 0) __PYX_ERR(0, 79, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+      /* "core/analyze/correlate.pyx":78
+ * 
+ *     for n in range(numLastPhoton):
+ *         if n%100000==0:             # <<<<<<<<<<<<<<
+ *             print(n)
+ *         idx_tau = 0
+ */
+    }
+
+    /* "core/analyze/correlate.pyx":80
+ *         if n%100000==0:
+ *             print(n)
  *         idx_tau = 0             # <<<<<<<<<<<<<<
  *         j = n + 1
  *         while(idx_tau < nbOfTau):
  */
     __pyx_v_idx_tau = 0;
 
-    /* "correlate.pyx":79
- *     for n in range(numLastPhoton):
+    /* "core/analyze/correlate.pyx":81
+ *             print(n)
  *         idx_tau = 0
  *         j = n + 1             # <<<<<<<<<<<<<<
  *         while(idx_tau < nbOfTau):
@@ -1947,7 +1999,7 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
  */
     __pyx_v_j = (__pyx_v_n + 1);
 
-    /* "correlate.pyx":80
+    /* "core/analyze/correlate.pyx":82
  *         idx_tau = 0
  *         j = n + 1
  *         while(idx_tau < nbOfTau):             # <<<<<<<<<<<<<<
@@ -1958,7 +2010,7 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
       __pyx_t_7 = ((__pyx_v_idx_tau < __pyx_v_nbOfTau) != 0);
       if (!__pyx_t_7) break;
 
-      /* "correlate.pyx":82
+      /* "core/analyze/correlate.pyx":84
  *         while(idx_tau < nbOfTau):
  *             # First tau is not necesseraly 1
  *             while timestamps[j] - timestamps[n]  < taus[0] - 1:             # <<<<<<<<<<<<<<
@@ -1969,10 +2021,10 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
         __pyx_t_8 = __pyx_v_j;
         __pyx_t_9 = __pyx_v_n;
         __pyx_t_10 = 0;
-        __pyx_t_7 = ((((*__Pyx_BufPtrStrided1d(__pyx_t_9correlate_DTYPE_t *, __pyx_pybuffernd_timestamps.rcbuffer->pybuffer.buf, __pyx_t_8, __pyx_pybuffernd_timestamps.diminfo[0].strides)) - (*__Pyx_BufPtrStrided1d(__pyx_t_9correlate_DTYPE_t *, __pyx_pybuffernd_timestamps.rcbuffer->pybuffer.buf, __pyx_t_9, __pyx_pybuffernd_timestamps.diminfo[0].strides))) < ((*__Pyx_BufPtrStrided1d(__pyx_t_9correlate_DTYPE_t2 *, __pyx_pybuffernd_taus.rcbuffer->pybuffer.buf, __pyx_t_10, __pyx_pybuffernd_taus.diminfo[0].strides)) - 1)) != 0);
+        __pyx_t_7 = ((((*__Pyx_BufPtrStrided1d(__pyx_t_4core_7analyze_9correlate_DTYPE_t *, __pyx_pybuffernd_timestamps.rcbuffer->pybuffer.buf, __pyx_t_8, __pyx_pybuffernd_timestamps.diminfo[0].strides)) - (*__Pyx_BufPtrStrided1d(__pyx_t_4core_7analyze_9correlate_DTYPE_t *, __pyx_pybuffernd_timestamps.rcbuffer->pybuffer.buf, __pyx_t_9, __pyx_pybuffernd_timestamps.diminfo[0].strides))) < ((*__Pyx_BufPtrStrided1d(__pyx_t_4core_7analyze_9correlate_DTYPE_t2 *, __pyx_pybuffernd_taus.rcbuffer->pybuffer.buf, __pyx_t_10, __pyx_pybuffernd_taus.diminfo[0].strides)) - 1)) != 0);
         if (!__pyx_t_7) break;
 
-        /* "correlate.pyx":83
+        /* "core/analyze/correlate.pyx":85
  *             # First tau is not necesseraly 1
  *             while timestamps[j] - timestamps[n]  < taus[0] - 1:
  *                 j += 1             # <<<<<<<<<<<<<<
@@ -1982,7 +2034,7 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
         __pyx_v_j = (__pyx_v_j + 1);
       }
 
-      /* "correlate.pyx":85
+      /* "core/analyze/correlate.pyx":87
  *                 j += 1
  * 
  *             while timestamps[j] - timestamps[n]  < taus[idx_tau]:             # <<<<<<<<<<<<<<
@@ -1993,10 +2045,10 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
         __pyx_t_11 = __pyx_v_j;
         __pyx_t_12 = __pyx_v_n;
         __pyx_t_13 = __pyx_v_idx_tau;
-        __pyx_t_7 = ((((*__Pyx_BufPtrStrided1d(__pyx_t_9correlate_DTYPE_t *, __pyx_pybuffernd_timestamps.rcbuffer->pybuffer.buf, __pyx_t_11, __pyx_pybuffernd_timestamps.diminfo[0].strides)) - (*__Pyx_BufPtrStrided1d(__pyx_t_9correlate_DTYPE_t *, __pyx_pybuffernd_timestamps.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_timestamps.diminfo[0].strides))) < (*__Pyx_BufPtrStrided1d(__pyx_t_9correlate_DTYPE_t2 *, __pyx_pybuffernd_taus.rcbuffer->pybuffer.buf, __pyx_t_13, __pyx_pybuffernd_taus.diminfo[0].strides))) != 0);
+        __pyx_t_7 = ((((*__Pyx_BufPtrStrided1d(__pyx_t_4core_7analyze_9correlate_DTYPE_t *, __pyx_pybuffernd_timestamps.rcbuffer->pybuffer.buf, __pyx_t_11, __pyx_pybuffernd_timestamps.diminfo[0].strides)) - (*__Pyx_BufPtrStrided1d(__pyx_t_4core_7analyze_9correlate_DTYPE_t *, __pyx_pybuffernd_timestamps.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_timestamps.diminfo[0].strides))) < (*__Pyx_BufPtrStrided1d(__pyx_t_4core_7analyze_9correlate_DTYPE_t2 *, __pyx_pybuffernd_taus.rcbuffer->pybuffer.buf, __pyx_t_13, __pyx_pybuffernd_taus.diminfo[0].strides))) != 0);
         if (!__pyx_t_7) break;
 
-        /* "correlate.pyx":86
+        /* "core/analyze/correlate.pyx":88
  * 
  *             while timestamps[j] - timestamps[n]  < taus[idx_tau]:
  *                 G[idx_tau] += 1             # <<<<<<<<<<<<<<
@@ -2004,9 +2056,9 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
  *                 # if j == nbOfPhoton:
  */
         __pyx_t_14 = __pyx_v_idx_tau;
-        *__Pyx_BufPtrStrided1d(__pyx_t_9correlate_DTYPE_t2 *, __pyx_pybuffernd_G.rcbuffer->pybuffer.buf, __pyx_t_14, __pyx_pybuffernd_G.diminfo[0].strides) += 1;
+        *__Pyx_BufPtrStrided1d(__pyx_t_4core_7analyze_9correlate_DTYPE_t2 *, __pyx_pybuffernd_G.rcbuffer->pybuffer.buf, __pyx_t_14, __pyx_pybuffernd_G.diminfo[0].strides) += 1;
 
-        /* "correlate.pyx":87
+        /* "core/analyze/correlate.pyx":89
  *             while timestamps[j] - timestamps[n]  < taus[idx_tau]:
  *                 G[idx_tau] += 1
  *                 j += 1             # <<<<<<<<<<<<<<
@@ -2016,7 +2068,7 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
         __pyx_v_j = (__pyx_v_j + 1);
       }
 
-      /* "correlate.pyx":90
+      /* "core/analyze/correlate.pyx":92
  *                 # if j == nbOfPhoton:
  *                 #     break
  *             idx_tau += 1             # <<<<<<<<<<<<<<
@@ -2027,7 +2079,7 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
     }
   }
 
-  /* "correlate.pyx":69
+  /* "core/analyze/correlate.pyx":69
  * @cython.wraparound(False)
  * @cython.nonecheck(False)
  * def correlate(np.ndarray[DTYPE_t, ndim=1] timestamps, np.ndarray[DTYPE_t2, ndim=1] G, np.ndarray[DTYPE_t2, ndim=1] taus, int numLastPhoton):             # <<<<<<<<<<<<<<
@@ -2051,7 +2103,7 @@ static PyObject *__pyx_pf_9correlate_correlate(CYTHON_UNUSED PyObject *__pyx_sel
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_taus.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_timestamps.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("correlate.correlate", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("core.analyze.correlate.correlate", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
@@ -4693,8 +4745,11 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_RuntimeError, __pyx_k_RuntimeError, sizeof(__pyx_k_RuntimeError), 0, 0, 1, 1},
   {&__pyx_n_s_ValueError, __pyx_k_ValueError, sizeof(__pyx_k_ValueError), 0, 0, 1, 1},
   {&__pyx_n_s_cline_in_traceback, __pyx_k_cline_in_traceback, sizeof(__pyx_k_cline_in_traceback), 0, 0, 1, 1},
+  {&__pyx_n_s_core_analyze_correlate, __pyx_k_core_analyze_correlate, sizeof(__pyx_k_core_analyze_correlate), 0, 0, 1, 1},
   {&__pyx_n_s_correlate, __pyx_k_correlate, sizeof(__pyx_k_correlate), 0, 0, 1, 1},
   {&__pyx_kp_s_correlate_pyx, __pyx_k_correlate_pyx, sizeof(__pyx_k_correlate_pyx), 0, 0, 1, 0},
+  {&__pyx_n_s_end, __pyx_k_end, sizeof(__pyx_k_end), 0, 0, 1, 1},
+  {&__pyx_n_s_file, __pyx_k_file, sizeof(__pyx_k_file), 0, 0, 1, 1},
   {&__pyx_n_s_i, __pyx_k_i, sizeof(__pyx_k_i), 0, 0, 1, 1},
   {&__pyx_n_s_idx_tau, __pyx_k_idx_tau, sizeof(__pyx_k_idx_tau), 0, 0, 1, 1},
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
@@ -4711,6 +4766,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_numpy, __pyx_k_numpy, sizeof(__pyx_k_numpy), 0, 0, 1, 1},
   {&__pyx_kp_s_numpy_core_multiarray_failed_to, __pyx_k_numpy_core_multiarray_failed_to, sizeof(__pyx_k_numpy_core_multiarray_failed_to), 0, 0, 1, 0},
   {&__pyx_kp_s_numpy_core_umath_failed_to_impor, __pyx_k_numpy_core_umath_failed_to_impor, sizeof(__pyx_k_numpy_core_umath_failed_to_impor), 0, 0, 1, 0},
+  {&__pyx_n_s_print, __pyx_k_print, sizeof(__pyx_k_print), 0, 0, 1, 1},
   {&__pyx_n_s_range, __pyx_k_range, sizeof(__pyx_k_range), 0, 0, 1, 1},
   {&__pyx_n_s_size, __pyx_k_size, sizeof(__pyx_k_size), 0, 0, 1, 1},
   {&__pyx_n_s_taus, __pyx_k_taus, sizeof(__pyx_k_taus), 0, 0, 1, 1},
@@ -4831,7 +4887,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__9);
   __Pyx_GIVEREF(__pyx_tuple__9);
 
-  /* "correlate.pyx":69
+  /* "core/analyze/correlate.pyx":69
  * @cython.wraparound(False)
  * @cython.nonecheck(False)
  * def correlate(np.ndarray[DTYPE_t, ndim=1] timestamps, np.ndarray[DTYPE_t2, ndim=1] G, np.ndarray[DTYPE_t2, ndim=1] taus, int numLastPhoton):             # <<<<<<<<<<<<<<
@@ -4975,14 +5031,14 @@ static int __pyx_pymod_exec_correlate(PyObject *__pyx_pyinit_module)
   #if PY_MAJOR_VERSION < 3 && (__PYX_DEFAULT_STRING_ENCODING_IS_ASCII || __PYX_DEFAULT_STRING_ENCODING_IS_DEFAULT)
   if (__Pyx_init_sys_getdefaultencoding_params() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
-  if (__pyx_module_is_main_correlate) {
+  if (__pyx_module_is_main_core__analyze__correlate) {
     if (PyObject_SetAttrString(__pyx_m, "__name__", __pyx_n_s_main) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   }
   #if PY_MAJOR_VERSION >= 3
   {
     PyObject *modules = PyImport_GetModuleDict(); if (unlikely(!modules)) __PYX_ERR(0, 1, __pyx_L1_error)
-    if (!PyDict_GetItemString(modules, "correlate")) {
-      if (unlikely(PyDict_SetItemString(modules, "correlate", __pyx_m) < 0)) __PYX_ERR(0, 1, __pyx_L1_error)
+    if (!PyDict_GetItemString(modules, "core.analyze.correlate")) {
+      if (unlikely(PyDict_SetItemString(modules, "core.analyze.correlate", __pyx_m) < 0)) __PYX_ERR(0, 1, __pyx_L1_error)
     }
   }
   #endif
@@ -5014,7 +5070,7 @@ static int __pyx_pymod_exec_correlate(PyObject *__pyx_pyinit_module)
   if (__Pyx_patch_abc() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
 
-  /* "correlate.pyx":4
+  /* "core/analyze/correlate.pyx":4
  * cimport cython
  * 
  * import numpy as np             # <<<<<<<<<<<<<<
@@ -5026,7 +5082,7 @@ static int __pyx_pymod_exec_correlate(PyObject *__pyx_pyinit_module)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_np, __pyx_t_1) < 0) __PYX_ERR(0, 4, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "correlate.pyx":13
+  /* "core/analyze/correlate.pyx":13
  * # DTYPE for this, which is assigned to the usual NumPy runtime
  * # type info object.
  * DTYPE = np.uint64             # <<<<<<<<<<<<<<
@@ -5041,7 +5097,7 @@ static int __pyx_pymod_exec_correlate(PyObject *__pyx_pyinit_module)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_DTYPE, __pyx_t_2) < 0) __PYX_ERR(0, 13, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "correlate.pyx":19
+  /* "core/analyze/correlate.pyx":19
  * ctypedef np.uint64_t DTYPE_t
  * 
  * DTYPE2 = np.int             # <<<<<<<<<<<<<<
@@ -5056,19 +5112,19 @@ static int __pyx_pymod_exec_correlate(PyObject *__pyx_pyinit_module)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_DTYPE2, __pyx_t_1) < 0) __PYX_ERR(0, 19, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "correlate.pyx":69
+  /* "core/analyze/correlate.pyx":69
  * @cython.wraparound(False)
  * @cython.nonecheck(False)
  * def correlate(np.ndarray[DTYPE_t, ndim=1] timestamps, np.ndarray[DTYPE_t2, ndim=1] G, np.ndarray[DTYPE_t2, ndim=1] taus, int numLastPhoton):             # <<<<<<<<<<<<<<
  *     cdef int nbOfPhoton = np.size(timestamps)
  *     cdef int nbOfTau = np.size(taus)
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_9correlate_1correlate, NULL, __pyx_n_s_correlate); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 69, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_4core_7analyze_9correlate_1correlate, NULL, __pyx_n_s_core_analyze_correlate); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_correlate, __pyx_t_1) < 0) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "correlate.pyx":1
+  /* "core/analyze/correlate.pyx":1
  * import cython             # <<<<<<<<<<<<<<
  * cimport cython
  * 
@@ -5094,11 +5150,11 @@ static int __pyx_pymod_exec_correlate(PyObject *__pyx_pyinit_module)
   __Pyx_XDECREF(__pyx_t_2);
   if (__pyx_m) {
     if (__pyx_d) {
-      __Pyx_AddTraceback("init correlate", 0, __pyx_lineno, __pyx_filename);
+      __Pyx_AddTraceback("init core.analyze.correlate", 0, __pyx_lineno, __pyx_filename);
     }
     Py_DECREF(__pyx_m); __pyx_m = 0;
   } else if (!PyErr_Occurred()) {
-    PyErr_SetString(PyExc_ImportError, "init correlate");
+    PyErr_SetString(PyExc_ImportError, "init core.analyze.correlate");
   }
   __pyx_L0:;
   __Pyx_RefNannyFinishContext();
@@ -6105,6 +6161,13 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObjec
 }
 #endif
 
+/* None */
+    static CYTHON_INLINE long __Pyx_mod_long(long a, long b) {
+    long r = a % b;
+    r += ((r != 0) & ((r ^ b) < 0)) * b;
+    return r;
+}
+
 /* PyErrFetchRestore */
     #if CYTHON_FAST_THREAD_STATE
 static CYTHON_INLINE void __Pyx_ErrRestoreInState(PyThreadState *tstate, PyObject *type, PyObject *value, PyObject *tb) {
@@ -6795,6 +6858,112 @@ static void __Pyx_ReleaseBuffer(Py_buffer *view) {
     }
 }
 
+/* Print */
+      #if !CYTHON_COMPILING_IN_PYPY && PY_MAJOR_VERSION < 3
+static PyObject *__Pyx_GetStdout(void) {
+    PyObject *f = PySys_GetObject((char *)"stdout");
+    if (!f) {
+        PyErr_SetString(PyExc_RuntimeError, "lost sys.stdout");
+    }
+    return f;
+}
+static int __Pyx_Print(PyObject* f, PyObject *arg_tuple, int newline) {
+    int i;
+    if (!f) {
+        if (!(f = __Pyx_GetStdout()))
+            return -1;
+    }
+    Py_INCREF(f);
+    for (i=0; i < PyTuple_GET_SIZE(arg_tuple); i++) {
+        PyObject* v;
+        if (PyFile_SoftSpace(f, 1)) {
+            if (PyFile_WriteString(" ", f) < 0)
+                goto error;
+        }
+        v = PyTuple_GET_ITEM(arg_tuple, i);
+        if (PyFile_WriteObject(v, f, Py_PRINT_RAW) < 0)
+            goto error;
+        if (PyString_Check(v)) {
+            char *s = PyString_AsString(v);
+            Py_ssize_t len = PyString_Size(v);
+            if (len > 0) {
+                switch (s[len-1]) {
+                    case ' ': break;
+                    case '\f': case '\r': case '\n': case '\t': case '\v':
+                        PyFile_SoftSpace(f, 0);
+                        break;
+                    default:  break;
+                }
+            }
+        }
+    }
+    if (newline) {
+        if (PyFile_WriteString("\n", f) < 0)
+            goto error;
+        PyFile_SoftSpace(f, 0);
+    }
+    Py_DECREF(f);
+    return 0;
+error:
+    Py_DECREF(f);
+    return -1;
+}
+#else
+static int __Pyx_Print(PyObject* stream, PyObject *arg_tuple, int newline) {
+    PyObject* kwargs = 0;
+    PyObject* result = 0;
+    PyObject* end_string;
+    if (unlikely(!__pyx_print)) {
+        __pyx_print = PyObject_GetAttr(__pyx_b, __pyx_n_s_print);
+        if (!__pyx_print)
+            return -1;
+    }
+    if (stream) {
+        kwargs = PyDict_New();
+        if (unlikely(!kwargs))
+            return -1;
+        if (unlikely(PyDict_SetItem(kwargs, __pyx_n_s_file, stream) < 0))
+            goto bad;
+        if (!newline) {
+            end_string = PyUnicode_FromStringAndSize(" ", 1);
+            if (unlikely(!end_string))
+                goto bad;
+            if (PyDict_SetItem(kwargs, __pyx_n_s_end, end_string) < 0) {
+                Py_DECREF(end_string);
+                goto bad;
+            }
+            Py_DECREF(end_string);
+        }
+    } else if (!newline) {
+        if (unlikely(!__pyx_print_kwargs)) {
+            __pyx_print_kwargs = PyDict_New();
+            if (unlikely(!__pyx_print_kwargs))
+                return -1;
+            end_string = PyUnicode_FromStringAndSize(" ", 1);
+            if (unlikely(!end_string))
+                return -1;
+            if (PyDict_SetItem(__pyx_print_kwargs, __pyx_n_s_end, end_string) < 0) {
+                Py_DECREF(end_string);
+                return -1;
+            }
+            Py_DECREF(end_string);
+        }
+        kwargs = __pyx_print_kwargs;
+    }
+    result = PyObject_Call(__pyx_print, arg_tuple, kwargs);
+    if (unlikely(kwargs) && (kwargs != __pyx_print_kwargs))
+        Py_DECREF(kwargs);
+    if (!result)
+        return -1;
+    Py_DECREF(result);
+    return 0;
+bad:
+    if (kwargs != __pyx_print_kwargs)
+        Py_XDECREF(kwargs);
+    return -1;
+}
+#endif
+
 /* Declarations */
       #if CYTHON_CCOMPLEX
   #ifdef __cplusplus
@@ -7324,6 +7493,43 @@ raise_neg_overflow:
         "can't convert negative value to int");
     return (int) -1;
 }
+
+/* PrintOne */
+      #if !CYTHON_COMPILING_IN_PYPY && PY_MAJOR_VERSION < 3
+static int __Pyx_PrintOne(PyObject* f, PyObject *o) {
+    if (!f) {
+        if (!(f = __Pyx_GetStdout()))
+            return -1;
+    }
+    Py_INCREF(f);
+    if (PyFile_SoftSpace(f, 0)) {
+        if (PyFile_WriteString(" ", f) < 0)
+            goto error;
+    }
+    if (PyFile_WriteObject(o, f, Py_PRINT_RAW) < 0)
+        goto error;
+    if (PyFile_WriteString("\n", f) < 0)
+        goto error;
+    Py_DECREF(f);
+    return 0;
+error:
+    Py_DECREF(f);
+    return -1;
+    /* the line below is just to avoid C compiler
+     * warnings about unused functions */
+    return __Pyx_Print(f, NULL, 0);
+}
+#else
+static int __Pyx_PrintOne(PyObject* stream, PyObject *o) {
+    int res;
+    PyObject* arg_tuple = PyTuple_Pack(1, o);
+    if (unlikely(!arg_tuple))
+        return -1;
+    res = __Pyx_Print(stream, arg_tuple, 1);
+    Py_DECREF(arg_tuple);
+    return res;
+}
+#endif
 
 /* CIntToPy */
       static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value) {

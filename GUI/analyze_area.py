@@ -20,29 +20,32 @@ class Analyze_area():
         self.frame_common = tk.LabelFrame(self.masterFrame, text="Common", borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frame_common.pack(side="top", fill="both", expand=True)
 
+        self.frame_common_cmd = tk.LabelFrame(self.frame_common, text="cmd", borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frame_common_cmd.pack(side="top", fill="both", expand=True)
+
         #combo box anlayse Source
-        label = ttk.Label(self.frame_common, text='Source')
-        label.pack(side=tk.LEFT, padx=2, pady=2)
+        label = ttk.Label(self.frame_common_cmd, text='Source')
+        label.grid(row=0, column=0)
         self.analyzeComboBoxSource_sv = tk.StringVar()
-        cb = ttk.Combobox(self.frame_common, width=25, justify=tk.CENTER, textvariable=self.analyzeComboBoxSource_sv, values='')
+        cb = ttk.Combobox(self.frame_common_cmd, width=25, justify=tk.CENTER, textvariable=self.analyzeComboBoxSource_sv, values='')
         cb.bind('<<ComboboxSelected>>', self.changeAnalyzeSource)
         cb['values'] = ('Whole', 'Time Zoom', 'Selection')
         self.analyzeComboBoxSource_sv.set('Time Zoom')
-        cb.pack(side=tk.LEFT, padx=2, pady=2)
+        cb.grid(row=0, column=1)
 
         #ProgressBar
         """
         If your program cannot accurately depict the relative progress that this widget is supposed to display, use mode='indeterminate'. In this mode, a rectangle bounces back and forth between the ends of the widget once you use the .start() method.
         If your program has some measure of relative progress, use mode='determinate'. In this mode, your program can move the indicator to a specified position along the widget's track.
         """
-        self.analyzePgb = ttk.Progressbar(self.frame_common, orient="horizontal", length=15)
-        self.analyzePgb.pack(side=tk.LEFT, fill=tk.X)
+        self.analyzePgb = ttk.Progressbar(self.frame_common_cmd, orient="horizontal", length=150, mode='indeterminate')
+        self.analyzePgb.grid(row=1, column=0, columnspan=2)
         #self.analyzePgb.ste
 
         #Live Analysis ?
         self.isLive = tk.IntVar()
-        self.isLiveCheckBox =  ttk.Checkbutton(self.frame_common, text="Live ?", variable=self.isLive)
-        self.isLiveCheckBox.pack(side=tk.LEFT, fill=tk.X)
+        self.isLiveCheckBox =  ttk.Checkbutton(self.frame_common_cmd, text="Live ?", variable=self.isLive)
+        self.isLiveCheckBox.grid(row=0, column=5)
 
         # Graph
         self.frame_common_graph = tk.LabelFrame(self.frame_common, text="Graph command", borderwidth=self.appearenceParam.frameLabelBorderWidth)

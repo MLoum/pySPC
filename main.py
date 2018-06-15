@@ -1,5 +1,5 @@
 
-from  Controller.Controller import Controller
+from Controller.Controller import Controller
 
 
 if __name__ == "__main__":

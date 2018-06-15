@@ -49,6 +49,33 @@ class Graph_Results(InteractiveGraph):
         self.frame = tk.Frame(self.masterFrame)
         self.frame.pack(side="top", fill="both", expand=True)
 
+
+
+
+        # fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex=True,
+        #                        gridspec_kw={'height_ratios': [3, 1]})
+        # plt.subplots_adjust(hspace=0)
+        # ax[0].semilogx(tau, Gn)
+        # for a in ax:
+        #     a.grid(True);
+        #     a.grid(True, which='minor', lw=0.3)
+        # ax[0].plot(tau, fitres.best_fit)
+        # ax[1].plot(tau, fitres.residual * weights, 'k')
+        # ym = np.abs(fitres.residual * weights).max()
+        # ax[1].set_ylim(-ym, ym)
+        # ax[1].set_xlim(bins[0] * unit, bins[-1] * unit);
+        # tau_diff_us = fitres.values['tau_diff'] * 1e6
+        # msg = ((r'$G(0)-1$ = {A0:.2f}' + '\n' + r'$\tau_D$ = {tau_diff_us:.0f} μs')
+        #        .format(A0=fitres.values['A0'], tau_diff_us=tau_diff_us))
+        # ax[0].text(.75, .9, msg,
+        #            va='top', ha='left', transform=ax[0].transAxes, fontsize=18);
+        # ax[0].set_ylabel('G(τ)')
+        # ax[1].set_ylabel('residuals')
+        # ax[0].set_title('Donor-Acceptor CCF')
+        # ax[1].set_xlabel('Time Lag, τ (s)');
+
+
+
         self.figure = plt.Figure(figsize=figsize, dpi=dpi)
         #[left, bottom, width, height]
         self.ax = self.figure.add_axes([0.08, 0.3, 0.9, 0.65], xticklabels=[])

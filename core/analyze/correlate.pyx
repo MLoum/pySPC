@@ -66,28 +66,48 @@ ctypedef np.int_t DTYPE_t2
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-def correlate(np.ndarray[DTYPE_t, ndim=1] timestamps, np.ndarray[DTYPE_t2, ndim=1] G, np.ndarray[DTYPE_t2, ndim=1] taus, int numLastPhoton):
+def correlate(np.ndarray[DTYPE_t, ndim=1] timestamps, np.ndarray[DTYPE_t2, ndim=1] G, np.ndarray[DTYPE_t2, ndim=1] taus, int numLastPhoton, int nb_of_pt_per_cascade):
     cdef int nbOfPhoton = np.size(timestamps)
     cdef int nbOfTau = np.size(taus)
 
     #tau holds the delay at which we want to compute the correlation
-    cdef int n
+    cdef int n, tau
     cdef int j, i, idx_tau
+    cdef int nb_of_cascade=10
 
-    for n in range(numLastPhoton):
-        idx_tau = 0
-        j = n + 1
-        while(idx_tau < nbOfTau):
-            # First tau is not necesseraly 1
-            while timestamps[j] - timestamps[n]  < taus[0] - 1:
-                j += 1
 
-            while timestamps[j] - timestamps[n]  < taus[idx_tau]:
-                G[idx_tau] += 1
-                j += 1
-                # if j == nbOfPhoton:
-                #     break
-            idx_tau += 1
+    for tau in range(nb_of_cascade):
+        timestamps /= 2
+        binned_timestamps = np.bincount(timestamps)
+        binned_timestamps = binned_timestamps[np.nonzero(binned_timestamps)]
+        for n in range(nb_of_pt_per_cascade):
+            binned_timestamps = np.diff(binned_timestamps)
+            G[idx_tau + n] = np.size(np.where( binned_timestamps == n))
+
+        idx_tau += nb_of_pt_per_cascade
+
+
+
+    # for n in range(numLastPhoton):
+    #     if n%100000==0:
+    #         print(n)
+    #     idx_tau = 0
+    #     j = n + 1
+    #     while(idx_tau < nbOfTau):
+    #         # First tau is not necesseraly 1
+    #         while timestamps[j] - timestamps[n]  < taus[0] - 1:
+    #             j += 1
+    #
+    #         while timestamps[j] - timestamps[n]  < taus[idx_tau]:
+    #             G[idx_tau] += 1
+    #             j += 1
+    #             # if j == nbOfPhoton:
+    #             #     break
+    #         idx_tau += 1
+
+
+
+
 
 # def inverseCorrelation(np.ndarray[DTYPE_t, ndim=1] timestamps, np.ndarray[DTYPE_t2, ndim=1] Gn, DTYPE_t t_start, DTYPE_t t_end):
 #     cdef int nbOfPhoton = np.size(timestamps)

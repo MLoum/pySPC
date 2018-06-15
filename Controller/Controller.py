@@ -76,7 +76,7 @@ class Controller:
         self.model.new_exp("file", [file_path])
 
         # FIXME le channel 0 is hardcoded
-        self.view.currentTimeWindow = [0, self.model.convert_ticks_in_seconds(self.model.data.channels[0].endTick) * 1E6]
+        self.view.currentTimeWindow = [0, self.model.convert_ticks_in_seconds(self.model.data.channels[0].end_tick) * 1E6]
         self.view.is_a_FileLoaded = True
         self.view.currentChannel = 0
         self.set_chrono_bin_size_s(0.01)
@@ -112,7 +112,7 @@ class Controller:
 
         self.view.archi.status_area.setFileName(self.model.fileName)
         c = self.model.data.channels[self.view.currentChannel]
-        self.view.archi.status_area.setNbOfPhotonAndCPS(c.nbOfTick, c.CPS)
+        self.view.archi.status_area.setNbOfPhotonAndCPS(c.nb_of_tick, c.CPS)
 
     def update_analyze(self):
         if self.view.is_a_FileLoaded is False:
@@ -130,14 +130,14 @@ class Controller:
             binSize_s = 100
 
             binInTick = self.model.convert_seconds_in_ticks(binSize_s)
-            self.model.data.results.chronograms[channel] = self.model.data.chronogram(channel, t1_tick, t2_tick,
+            self.model.results.chronograms[channel] = self.model.chronogram(channel, t1_tick, t2_tick,
                                                                                       binInTick)
             # self.view.plotMainChronogram(self.model.results.chronograms[channel])
             # TODO plot dans la fenetre result.
 
         elif self.view.currentOperation == "micro":
-            self.model.data.microTimeLifeTime(channel, t1_tick, t2_tick)
-            guiGraphResult.plot("lifetime", self.model.results.lifeTimeMeasurements[channel])
+            self.model.micro_time_life_time(channel, t1_tick, t2_tick)
+            guiGraphResult.plot("lifetime", self.model.results.lifetimes[channel])
 
         elif self.view.currentOperation == "FCS":
             gui = self.view.archi.analyze_area.FCS_TimeAnalyze_gui
@@ -145,7 +145,9 @@ class Controller:
             channel1 = channel2 = channel
 
             max_correlTime_ms = float(gui.maxCorrelTime_sv.get())
-            self.model.data.FCS(channel1, channel2, t1_tick, t2_tick, max_correlTime_ms)
+            self.view.archi.analyze_area.analyzePgb.start()
+            self.model.FCS(channel1, channel2, t1_tick, t2_tick, max_correlTime_ms)
+            self.view.archi.analyze_area.analyzePgb.stop()
             guiGraphResult.plot("FCS", self.model.results.FCS_Measurements[channel])
 
         elif self.view.currentOperation == "DLS":
@@ -155,7 +157,9 @@ class Controller:
             max_correlTime_ms = float(gui.maxCorrelTime_sv.get())
             start_time_mu_s = float(gui.start_time_micro_sv.get())
             precision = float(gui.corel_precision_sv.get())
-            self.model.data.DLS(channel1, channel2, t1_tick, t2_tick, max_correlTime_ms, start_time_mu_s, precision)
+            self.view.archi.analyze_area.analyzePgb.start()
+            self.model.DLS(channel1, channel2, t1_tick, t2_tick, max_correlTime_ms, start_time_mu_s, precision)
+            self.view.archi.analyze_area.analyzePgb.stop()
             guiGraphResult.plot("DLS", self.model.results.DLS_Measurements[channel])
 
     # def updateNavigation(self, channel, t1_microsec, t2_microsec, binSize_s=0.01):
@@ -170,7 +174,7 @@ class Controller:
         t1_tick, t2_tick = self.model.convert_seconds_in_ticks(t1_microsec / 1E6), self.model.convert_seconds_in_ticks(
             t2_microsec / 1E6)
         binInTick = self.model.convert_seconds_in_ticks(binSize_s)
-        self.model.data.results.chronograms[channel] = self.model.data.chronogram(channel, t1_tick, t2_tick, binInTick)
+        self.model.results.chronograms[channel] = self.model.chronogram(channel, t1_tick, t2_tick, binInTick)
         self.view.archi.navigation_area.timeZoom.graph_timeZoom.plot(self.model.results.chronograms[channel])
 
         self.view.archi.navigation_area.graph_navigation.plot(self.model.results.navigationChronogram,
@@ -225,6 +229,7 @@ class Controller:
         :param params: list of paramaters for the fit
         xlims_idx : index of the limits of the x axis where to perform the fit.
         :return:
+
         """
         data, gui, fit_plot_mode = None, None, None
 
@@ -232,7 +237,7 @@ class Controller:
         # TODO cursor with fit limits.
 
         if analyze_type == "lifetime":
-            data = self.model.results.lifeTimeMeasurements[channel]
+            data = self.model.results.lifetimes[channel]
             gui = self.view.archi.analyze_area.lifeTimeAnalyze_gui.guiForFitOperation_Lifetime
             fit_plot_mode = "lifetime"
         elif analyze_type == "DLS":
@@ -246,18 +251,18 @@ class Controller:
 
         if data is not None:
             if mode == "eval":
-                data.setModel(model_name)
-                data.setParams(params)
+                data.set_model(model_name)
+                data.set_params(params)
                 data.evalParams(idx_start, idx_end)
 
             elif mode == "guess":
-                data.setModel(model_name)
+                data.set_model(model_name)
                 data.guess(idx_start, idx_end)
                 gui.setParamsFromFit(data.params)
 
             elif mode == "fit":
-                data.setModel(model_name)
-                data.setParams(params)
+                data.set_model(model_name)
+                data.set_params(params)
                 fitResults = data.fit(idx_start, idx_end)
                 # TODO set option to tell if user want fit results exported to fit params
                 gui.setParamsFromFit(data.params)
@@ -267,7 +272,7 @@ class Controller:
 
     def shift_IR(self, main_width, secondary_width, secondary_amplitude, time_offset):
         channel = self.view.currentChannel
-        lf = self.model.results.lifeTimeMeasurements[channel]
+        lf = self.model.results.lifetimes[channel]
         lf.generateArtificialIR(main_width, secondary_width, secondary_amplitude, time_offset)
 
     def export_graph_result(self, mode, file_path):

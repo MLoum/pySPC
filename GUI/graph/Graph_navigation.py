@@ -37,11 +37,17 @@ class Graph_navigation(InteractiveGraph):
 
         #FIXME test if 1000 bins ?
         # reduce nb of point to 1000 (approximative size in pixel
-        skipsize = int(mainChrono.nbOfBin / 1000)
-        idx = np.arange(0, len(mainChrono.data), skipsize)
+        min_nb_of_bin = 1000
+        if mainChrono.nbOfBin  > 1000:
+            skipsize = int(mainChrono.nbOfBin / 1000)
+            idx = np.arange(0, len(mainChrono.data), skipsize)
+            plot = mainChrono.data[idx]
+            plotX = mainChrono.xAxis[idx]
+        else:
+            plot = mainChrono.data
+            plotX = mainChrono.xAxis
 
-        plot = mainChrono.data[idx]
-        plotX = mainChrono.xAxis[idx]
+
 
         self.ax.plot(plotX, plot)
         self.ax.set_xlim(mainChrono.xAxis[0], mainChrono.xAxis[-1])

@@ -1,7 +1,11 @@
 import numpy as np
 
 
-class ExperimentParam(object):
+class Experiment_param(object):
+    """
+
+
+    """
     def __init__(self):
         self.meta = None
         self.nbOfChannel = None

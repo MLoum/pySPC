@@ -1,0 +1,17 @@
+Jupyter ask for a token.
+
+Windows :
+1. Laucnh the calculation of a cell. Pycharm ask for a token
+
+2. open a line command (cmd) and type jupyter notebook list
+
+3. copy past the token in the pycyharm's prompt
+
+Running jupyter notebook list will display all of the running servers on your machine. So doing this in the terminal after starting a cell in PyCharm will result in output similar to
+Currently running servers:
+http://127.0.0.1:8888/?token=f85145dda03dc598bbbfa6e53b93cbcb27629ea00cfd2105 :: /home/....
+which contains the appropriate token for authenticating.
+
+
+Source :
+https://stackoverflow.com/questions/41736309/jupyter-notebook-in-pycharm

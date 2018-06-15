@@ -1,15 +1,16 @@
-from multiprocessing import Pool
+import multiprocessing as mp
 
 import numpy as np
 from lmfit import minimize, Parameters, Model
 from lmfit.models import LinearModel, ExponentialModel
 
-from .correlate import correlate
+# from .correlate import correlate
 
 from threading import Thread
 
+from core.analyze.pycorrelate import pcorrelate
 
-
+import numba
 
 
 
@@ -22,7 +23,7 @@ def update_param_vals(pars, prefix, **kwargs):
             pars[pname].value = val
     return pars
 
-from .Measurement import Measurements
+from core.analyze.Measurement import Measurements
 
 class OneSpeDiffusion(Model):
     """A exponential decay with a shift in time, with four Parameters ``t0``, ``amp``, ``tau`` and ``cst``.
@@ -76,28 +77,86 @@ class CorrelationMeasurement(Measurements):
 
         self.create_list_time_correlation(startCorrelationTimeInTick, maxCorrelationTimeInTick, pointPerDecade=nbOfPointPerCascade_aka_B)
         self.data = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)
-        correlate(timestamps1, self.data, self.timeAxis, self.numLastPhoton)
-        self.normalize_correlation()
+
+        # correlate(timestamps, self.data, self.timeAxis, self.numLastPhoton)
+        self.data = pcorrelate(t=timestamps1, u=timestamps1, bins=self.timeAxis, normalize=True)
+        # self.pcorrelate_me(timestamps1, self.timeAxis, self.data)
+
+        # self.normalize_correlation()
         self.scale_time_axis()
+        self.timeAxis = self.timeAxis[:-1]
 
-    def correlateFCS_multi(self, timestamps1, timestamps2, maxCorrelationTimeInTick):
-        self.maxTimeInTick = timestamps1[-1]
-        self.numLastPhoton = np.searchsorted(timestamps1, self.maxTimeInTick - maxCorrelationTimeInTick)
-        self.endTimeCorrelation_tick = timestamps1[self.numLastPhoton]
+    @numba.jit(nopython=True)
+    def pcorrelate_me(self, timestamps, taus, G):
 
-        nbOfChunk = 10
-        timeStamp1_chunck = np.array_split(timestamps1, nbOfChunk)
-        timeStamp2_chunck = np.array_split(timestamps2, nbOfChunk)
-        self.create_list_time_correlation(maxCorrelationTimeInTick, pointPerDecade=10)
-        correlation_chunck = np.zeros(self.nbOfCorrelationPoint, nbOfChunk)
+        numLastPhoton = np.size(timestamps)
+        nbOfTau = np.size(taus)
+        for n in range(numLastPhoton):
+            # if n%100000==0:
+            #     print(n)
+            idx_tau = 0
+            j = n + 1
+            while(idx_tau < nbOfTau):
+                # First tau is not necesseraly 1
+                while timestamps[j] - timestamps[n]  < taus[0] - 1:
+                    j += 1
+
+                while timestamps[j] - timestamps[n]  < taus[idx_tau]:
+                    G[idx_tau] += 1
+                    j += 1
+                    # if j == nbOfPhoton:
+                    #     break
+                idx_tau += 1
+
+    def correlateFCS_multi(self, timestamps_1, timestamps_2, max_correlation_time_in_tick, start_correlation_time_in_tick=1, nb_of_point_per_cascade_aka_B=10, tick_duration_micros=1):
+        self.tick_duration_micros = tick_duration_micros
+
+        # TODO nb_of_chunk based on max correlation time and the max Time of the file.
+
+        # nb_of_chunk = 10
+        # nb_of_workers = 4
         #
-        # pool = Pool(processes=3)
-        # print(pool.map(target = correlate, numbers))
+        # # Split the timeStamps in 10 (?) array
+        # self.maxTimeInTick_1 = timestamps_1[-1]
+        # self.maxTimeInTick_2 = timestamps_2[-1]
+        #
+        # chunks_of_timestamps_1 = np.split(timestamps_1, nb_of_chunk)
+        # chunks_of_timestamps_2 = np.split(timestamps_2, nb_of_chunk)
+        #
+        #
+        #
+        #
+        # self.numLastPhoton = np.searchsorted(timestamps_1, self.maxTimeInTick - max_correlation_time_in_tick)
+        # self.endTimeCorrelation_tick = timestamps_1[self.numLastPhoton]
+        #
+        # self.create_list_time_correlation(start_correlation_time_in_tick, max_correlation_time_in_tick,
+        #                                   pointPerDecade=nb_of_point_per_cascade_aka_B)
+        # self.data = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)
+        #
+        # processes = [mp.Process(target=pcorrelate, args=(chunks_of_timestamps_1[i], chunks_of_timestamps_2[i], bins,
+        #                                                  self.timeAxis, normalize=True)) for x in range(nb_of_workers)]
+        # # Run processes
+        # for p in processes:
+        #     p.start()
+        #
+        # # Exit the completed processes
+        # for p in processes:
+        #     p.join()
+
+
+
+        # correlate(timestamps, self.data, self.timeAxis, self.numLastPhoton)
+        # self.data = pcorrelate(t=timestamps_1, u=timestamps_1, bins=self.timeAxis, normalize=True)
+        # self.pcorrelate_me(timestamps1, self.timeAxis, self.data)
+
+        # self.normalize_correlation()
+        # self.scale_time_axis()
+        # self.timeAxis = self.timeAxis[:-1]
 
     def normalize_correlation(self):
         self.data = self.data.astype(np.float64)
         B = self.pointPerDecade
-        for n in range(1, self.nbOfcascade):
+        for n in range(1, self.nb_of_cascade):
             self.data[n * B:(n + 1) * B] /= np.power(2, n)
 
         self.data *= (self.maxTimeInTick - self.timeAxis) / (self.numLastPhoton ** 2)
@@ -120,7 +179,7 @@ class CorrelationMeasurement(Measurements):
         # How many "cascade" do we need ?
         # maxCorrelationTime_tick =  2^(n_casc - 1/B)
         # then ln (maxCorrelationTime_tick) = (n_casc - 1/B) ln 2
-        self.nbOfcascade = int(np.log(maxCorrelationTime_tick) / np.log(2) + 1 / B)
+        self.nb_of_cascade = int(np.log(maxCorrelationTime_tick) / np.log(2) + 1 / B)
 
         """
                  |
@@ -132,21 +191,21 @@ class CorrelationMeasurement(Measurements):
 
         """
         # TODO Total vectorisation ?
-        self.nbOfCorrelationPoint = int(self.nbOfcascade * B)  # +1 ?
+        self.nbOfCorrelationPoint = int(self.nb_of_cascade * B)  # +1 ?
         taus = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)
         taus[:B] = np.arange(B) + 1
-        for n in range(1, self.nbOfcascade):
+        for n in range(1, self.nb_of_cascade):
             taus[n * B:(n + 1) * B] = taus[:B] * np.power(2, n) + taus[n * B - 1]
         taus += startCorrelationTimeInTick
         self.timeAxis = taus
 
-    def setParams(self, params):
+    def set_params(self, params):
         if self.modelName == "1 Diff":
             self.params['G0'].set(value=params[0], vary=True, min=0, max=None)
             self.params['tdiff'].set(value=params[1], vary=True, min=0, max=None)
             self.params['cst'].set(value=params[2], vary=True, min=0, max=None)
 
-    def setModel(self, modelName):
+    def set_model(self, modelName):
         # il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *
         if modelName == "1 Diff":
             self.modelName = modelName
@@ -159,7 +218,7 @@ class FCSMeasurements(CorrelationMeasurement):
         super().__init__(correlationCurve, time_axis_)
 
 
-    def setParams(self, params):
+    def set_params(self, params):
         if self.modelName == "1 Diff":
             self.params['G0'].set(value=params[0],  vary=True, min=0, max=None)
             self.params['tdiff'].set(value=params[1], vary=True, min=0, max=None)
@@ -167,7 +226,7 @@ class FCSMeasurements(CorrelationMeasurement):
 
 
 
-    def setModel(self, modelName):
+    def set_model(self, modelName):
         #il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *
         if modelName == "1 Diff":
             self.modelName = modelName

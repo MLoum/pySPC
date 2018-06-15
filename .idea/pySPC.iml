@@ -8,6 +8,10 @@
   <component name="PyDocumentationSettings">
     <option name="renderExternalDocumentation" value="true" />
   </component>
+  <component name="ReSTService">
+    <option name="workdir" value="C:\TRAVAIL\recherche\code\pySPC\doc" />
+    <option name="DOC_DIR" value="C:\TRAVAIL\recherche\code\pySPC\doc" />
+  </component>
   <component name="TestRunnerService">
     <option name="projectConfiguration" value="Nosetests" />
     <option name="PROJECT_TEST_RUNNER" value="Nosetests" />
