@@ -1,0 +1,396 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Controller &#8212; pySPC 0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Controller</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+
+<span class="c1"># Note on MVC pattern :</span>
+<span class="c1"># https://realpython.com/blog/python/the-model-view-controller-mvc-paradigm-summarized-with-legos/</span>
+<span class="c1"># http://sametmax.com/quest-de-que-mvc-et-a-quoi-ca-sert/</span>
+
+
+<span class="c1"># http://cirw.in//blog/time-to-move-on.html</span>
+
+<span class="c1"># De toute façon, aucun MVC n’est parfait, et un peu de vue dégouline parfois sur le contrôleur,</span>
+<span class="c1"># un peu de contrôleur coule dans le modèle, ou inversement. Il ne sert à rien d’être un nazi du MVC,</span>
+<span class="c1"># c’est une bonne pratique, pas un dogme religieux.</span>
+
+<span class="kn">import</span> <span class="nn">tkinter</span> <span class="k">as</span> <span class="nn">Tk</span>
+
+<span class="kn">from</span> <span class="nn">matplotlib.figure</span> <span class="k">import</span> <span class="n">Figure</span>
+<span class="kn">from</span> <span class="nn">matplotlib.backends.backend_tkagg</span> <span class="k">import</span> <span class="n">FigureCanvasTkAgg</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">core</span> <span class="k">import</span> <span class="n">ExpParam</span>
+<span class="kn">from</span> <span class="nn">core</span> <span class="k">import</span> <span class="n">Results</span>
+<span class="kn">from</span> <span class="nn">core</span> <span class="k">import</span> <span class="n">Data</span>
+<span class="kn">from</span> <span class="nn">core</span> <span class="k">import</span> <span class="n">Experiment</span>
+
+<span class="kn">from</span> <span class="nn">GUI</span> <span class="k">import</span> <span class="n">View</span>
+<span class="kn">from</span> <span class="nn">GUI</span> <span class="k">import</span> <span class="n">guiForFitOperation</span>
+
+<span class="kn">import</span> <span class="nn">shelve</span>
+
+
+<div class="viewcode-block" id="Controller"><a class="viewcode-back" href="../index.html#Controller.Controller">[docs]</a><span class="k">class</span> <span class="nc">Controller</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Tk</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_of_exp</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_current_exp</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">Experiment</span><span class="o">.</span><span class="n">Experiment</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span> <span class="o">=</span> <span class="n">View</span><span class="o">.</span><span class="n">View</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="c1"># Has to be done when all have been initialized</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">dock</span><span class="p">()</span>
+        <span class="c1"># self.createMenuCommands()</span>
+        <span class="c1"># self.createShortCut()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">protocol</span><span class="p">(</span><span class="s2">&quot;WM_DELETE_WINDOW&quot;</span><span class="p">,</span>
+                           <span class="bp">self</span><span class="o">.</span><span class="n">on_quit</span><span class="p">)</span>  <span class="c1"># Exit when x pressed, notice that its the name of the function &#39;self.handler&#39; and not a method call self.handler()</span>
+
+        <span class="c1"># self.view.sidepanel.plotBut.bind(&quot;&lt;Button&gt;&quot;,self.my_plot)</span>
+        <span class="c1"># self.view.sidepanel.clearButton.bind(&quot;&lt;Button&gt;&quot;,self.clear)</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;pySPC&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">deiconify</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
+
+    <span class="c1">############</span>
+
+    <span class="k">def</span> <span class="nf">change_current_exp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">num</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_of_exp</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_current_exp</span> <span class="o">=</span> <span class="n">num</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_of_exp</span><span class="p">[</span><span class="n">num</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_all</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">close_exp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+        <span class="k">del</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_of_exp</span><span class="p">[</span><span class="n">num</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">num</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">change_current_exp</span><span class="p">(</span><span class="n">num</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">add_exp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_of_exp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Experiment</span><span class="o">.</span><span class="n">Experiment</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">change_current_exp</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">open_SPC_File</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">):</span>
+        <span class="c1"># filePath = self.view.menu.askOpenFile(&#39;Choose the SPC file to analyse (.spc, .pt3, .ttt, ...&#39;)</span>
+        <span class="c1"># TODO test extension</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">new_exp</span><span class="p">(</span><span class="s2">&quot;file&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">file_path</span><span class="p">])</span>
+
+        <span class="c1"># FIXME le channel 0 is hardcoded</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTimeWindow</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">convert_ticks_in_seconds</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">endTick</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1E6</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">is_a_FileLoaded</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentChannel</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_chrono_bin_size_s</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_status</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_navigation</span><span class="p">()</span>
+
+        <span class="c1"># self.view.archi.navigation_area.timeZoom.graph_timeZoom.plot(self.model.results.mainChronogram)</span>
+        <span class="c1"># self.view.plotMainPCH(self.model.results.mainPCH)</span>
+        <span class="c1"># self.view.archi.navigation_area.graph_navigation.plot(self.model.results.mainChronogram)</span>
+
+    <span class="k">def</span> <span class="nf">generate_poisson_noise_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_s</span><span class="p">,</span> <span class="n">count_per_secound</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">new_exp</span><span class="p">(</span><span class="s2">&quot;generate&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;Poisson&quot;</span><span class="p">,</span> <span class="n">time_s</span><span class="p">,</span> <span class="n">count_per_secound</span><span class="p">])</span>
+
+        <span class="c1"># TODO don&#39;t duplicate from open SPC.</span>
+        <span class="c1"># FIXME le channel 0 is hardcoded</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTimeWindow</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">convert_ticks_in_seconds</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">endTick</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1E6</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">is_a_FileLoaded</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_status</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_navigation</span><span class="p">()</span>
+
+    <span class="c1">############</span>
+
+    <span class="k">def</span> <span class="nf">update_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_status</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_navigation</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_analyze</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">update_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">is_a_FileLoaded</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">status_area</span><span class="o">.</span><span class="n">setFileName</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fileName</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentChannel</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">status_area</span><span class="o">.</span><span class="n">setNbOfPhotonAndCPS</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">nbOfTick</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">CPS</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">update_analyze</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">is_a_FileLoaded</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">t1_microsec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTimeWindow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">t2_microsec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTimeWindow</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">t1_tick</span><span class="p">,</span> <span class="n">t2_tick</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">convert_seconds_in_ticks</span><span class="p">(</span><span class="n">t1_microsec</span> <span class="o">/</span> <span class="mf">1E6</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">convert_seconds_in_ticks</span><span class="p">(</span>
+            <span class="n">t2_microsec</span> <span class="o">/</span> <span class="mf">1E6</span><span class="p">)</span>
+        <span class="n">channel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentChannel</span>
+        <span class="n">guiGraphResult</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">resultArea_gui</span><span class="o">.</span><span class="n">graph_results</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentOperation</span> <span class="o">==</span> <span class="s2">&quot;macro&quot;</span><span class="p">:</span>
+            <span class="c1"># FIXME main channel and bin size</span>
+            <span class="n">binSize_s</span> <span class="o">=</span> <span class="mi">100</span>
+
+            <span class="n">binInTick</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">convert_seconds_in_ticks</span><span class="p">(</span><span class="n">binSize_s</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">chronograms</span><span class="p">[</span><span class="n">channel</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">chronogram</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">t1_tick</span><span class="p">,</span> <span class="n">t2_tick</span><span class="p">,</span>
+                                                                                      <span class="n">binInTick</span><span class="p">)</span>
+            <span class="c1"># self.view.plotMainChronogram(self.model.results.chronograms[channel])</span>
+            <span class="c1"># TODO plot dans la fenetre result.</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentOperation</span> <span class="o">==</span> <span class="s2">&quot;micro&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">microTimeLifeTime</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">t1_tick</span><span class="p">,</span> <span class="n">t2_tick</span><span class="p">)</span>
+            <span class="n">guiGraphResult</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">&quot;lifetime&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">lifeTimeMeasurements</span><span class="p">[</span><span class="n">channel</span><span class="p">])</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentOperation</span> <span class="o">==</span> <span class="s2">&quot;FCS&quot;</span><span class="p">:</span>
+            <span class="n">gui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">FCS_TimeAnalyze_gui</span>
+            <span class="c1"># FIXME recuperer les data</span>
+            <span class="n">channel1</span> <span class="o">=</span> <span class="n">channel2</span> <span class="o">=</span> <span class="n">channel</span>
+
+            <span class="n">max_correlTime_ms</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">gui</span><span class="o">.</span><span class="n">maxCorrelTime_sv</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">analyzePgb</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">FCS</span><span class="p">(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">channel2</span><span class="p">,</span> <span class="n">t1_tick</span><span class="p">,</span> <span class="n">t2_tick</span><span class="p">,</span> <span class="n">max_correlTime_ms</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">analyzePgb</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="n">guiGraphResult</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">&quot;FCS&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">FCS_Measurements</span><span class="p">[</span><span class="n">channel</span><span class="p">])</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentOperation</span> <span class="o">==</span> <span class="s2">&quot;DLS&quot;</span><span class="p">:</span>
+            <span class="n">gui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">DLS_TimeAnalyze_gui</span>
+            <span class="c1"># FIXME recuperer les data</span>
+            <span class="n">channel1</span> <span class="o">=</span> <span class="n">channel2</span> <span class="o">=</span> <span class="n">channel</span>
+            <span class="n">max_correlTime_ms</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">gui</span><span class="o">.</span><span class="n">maxCorrelTime_sv</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+            <span class="n">start_time_mu_s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">gui</span><span class="o">.</span><span class="n">start_time_micro_sv</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+            <span class="n">precision</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">gui</span><span class="o">.</span><span class="n">corel_precision_sv</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">analyzePgb</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">DLS</span><span class="p">(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">channel2</span><span class="p">,</span> <span class="n">t1_tick</span><span class="p">,</span> <span class="n">t2_tick</span><span class="p">,</span> <span class="n">max_correlTime_ms</span><span class="p">,</span> <span class="n">start_time_mu_s</span><span class="p">,</span> <span class="n">precision</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">analyzePgb</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="n">guiGraphResult</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">&quot;DLS&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">DLS_Measurements</span><span class="p">[</span><span class="n">channel</span><span class="p">])</span>
+
+    <span class="c1"># def updateNavigation(self, channel, t1_microsec, t2_microsec, binSize_s=0.01):</span>
+    <span class="k">def</span> <span class="nf">update_navigation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">is_a_FileLoaded</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">channel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentChannel</span>
+        <span class="n">t1_microsec</span><span class="p">,</span> <span class="n">t2_microsec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTimeWindow</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTimeWindow</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">binSize_s</span> <span class="o">=</span> <span class="mf">0.01</span>
+
+        <span class="c1"># FIXME main channel and bin size</span>
+        <span class="n">t1_tick</span><span class="p">,</span> <span class="n">t2_tick</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">convert_seconds_in_ticks</span><span class="p">(</span><span class="n">t1_microsec</span> <span class="o">/</span> <span class="mf">1E6</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">convert_seconds_in_ticks</span><span class="p">(</span>
+            <span class="n">t2_microsec</span> <span class="o">/</span> <span class="mf">1E6</span><span class="p">)</span>
+        <span class="n">binInTick</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">convert_seconds_in_ticks</span><span class="p">(</span><span class="n">binSize_s</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">chronograms</span><span class="p">[</span><span class="n">channel</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">chronogram</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">t1_tick</span><span class="p">,</span> <span class="n">t2_tick</span><span class="p">,</span> <span class="n">binInTick</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">navigation_area</span><span class="o">.</span><span class="n">timeZoom</span><span class="o">.</span><span class="n">graph_timeZoom</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">chronograms</span><span class="p">[</span><span class="n">channel</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">navigation_area</span><span class="o">.</span><span class="n">graph_navigation</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">navigationChronogram</span><span class="p">,</span>
+                                                              <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTimeWindow</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                                              <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTimeWindow</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">navigation_area</span><span class="o">.</span><span class="n">timeZoom</span><span class="o">.</span><span class="n">chronoStart_sv</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTimeWindow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">navigation_area</span><span class="o">.</span><span class="n">timeZoom</span><span class="o">.</span><span class="n">chronoEnd_sv</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTimeWindow</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)))</span>
+
+    <span class="k">def</span> <span class="nf">set_chrono_bin_size_s</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">binSize_s</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">navigation_area</span><span class="o">.</span><span class="n">timeZoom</span><span class="o">.</span><span class="n">binSizeMicros_sv</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">binSize_s</span> <span class="o">*</span> <span class="mf">1E6</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentBinSize_s</span> <span class="o">=</span> <span class="n">binSize_s</span>
+
+    <span class="k">def</span> <span class="nf">change_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTab</span> <span class="o">==</span> <span class="s1">&#39;macro&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentOperation</span> <span class="o">=</span> <span class="s2">&quot;macro&quot;</span>
+            <span class="c1"># self.update_analyze()</span>
+
+            <span class="c1"># self.drawMainChronogram(self.view.currentChannel, self.view.currentTimeWindow[0], self.view.currentTimeWindow[1], self.view.currentBinSize_s)</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentTab</span> <span class="o">==</span> <span class="s1">&#39;micro&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentOperation</span> <span class="o">=</span> <span class="s2">&quot;micro&quot;</span>
+            <span class="c1"># self.update_analyze()</span>
+
+            <span class="c1"># self.drawMicroTimeHisto(self.view.currentChannel, self.view.currentTimeWindow[0], self.view.currentTimeWindow[1])</span>
+
+    <span class="k">def</span> <span class="nf">create_short_cut</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">set_lim_X_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idxStart</span><span class="p">,</span> <span class="n">idxEnd</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">FCS_TimeAnalyze_gui</span><span class="o">.</span><span class="n">guiForFitOperation_FCS</span><span class="o">.</span><span class="n">idx_lim_for_fit_min_sv</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+            <span class="s2">&quot;</span><span class="si">%.2f</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">idxStart</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">FCS_TimeAnalyze_gui</span><span class="o">.</span><span class="n">guiForFitOperation_FCS</span><span class="o">.</span><span class="n">idx_lim_for_fit_max_sv</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%.2f</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">idxEnd</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">lifeTimeAnalyze_gui</span><span class="o">.</span><span class="n">guiForFitOperation_Lifetime</span><span class="o">.</span><span class="n">idx_lim_for_fit_min_sv</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+            <span class="s2">&quot;</span><span class="si">%.2f</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">idxStart</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">lifeTimeAnalyze_gui</span><span class="o">.</span><span class="n">guiForFitOperation_Lifetime</span><span class="o">.</span><span class="n">idx_lim_for_fit_max_sv</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+            <span class="s2">&quot;</span><span class="si">%.2f</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">idxEnd</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">DLS_TimeAnalyze_gui</span><span class="o">.</span><span class="n">guiForFitOperation_DLS</span><span class="o">.</span><span class="n">idx_lim_for_fit_min_sv</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+            <span class="s2">&quot;</span><span class="si">%.2f</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">idxStart</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">DLS_TimeAnalyze_gui</span><span class="o">.</span><span class="n">guiForFitOperation_DLS</span><span class="o">.</span><span class="n">idx_lim_for_fit_max_sv</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%.2f</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">idxEnd</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">replot_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">is_zoom_x_selec</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">is_autoscale</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">resultArea_gui</span><span class="o">.</span><span class="n">graph_results</span><span class="o">.</span><span class="n">replot</span><span class="p">(</span><span class="n">is_zoom_x_selec</span><span class="p">,</span> <span class="n">is_autoscale</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Controller.fit"><a class="viewcode-back" href="../index.html#Controller.Controller.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">analyze_type</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">model_name</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">idx_start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">idx_end</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param analyze_type: is a string for lifetime FCS DLS ...</span>
+<span class="sd">        :param mode can be fit, eval or guess</span>
+<span class="sd">        :param model_name string for the model name</span>
+<span class="sd">        :param params: list of paramaters for the fit</span>
+<span class="sd">        xlims_idx : index of the limits of the x axis where to perform the fit.</span>
+<span class="sd">        :return:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data</span><span class="p">,</span> <span class="n">gui</span><span class="p">,</span> <span class="n">fit_plot_mode</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="n">channel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentChannel</span>
+        <span class="c1"># TODO cursor with fit limits.</span>
+
+        <span class="k">if</span> <span class="n">analyze_type</span> <span class="o">==</span> <span class="s2">&quot;lifetime&quot;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">lifeTimeMeasurements</span><span class="p">[</span><span class="n">channel</span><span class="p">]</span>
+            <span class="n">gui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">lifeTimeAnalyze_gui</span><span class="o">.</span><span class="n">guiForFitOperation_Lifetime</span>
+            <span class="n">fit_plot_mode</span> <span class="o">=</span> <span class="s2">&quot;lifetime&quot;</span>
+        <span class="k">elif</span> <span class="n">analyze_type</span> <span class="o">==</span> <span class="s2">&quot;DLS&quot;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">DLS_Measurements</span><span class="p">[</span><span class="n">channel</span><span class="p">]</span>
+            <span class="n">gui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">DLS_TimeAnalyze_gui</span><span class="o">.</span><span class="n">guiForFitOperation_DLS</span>
+            <span class="n">fit_plot_mode</span> <span class="o">=</span> <span class="s2">&quot;DLS&quot;</span>
+        <span class="k">elif</span> <span class="n">analyze_type</span> <span class="o">==</span> <span class="s2">&quot;FCS&quot;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">FCS_Measurements</span><span class="p">[</span><span class="n">channel</span><span class="p">]</span>
+            <span class="n">gui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">FCS_TimeAnalyze_gui</span><span class="o">.</span><span class="n">guiForFitOperation_FCS</span>
+            <span class="n">fit_plot_mode</span> <span class="o">=</span> <span class="s2">&quot;FCS&quot;</span>
+
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;eval&quot;</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">setModel</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">setParams</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">evalParams</span><span class="p">(</span><span class="n">idx_start</span><span class="p">,</span> <span class="n">idx_end</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;guess&quot;</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">setModel</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">guess</span><span class="p">(</span><span class="n">idx_start</span><span class="p">,</span> <span class="n">idx_end</span><span class="p">)</span>
+                <span class="n">gui</span><span class="o">.</span><span class="n">setParamsFromFit</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;fit&quot;</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">setModel</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">setParams</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+                <span class="n">fitResults</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">idx_start</span><span class="p">,</span> <span class="n">idx_end</span><span class="p">)</span>
+                <span class="c1"># TODO set option to tell if user want fit results exported to fit params</span>
+                <span class="n">gui</span><span class="o">.</span><span class="n">setParamsFromFit</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">resultArea_gui</span><span class="o">.</span><span class="n">setTextResult</span><span class="p">(</span><span class="n">fitResults</span><span class="o">.</span><span class="n">fit_report</span><span class="p">())</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">resultArea_gui</span><span class="o">.</span><span class="n">graph_results</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">fit_plot_mode</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">is_plot_fit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">shift_IR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">main_width</span><span class="p">,</span> <span class="n">secondary_width</span><span class="p">,</span> <span class="n">secondary_amplitude</span><span class="p">,</span> <span class="n">time_offset</span><span class="p">):</span>
+        <span class="n">channel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">currentChannel</span>
+        <span class="n">lf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">lifeTimeMeasurements</span><span class="p">[</span><span class="n">channel</span><span class="p">]</span>
+        <span class="n">lf</span><span class="o">.</span><span class="n">generateArtificialIR</span><span class="p">(</span><span class="n">main_width</span><span class="p">,</span> <span class="n">secondary_width</span><span class="p">,</span> <span class="n">secondary_amplitude</span><span class="p">,</span> <span class="n">time_offset</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">export_graph_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">file_path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">archi</span><span class="o">.</span><span class="n">analyze_area</span><span class="o">.</span><span class="n">resultArea_gui</span><span class="o">.</span><span class="n">graph_results</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">save_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">savefile_path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shelf</span> <span class="o">=</span> <span class="n">shelve</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">savefile_path</span><span class="p">,</span> <span class="s1">&#39;n&#39;</span><span class="p">)</span>  <span class="c1"># n for new</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">save_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shelf</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">saveState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shelf</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shelf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">load_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">load_file_path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shelf</span> <span class="o">=</span> <span class="n">shelve</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">load_file_path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">load_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shelf</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">loadState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shelf</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shelf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">on_quit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># paramFile = open(&#39;param.ini&#39;, &#39;w&#39;)</span>
+        <span class="c1"># paramFile.write(self.saveDir)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">destroy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+
+    <span class="c1">#core =  model.PropSpecReaderModel()</span>
+    <span class="c1">#ctrl = controller.controller(core)</span>
+
+
+    <span class="n">controller</span> <span class="o">=</span> <span class="n">Controller</span><span class="p">()</span>
+    <span class="n">controller</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, m.loumaigne et al..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,362 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Experiment &#8212; pySPC 0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Experiment</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">core</span> <span class="k">import</span> <span class="n">Data</span>
+<span class="kn">from</span> <span class="nn">core</span> <span class="k">import</span> <span class="n">ExpParam</span>
+<span class="kn">from</span> <span class="nn">core</span> <span class="k">import</span> <span class="n">Results</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">core.analyze</span> <span class="k">import</span> <span class="n">lifetime</span><span class="p">,</span> <span class="n">FCS</span><span class="p">,</span> <span class="n">DLS</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Test Experiment</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Experiment"><a class="viewcode-back" href="../index.html#Experiment.Experiment">[docs]</a><span class="k">class</span> <span class="nc">Experiment</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Root class of the model (named here &quot;core&quot;) of the MVC pattern.</span>
+
+<span class="sd">    main members :</span>
+<span class="sd">    - exp_param</span>
+<span class="sd">    - results</span>
+<span class="sd">    - data</span>
+
+<span class="sd">    main methods :</span>
+<span class="sd">    - new_exp</span>
+<span class="sd">    - save_state/load_state</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_param</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">results</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">exp_param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span> <span class="o">=</span> <span class="n">ExpParam</span><span class="o">.</span><span class="n">Experiment_param</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span> <span class="o">=</span> <span class="n">exp_param</span>
+
+        <span class="k">if</span> <span class="n">results</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">Results</span><span class="o">.</span><span class="n">Results</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">results</span>
+
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">Data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fileName</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">defaultBinSize_s</span> <span class="o">=</span> <span class="mf">0.01</span>  <span class="c1"># default : 10ms</span>
+
+    <span class="c1"># TODO put convert function where it belongs</span>
+    <span class="k">def</span> <span class="nf">convert_ticks_in_seconds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ticks</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span> <span class="o">*</span> <span class="n">ticks</span>
+
+    <span class="k">def</span> <span class="nf">convert_seconds_in_ticks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seconds</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">seconds</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span>
+
+<div class="viewcode-block" id="Experiment.new_exp"><a class="viewcode-back" href="../index.html#Experiment.Experiment.new_exp">[docs]</a>    <span class="k">def</span> <span class="nf">new_exp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new experiment from a file or from simulated data.</span>
+
+<span class="sd">        :param mode: a string telling how to create the new experiment. Can be :</span>
+<span class="sd">            - &quot;file&quot; : a recorded file spc or pt3 file</span>
+<span class="sd">            - &quot;generate&quot; : Poissonian Noise</span>
+<span class="sd">            - &quot;simulation&quot; : Not Implemented Yet.</span>
+<span class="sd">        :param params: params passed to the function based on the mode :</span>
+<span class="sd">            - for &quot;file mode :</span>
+<span class="sd">                - params[0] = filePath</span>
+<span class="sd">            - for &quot;generate&quot; :</span>
+<span class="sd">                - params[0] = filePath</span>
+<span class="sd">                - params[1] = time_s</span>
+<span class="sd">                - params[2] = count_per_second_s</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;file&quot;</span><span class="p">:</span>
+            <span class="n">filePath</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">load_from_file</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+            <span class="n">head</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fileName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;generate&quot;</span><span class="p">:</span>
+            <span class="nb">type</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">time_s</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">count_per_second_s</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">new_generated_exp</span><span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="p">[</span><span class="n">time_s</span><span class="p">,</span> <span class="n">count_per_second_s</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fileName</span> <span class="o">=</span> <span class="s2">&quot;Generated Poisson Noise - count per second : </span><span class="si">%f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">count_per_second_s</span>
+        <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;simulation&quot;</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="c1"># Display chronogram as proof od new exp.</span>
+        <span class="c1"># chronogram(self, numChannel, startTick, endTick, binInTick):</span>
+        <span class="n">binInTick</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">convert_seconds_in_ticks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">defaultBinSize_s</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">navigationChronogram</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">chronogram</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">endTick</span><span class="p">,</span> <span class="n">binInTick</span><span class="p">)</span></div>
+        <span class="c1"># self.results.mainChronogram = self.data.chronogram(0, 0, self.data.channels[0].endTick, binInTick)</span>
+        <span class="c1"># self.data.PCH(self.results.mainChronogram)</span>
+
+<div class="viewcode-block" id="Experiment.save_state"><a class="viewcode-back" href="../index.html#Experiment.Experiment.save_state">[docs]</a>    <span class="k">def</span> <span class="nf">save_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shelf</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param shelf:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">shelf</span><span class="p">[</span><span class="s1">&#39;exp_param&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span>
+        <span class="n">shelf</span><span class="p">[</span><span class="s1">&#39;results&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span>
+        <span class="n">shelf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">shelf</span><span class="p">[</span><span class="s1">&#39;fileName&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fileName</span></div>
+
+<div class="viewcode-block" id="Experiment.load_state"><a class="viewcode-back" href="../index.html#Experiment.Experiment.load_state">[docs]</a>    <span class="k">def</span> <span class="nf">load_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shelf</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param shelf:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span> <span class="o">=</span> <span class="n">shelf</span><span class="p">[</span><span class="s1">&#39;exp_param&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">shelf</span><span class="p">[</span><span class="s1">&#39;results&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">shelf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fileName</span> <span class="o">=</span> <span class="n">shelf</span><span class="p">[</span><span class="s1">&#39;fileName&#39;</span><span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="c1"># TODO put into a file in analyze and call it Bin.</span>
+<div class="viewcode-block" id="Experiment.chronogram"><a class="viewcode-back" href="../index.html#Experiment.Experiment.chronogram">[docs]</a>    <span class="k">def</span> <span class="nf">chronogram</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numChannel</span><span class="p">,</span> <span class="n">startTick</span><span class="p">,</span> <span class="n">endTick</span><span class="p">,</span> <span class="n">bin_in_tick</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The x axis is in -&gt;microsecond&lt;-</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">timeStamps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span>
+
+        <span class="n">startTick</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">(</span><span class="n">startTick</span><span class="p">)</span>
+        <span class="n">endTick</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">(</span><span class="n">endTick</span><span class="p">)</span>
+
+        <span class="c1"># TODO Expliquer le +1, je pense que c&#39;est du à des pb de valeurs arrondies... Au pire la derniere case est vide.</span>
+        <span class="n">nbOfBin</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">endTick</span> <span class="o">-</span> <span class="n">startTick</span><span class="p">)</span> <span class="o">/</span> <span class="n">bin_in_tick</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="c1"># Find indices where elements should be inserted to maintain order</span>
+        <span class="n">idxStart</span><span class="p">,</span> <span class="n">idxEnd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">timeStamps</span><span class="p">,</span> <span class="p">(</span><span class="n">startTick</span><span class="p">,</span> <span class="n">endTick</span><span class="p">))</span>
+
+        <span class="n">timesStamps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">timeStamps</span><span class="p">[</span><span class="n">idxStart</span><span class="p">:</span><span class="n">idxEnd</span><span class="p">])</span>
+        <span class="n">timesStamps</span> <span class="o">-=</span> <span class="n">startTick</span>
+
+        <span class="n">numStartBin</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">startTick</span> <span class="o">/</span> <span class="n">bin_in_tick</span><span class="p">)</span>
+        <span class="c1"># numEndBin = int( endTick / binInTick)</span>
+        <span class="n">numEndBin</span> <span class="o">=</span> <span class="n">numStartBin</span> <span class="o">+</span> <span class="n">nbOfBin</span>
+
+        <span class="c1"># FIXME moins de divisions, ici on prend tout le fichier</span>
+        <span class="c1"># numOfBinForEachPhoton =  timesStamps / binInTick</span>
+        <span class="c1"># numOfBinForEachPhoton = numOfBinForEachPhoton.astype(int)</span>
+
+        <span class="c1"># #Default value for &quot;range&quot; seems fine  -&gt; The lower and upper range of the bins. If not provided, range is simply (a.min(), a.max()). Values outside the range are ignored.</span>
+        <span class="c1"># self.results.mainChronogram = Results.Chronogram()</span>
+        <span class="c1"># self.results.mainChronogram.tickStart, self.results.mainChronogram.tickEnd, self.results.mainChronogram.nbOfBin = startTick, endTick, nbOfBin</span>
+        <span class="c1"># self.results.mainChronogram.data, self.results.mainChronogram.xAxis  =  np.histogram(numOfBinForEachPhoton, nbOfBin)</span>
+        <span class="c1"># #time axis in millisecond</span>
+        <span class="c1"># self.results.mainChronogram.xAxis *= binInTick * self.expParam.mAcrotime_clickEquivalentIn_second*1E6 #ms</span>
+        <span class="c1"># #We have to cut by one element the x axis because it is on element longer than the data (NB : there is no copy, just &quot;a view&quot;)</span>
+        <span class="c1"># self.results.mainChronogram.xAxis = self.results.mainChronogram.xAxis[:-1]</span>
+
+        <span class="n">chronogram</span> <span class="o">=</span> <span class="n">Results</span><span class="o">.</span><span class="n">Chronogram</span><span class="p">()</span>
+        <span class="n">chronogram</span><span class="o">.</span><span class="n">tickStart</span><span class="p">,</span> <span class="n">chronogramtickEnd</span><span class="p">,</span> <span class="n">chronogram</span><span class="o">.</span><span class="n">nbOfBin</span> <span class="o">=</span> <span class="n">startTick</span><span class="p">,</span> <span class="n">endTick</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">nbOfBin</span><span class="p">)</span>
+        <span class="c1"># chronogram.data, chronogram.xAxis = np.histogram(numOfBinForEachPhoton, int(nbOfBin))</span>
+
+        <span class="c1"># chronogram.data = np.zeros(chronogram.nbOfBin + 1, dtype=np.int)</span>
+        <span class="c1"># bin.bin(timesStamps, chronogram.data, bin_in_tick)</span>
+
+        <span class="n">num_bin</span> <span class="o">=</span> <span class="p">(</span><span class="n">timesStamps</span> <span class="o">/</span> <span class="n">bin_in_tick</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+        <span class="n">chronogram</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">num_bin</span><span class="p">)</span>
+
+        <span class="c1"># chronogram.data</span>
+        <span class="c1"># TODO UNDERSTAND We have to cut by one element the x axis because it is on element longer than the data (NB : there is no copy, just &quot;a view&quot;)</span>
+        <span class="c1"># chronogram.data = chronogram.data[:-1]</span>
+
+        <span class="n">chronogram</span><span class="o">.</span><span class="n">xAxis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">numStartBin</span><span class="p">,</span> <span class="n">numEndBin</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">chronogram</span><span class="o">.</span><span class="n">xAxis</span> <span class="o">*=</span> <span class="n">bin_in_tick</span>
+        <span class="n">chronogram</span><span class="o">.</span><span class="n">xAxis</span> <span class="o">+=</span> <span class="n">chronogram</span><span class="o">.</span><span class="n">tickStart</span>
+        <span class="n">chronogram</span><span class="o">.</span><span class="n">xAxis</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span> <span class="o">*</span> <span class="mf">1E6</span>
+
+        <span class="c1"># time axis in millisecond</span>
+        <span class="c1"># chronogram.xAxis += chronogram.tickStart</span>
+        <span class="c1"># chronogram.xAxis *= binInTick * self.expParam.mAcrotime_clickEquivalentIn_second * 1E6  # microsecond</span>
+        <span class="c1"># We have to cut by one element the x axis because it is on element longer than the data (NB : there is no copy, just &quot;a view&quot;)</span>
+        <span class="c1"># chronogram.xAxis = chronogram.xAxis[:-1]</span>
+
+        <span class="k">return</span> <span class="n">chronogram</span></div>
+
+<div class="viewcode-block" id="Experiment.PCH"><a class="viewcode-back" href="../index.html#Experiment.Experiment.PCH">[docs]</a>    <span class="k">def</span> <span class="nf">PCH</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chronogram</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Photon Counting Histogramm</span>
+<span class="sd">        :param chronogram:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+        <span class="c1"># self.results.mainPCH = Results.PCH()</span>
+        <span class="c1"># self.results.mainPCH.data, self.results.mainPCH.xAxis = np.histogram(chronogram.data, chronogram.data.max())</span>
+        <span class="c1">#</span>
+        <span class="c1"># self.results.mainPCH.nbOfBin = len(self.results.mainPCH.data)</span>
+        <span class="c1">#</span>
+        <span class="c1"># # We have to cut by one element the x axis because it is on element longer than the data (NB : there is no copy, just &quot;a view&quot;)</span>
+        <span class="c1"># self.results.mainPCH.xAxis = self.results.mainPCH.xAxis[:-1]</span>
+
+<div class="viewcode-block" id="Experiment.timeDifference"><a class="viewcode-back" href="../index.html#Experiment.Experiment.timeDifference">[docs]</a>    <span class="k">def</span> <span class="nf">timeDifference</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numChannel</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the tume difference between consecutive photons</span>
+<span class="sd">        :param numChannel:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">timeDifference</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">timestamps</span><span class="p">[</span><span class="n">numChannel</span><span class="p">])</span></div>
+
+    <span class="k">def</span> <span class="nf">microTimeLifeTime</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numChannel</span><span class="p">,</span> <span class="n">startTick</span><span class="p">,</span> <span class="n">endTick</span><span class="p">):</span>
+        <span class="n">timeStamps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span>
+        <span class="n">nanotimes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;nanotimes&#39;</span><span class="p">]</span>
+        <span class="n">idxStart</span><span class="p">,</span> <span class="n">idxEnd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">timeStamps</span><span class="p">,</span> <span class="p">(</span><span class="n">startTick</span><span class="p">,</span> <span class="n">endTick</span><span class="p">))</span>
+        <span class="n">nanotimes</span> <span class="o">=</span> <span class="n">nanotimes</span><span class="p">[</span><span class="n">idxStart</span><span class="p">:</span><span class="n">idxEnd</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">lifeTimeMeasurements</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">lifeTimeMeasurements</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span> <span class="o">=</span> <span class="n">lifetime</span><span class="o">.</span><span class="n">lifeTimeMeasurements</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">lifeTimeMeasurements</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span><span class="o">.</span><span class="n">createHistogramm</span><span class="p">(</span><span class="n">nanotimes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span><span class="o">.</span><span class="n">nbOfMicrotimeChannel</span><span class="p">,</span>
+                                                                       <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span><span class="o">.</span><span class="n">mIcrotime_clickEquivalentIn_second</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Experiment.FCS"><a class="viewcode-back" href="../index.html#Experiment.Experiment.FCS">[docs]</a>    <span class="k">def</span> <span class="nf">FCS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_channel_1</span><span class="p">,</span> <span class="n">num_channel_2</span><span class="p">,</span> <span class="n">start_tick</span><span class="p">,</span> <span class="n">end_tick</span><span class="p">,</span> <span class="n">max_correlation_time_ms</span><span class="o">=</span><span class="mi">1000</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fluctuation Correlation Spectroscopy</span>
+
+<span class="sd">        Create a FCS_Measurements object and launch calculation</span>
+<span class="sd">        :param num_channel_1:</span>
+<span class="sd">        :param num_channel_2:</span>
+<span class="sd">        :param start_tick:</span>
+<span class="sd">        :param end_tick:</span>
+<span class="sd">        :param max_correlation_time_ms:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO cross correlation</span>
+        <span class="n">numChannel</span> <span class="o">=</span> <span class="n">num_channel_1</span>
+
+        <span class="n">timeStamps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span>
+        <span class="n">nanotimes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;nanotimes&#39;</span><span class="p">]</span>
+        <span class="n">idxStart</span><span class="p">,</span> <span class="n">idxEnd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">timeStamps</span><span class="p">,</span> <span class="p">(</span><span class="n">start_tick</span><span class="p">,</span> <span class="n">end_tick</span><span class="p">))</span>
+        <span class="n">timeStamps_reduc</span> <span class="o">=</span> <span class="n">timeStamps</span><span class="p">[</span><span class="n">idxStart</span><span class="p">:</span><span class="n">idxEnd</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">FCS_Measurements</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">FCS_Measurements</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span> <span class="o">=</span> <span class="n">FCS</span><span class="o">.</span><span class="n">FCSMeasurements</span><span class="p">()</span>
+
+        <span class="n">maxCorrelationTimeInTick</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+            <span class="n">max_correlation_time_ms</span> <span class="o">/</span> <span class="mf">1000.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">FCS_Measurements</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span><span class="o">.</span><span class="n">correlateMonoProc</span><span class="p">(</span><span class="n">timeStamps_reduc</span><span class="p">,</span> <span class="n">timeStamps_reduc</span><span class="p">,</span>
+                                                                    <span class="n">maxCorrelationTimeInTick</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Experiment.DLS"><a class="viewcode-back" href="../index.html#Experiment.Experiment.DLS">[docs]</a>    <span class="k">def</span> <span class="nf">DLS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_channel_1</span><span class="p">,</span> <span class="n">num_channel_2</span><span class="p">,</span> <span class="n">start_tick</span><span class="p">,</span> <span class="n">end_tick</span><span class="p">,</span> <span class="n">max_correlation_time_ms</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">start_time_mu_s</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">precision</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Dynamic Light Scattering</span>
+
+<span class="sd">        Create a DLS_Measurements object and launch calculation</span>
+
+<span class="sd">        :param num_channel_1:</span>
+<span class="sd">        :param num_channel_2:</span>
+<span class="sd">        :param start_tick:</span>
+<span class="sd">        :param end_tick:</span>
+<span class="sd">        :param max_correlation_time_ms:</span>
+<span class="sd">        :param start_time_mu_s:</span>
+<span class="sd">        :param precision:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">numChannel</span> <span class="o">=</span> <span class="n">num_channel_1</span>
+
+        <span class="n">timeStamps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span>
+        <span class="n">nanotimes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;nanotimes&#39;</span><span class="p">]</span>
+        <span class="n">idxStart</span><span class="p">,</span> <span class="n">idxEnd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">timeStamps</span><span class="p">,</span> <span class="p">(</span><span class="n">start_tick</span><span class="p">,</span> <span class="n">end_tick</span><span class="p">))</span>
+        <span class="n">timeStamps_reduc</span> <span class="o">=</span> <span class="n">timeStamps</span><span class="p">[</span><span class="n">idxStart</span><span class="p">:</span><span class="n">idxEnd</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">DLS_Measurements</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">DLS_Measurements</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span> <span class="o">=</span> <span class="n">DLS</span><span class="o">.</span><span class="n">DLS_Measurements</span><span class="p">()</span>
+
+        <span class="n">max_correlation_time_tick</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+            <span class="n">max_correlation_time_ms</span> <span class="o">/</span> <span class="mf">1000.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span><span class="p">)</span>
+
+        <span class="n">start_time_tick</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">start_time_mu_s</span> <span class="o">/</span> <span class="mf">1E6</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">DLS_Measurements</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span><span class="o">.</span><span class="n">correlateMonoProc</span><span class="p">(</span><span class="n">timeStamps_reduc</span><span class="p">,</span>
+                                                                    <span class="n">timeStamps_reduc</span><span class="p">,</span> <span class="n">max_correlation_time_tick</span><span class="p">,</span>
+                                                                    <span class="n">startCorrelationTimeInTick</span><span class="o">=</span><span class="n">start_time_tick</span><span class="p">,</span>
+                                                                    <span class="n">nbOfPointPerCascade_aka_B</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">precision</span><span class="p">),</span>
+                                                                    <span class="n">tick_duration_micros</span><span class="o">=</span>
+                                                                    <span class="bp">self</span><span class="o">.</span><span class="n">exp_param</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span> <span class="o">*</span> <span class="mf">1E6</span><span class="p">)</span></div></div>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, m.loumaigne et al..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

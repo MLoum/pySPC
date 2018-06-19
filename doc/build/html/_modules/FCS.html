@@ -1,0 +1,323 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>FCS &#8212; pySPC 0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for FCS</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">lmfit</span> <span class="k">import</span> <span class="n">minimize</span><span class="p">,</span> <span class="n">Parameters</span><span class="p">,</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">lmfit.models</span> <span class="k">import</span> <span class="n">LinearModel</span><span class="p">,</span> <span class="n">ExponentialModel</span>
+
+<span class="c1"># from .correlate import correlate</span>
+
+<span class="kn">from</span> <span class="nn">threading</span> <span class="k">import</span> <span class="n">Thread</span>
+
+<span class="kn">from</span> <span class="nn">core.analyze.pycorrelate</span> <span class="k">import</span> <span class="n">pcorrelate</span>
+
+<span class="kn">import</span> <span class="nn">numba</span>
+
+
+
+
+<span class="k">def</span> <span class="nf">update_param_vals</span><span class="p">(</span><span class="n">pars</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update parameter values with keyword arguments.&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">pname</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pname</span> <span class="ow">in</span> <span class="n">pars</span><span class="p">:</span>
+            <span class="n">pars</span><span class="p">[</span><span class="n">pname</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">val</span>
+    <span class="k">return</span> <span class="n">pars</span>
+
+<span class="kn">from</span> <span class="nn">core.analyze.Measurement</span> <span class="k">import</span> <span class="n">Measurements</span>
+
+<span class="k">class</span> <span class="nc">OneSpeDiffusion</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A exponential decay with a shift in time, with four Parameters ``t0``, ``amp``, ``tau`` and ``cst``.</span>
+
+<span class="sd">    Defined as:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        f(t; , G0, tdiff, cst) = cst + G0/(1+t/tdiff)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">independent_vars</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">],</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">nan_policy</span><span class="o">=</span><span class="s1">&#39;raise&#39;</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;prefix&#39;</span><span class="p">:</span> <span class="n">prefix</span><span class="p">,</span> <span class="s1">&#39;nan_policy&#39;</span><span class="p">:</span> <span class="n">nan_policy</span><span class="p">,</span>
+                       <span class="s1">&#39;independent_vars&#39;</span><span class="p">:</span> <span class="n">independent_vars</span><span class="p">})</span>
+
+        <span class="k">def</span> <span class="nf">oneSpeDiffusion</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">G0</span><span class="p">,</span> <span class="n">tdiff</span><span class="p">,</span> <span class="n">cst</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">cst</span> <span class="o">+</span> <span class="n">G0</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">t</span><span class="o">/</span><span class="n">tdiff</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">OneSpeDiffusion</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">oneSpeDiffusion</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">guess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">G0</span><span class="p">,</span> <span class="n">tdiff</span><span class="p">,</span> <span class="n">cst</span> <span class="o">=</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span>
+        <span class="c1">#if x is not None:</span>
+        <span class="n">G0</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1">#beawre afterpulsing...</span>
+        <span class="n">cst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">10</span><span class="p">:])</span>
+        <span class="c1">#Searching for position where G0 is divided by 2</span>
+        <span class="n">subarray</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">t0</span><span class="p">:]</span>
+        <span class="c1">#tau = np.where(subarray &lt; amp/np.exp(1))[0]</span>
+        <span class="n">tdiff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">data</span> <span class="o">&lt;</span> <span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="p">(</span><span class="n">G0</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">pars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_params</span><span class="p">(</span><span class="n">G0</span><span class="o">=</span><span class="n">G0</span><span class="p">,</span> <span class="n">tdiff</span><span class="o">=</span><span class="n">tdiff</span><span class="p">,</span> <span class="n">cst</span><span class="o">=</span><span class="n">cst</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">update_param_vals</span><span class="p">(</span><span class="n">pars</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># __init__.__doc__ = COMMON_INIT_DOC</span>
+    <span class="c1"># guess.__doc__ = COMMON_GUESS_DOC</span>
+    <span class="fm">__init__</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="s2">&quot;TODO&quot;</span>
+    <span class="n">guess</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="s2">&quot;TODO&quot;</span>
+
+
+<div class="viewcode-block" id="CorrelationMeasurement"><a class="viewcode-back" href="../index.html#FCS.CorrelationMeasurement">[docs]</a><span class="k">class</span> <span class="nc">CorrelationMeasurement</span><span class="p">(</span><span class="n">Measurements</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">time_axis_</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">data_</span><span class="p">,</span> <span class="n">time_axis_</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">correlateMonoProc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestamps1</span><span class="p">,</span> <span class="n">timestamps2</span><span class="p">,</span> <span class="n">maxCorrelationTimeInTick</span><span class="p">,</span> <span class="n">startCorrelationTimeInTick</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nbOfPointPerCascade_aka_B</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">tick_duration_micros</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tick_duration_micros</span> <span class="o">=</span> <span class="n">tick_duration_micros</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maxTimeInTick</span> <span class="o">=</span> <span class="n">timestamps1</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">numLastPhoton</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">timestamps1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxTimeInTick</span> <span class="o">-</span> <span class="n">maxCorrelationTimeInTick</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">endTimeCorrelation_tick</span> <span class="o">=</span> <span class="n">timestamps1</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">numLastPhoton</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_list_time_correlation</span><span class="p">(</span><span class="n">startCorrelationTimeInTick</span><span class="p">,</span> <span class="n">maxCorrelationTimeInTick</span><span class="p">,</span> <span class="n">pointPerDecade</span><span class="o">=</span><span class="n">nbOfPointPerCascade_aka_B</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbOfCorrelationPoint</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+
+        <span class="c1"># correlate(timestamps, self.data, self.timeAxis, self.numLastPhoton)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">pcorrelate</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="n">timestamps1</span><span class="p">,</span> <span class="n">u</span><span class="o">=</span><span class="n">timestamps1</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeAxis</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># self.pcorrelate_me(timestamps1, self.timeAxis, self.data)</span>
+
+        <span class="c1"># self.normalize_correlation()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale_time_axis</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timeAxis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeAxis</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="nd">@numba</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">pcorrelate_me</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestamps</span><span class="p">,</span> <span class="n">taus</span><span class="p">,</span> <span class="n">G</span><span class="p">):</span>
+
+        <span class="n">numLastPhoton</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">timestamps</span><span class="p">)</span>
+        <span class="n">nbOfTau</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">taus</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numLastPhoton</span><span class="p">):</span>
+            <span class="c1"># if n%100000==0:</span>
+            <span class="c1">#     print(n)</span>
+            <span class="n">idx_tau</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">while</span><span class="p">(</span><span class="n">idx_tau</span> <span class="o">&lt;</span> <span class="n">nbOfTau</span><span class="p">):</span>
+                <span class="c1"># First tau is not necesseraly 1</span>
+                <span class="k">while</span> <span class="n">timestamps</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">timestamps</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>  <span class="o">&lt;</span> <span class="n">taus</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="k">while</span> <span class="n">timestamps</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">timestamps</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>  <span class="o">&lt;</span> <span class="n">taus</span><span class="p">[</span><span class="n">idx_tau</span><span class="p">]:</span>
+                    <span class="n">G</span><span class="p">[</span><span class="n">idx_tau</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="c1"># if j == nbOfPhoton:</span>
+                    <span class="c1">#     break</span>
+                <span class="n">idx_tau</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">correlateFCS_multi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestamps_1</span><span class="p">,</span> <span class="n">timestamps_2</span><span class="p">,</span> <span class="n">max_correlation_time_in_tick</span><span class="p">,</span> <span class="n">start_correlation_time_in_tick</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nb_of_point_per_cascade_aka_B</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">tick_duration_micros</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tick_duration_micros</span> <span class="o">=</span> <span class="n">tick_duration_micros</span>
+
+        <span class="c1"># TODO nb_of_chunk based on max correlation time and the max Time of the file.</span>
+
+        <span class="c1"># nb_of_chunk = 10</span>
+        <span class="c1"># nb_of_workers = 4</span>
+        <span class="c1">#</span>
+        <span class="c1"># # Split the timeStamps in 10 (?) array</span>
+        <span class="c1"># self.maxTimeInTick_1 = timestamps_1[-1]</span>
+        <span class="c1"># self.maxTimeInTick_2 = timestamps_2[-1]</span>
+        <span class="c1">#</span>
+        <span class="c1"># chunks_of_timestamps_1 = np.split(timestamps_1, nb_of_chunk)</span>
+        <span class="c1"># chunks_of_timestamps_2 = np.split(timestamps_2, nb_of_chunk)</span>
+        <span class="c1">#</span>
+        <span class="c1">#</span>
+        <span class="c1">#</span>
+        <span class="c1">#</span>
+        <span class="c1"># self.numLastPhoton = np.searchsorted(timestamps_1, self.maxTimeInTick - max_correlation_time_in_tick)</span>
+        <span class="c1"># self.endTimeCorrelation_tick = timestamps_1[self.numLastPhoton]</span>
+        <span class="c1">#</span>
+        <span class="c1"># self.create_list_time_correlation(start_correlation_time_in_tick, max_correlation_time_in_tick,</span>
+        <span class="c1">#                                   pointPerDecade=nb_of_point_per_cascade_aka_B)</span>
+        <span class="c1"># self.data = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)</span>
+        <span class="c1">#</span>
+        <span class="c1"># processes = [mp.Process(target=pcorrelate, args=(chunks_of_timestamps_1[i], chunks_of_timestamps_2[i], bins,</span>
+        <span class="c1">#                                                  self.timeAxis, normalize=True)) for x in range(nb_of_workers)]</span>
+        <span class="c1"># # Run processes</span>
+        <span class="c1"># for p in processes:</span>
+        <span class="c1">#     p.start()</span>
+        <span class="c1">#</span>
+        <span class="c1"># # Exit the completed processes</span>
+        <span class="c1"># for p in processes:</span>
+        <span class="c1">#     p.join()</span>
+
+
+
+        <span class="c1"># correlate(timestamps, self.data, self.timeAxis, self.numLastPhoton)</span>
+        <span class="c1"># self.data = pcorrelate(t=timestamps_1, u=timestamps_1, bins=self.timeAxis, normalize=True)</span>
+        <span class="c1"># self.pcorrelate_me(timestamps1, self.timeAxis, self.data)</span>
+
+        <span class="c1"># self.normalize_correlation()</span>
+        <span class="c1"># self.scale_time_axis()</span>
+        <span class="c1"># self.timeAxis = self.timeAxis[:-1]</span>
+
+    <span class="k">def</span> <span class="nf">normalize_correlation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pointPerDecade</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_of_cascade</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">n</span> <span class="o">*</span> <span class="n">B</span><span class="p">:(</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">B</span><span class="p">]</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">*=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">maxTimeInTick</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeAxis</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numLastPhoton</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># maxCorrelationTimeInTick = 100000</span>
+        <span class="c1"># G = np.zeros(maxCorrelationTimeInTick, dtype=np.int)</span>
+        <span class="c1"># temp = np.zeros(maxCorrelationTimeInTick, dtype=np.int)</span>
+        <span class="c1"># nbOfTick = np.size(self.data)</span>
+        <span class="c1"># #correlate(timestamps1, G, temp, maxCorrelationTimeInTick, nbOfTick)</span>
+        <span class="c1"># self.data = correlate(timestamps1, G, maxCorrelationTimeInTick)</span>
+        <span class="c1"># #self.data = G</span>
+        <span class="c1"># self.timeAxis = np.arange(maxCorrelationTimeInTick)</span>
+
+    <span class="k">def</span> <span class="nf">scale_time_axis</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timeAxis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tick_duration_micros</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeAxis</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">create_list_time_correlation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">startCorrelationTimeInTick</span><span class="p">,</span> <span class="n">maxCorrelationTime_tick</span><span class="p">,</span> <span class="n">pointPerDecade</span><span class="p">):</span>
+
+        <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pointPerDecade</span> <span class="o">=</span> <span class="n">pointPerDecade</span>
+        <span class="c1"># How many &quot;cascade&quot; do we need ?</span>
+        <span class="c1"># maxCorrelationTime_tick =  2^(n_casc - 1/B)</span>
+        <span class="c1"># then ln (maxCorrelationTime_tick) = (n_casc - 1/B) ln 2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_of_cascade</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">maxCorrelationTime_tick</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">B</span><span class="p">)</span>
+
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                 |</span>
+<span class="sd">                 | 1                                si j = 1</span>
+<span class="sd">         tau_j = |</span>
+<span class="sd">                 |                  j - 1</span>
+<span class="sd">                 | tau_(j-1) + 2^( -------)         si j &gt; 1      ATTENTION division entre integer</span>
+<span class="sd">                                      B                           i.e on prend la partie entiere !!</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO Total vectorisation ?</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbOfCorrelationPoint</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nb_of_cascade</span> <span class="o">*</span> <span class="n">B</span><span class="p">)</span>  <span class="c1"># +1 ?</span>
+        <span class="n">taus</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbOfCorrelationPoint</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+        <span class="n">taus</span><span class="p">[:</span><span class="n">B</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">B</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_of_cascade</span><span class="p">):</span>
+            <span class="n">taus</span><span class="p">[</span><span class="n">n</span> <span class="o">*</span> <span class="n">B</span><span class="p">:(</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">B</span><span class="p">]</span> <span class="o">=</span> <span class="n">taus</span><span class="p">[:</span><span class="n">B</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="n">taus</span><span class="p">[</span><span class="n">n</span> <span class="o">*</span> <span class="n">B</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">taus</span> <span class="o">+=</span> <span class="n">startCorrelationTimeInTick</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timeAxis</span> <span class="o">=</span> <span class="n">taus</span>
+
+    <span class="k">def</span> <span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span> <span class="o">==</span> <span class="s2">&quot;1 Diff&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;G0&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vary</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;tdiff&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">vary</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;cst&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">vary</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">set_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
+        <span class="c1"># il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *</span>
+        <span class="k">if</span> <span class="n">modelName</span> <span class="o">==</span> <span class="s2">&quot;1 Diff&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span> <span class="o">=</span> <span class="n">modelName</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">OneSpeDiffusion</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">make_params</span><span class="p">(</span><span class="n">G0</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">tdiff</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cst</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FCSMeasurements"><a class="viewcode-back" href="../index.html#FCS.FCSMeasurements">[docs]</a><span class="k">class</span> <span class="nc">FCSMeasurements</span><span class="p">(</span><span class="n">CorrelationMeasurement</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">correlationCurve</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">time_axis_</span><span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">correlationCurve</span><span class="p">,</span> <span class="n">time_axis_</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span> <span class="o">==</span> <span class="s2">&quot;1 Diff&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;G0&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>  <span class="n">vary</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;tdiff&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">vary</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;cst&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">vary</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+
+
+    <span class="k">def</span> <span class="nf">set_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
+        <span class="c1">#il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *</span>
+        <span class="k">if</span> <span class="n">modelName</span> <span class="o">==</span> <span class="s2">&quot;1 Diff&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span> <span class="o">=</span> <span class="n">modelName</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">OneSpeDiffusion</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">make_params</span><span class="p">(</span><span class="n">G0</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">tdiff</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cst</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, m.loumaigne et al..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

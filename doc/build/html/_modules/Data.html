@@ -1,0 +1,373 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Data &#8212; pySPC 0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Data</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">core</span> <span class="k">import</span> <span class="n">Results</span>
+<span class="c1"># from .importFormat import bh_SPC_SET</span>
+<span class="c1"># from .importFormat import pq_PT3_PT2</span>
+<span class="kn">from</span> <span class="nn">core.importFormat</span> <span class="k">import</span> <span class="n">pqreader</span>
+<span class="kn">from</span> <span class="nn">core.importFormat</span> <span class="k">import</span> <span class="n">bhreader</span>
+<span class="kn">from</span> <span class="nn">core.importFormat</span> <span class="k">import</span> <span class="n">nist_fpga</span>
+<span class="c1"># from .analyze import bin</span>
+
+
+
+
+<span class="k">class</span> <span class="nc">Channel</span><span class="p">():</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">photons</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbOfTick</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">startTick</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">endTick</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">CPS</span> <span class="o">=</span> <span class="mi">0</span>
+
+
+<div class="viewcode-block" id="Data"><a class="viewcode-back" href="../index.html#Data.Data">[docs]</a><span class="k">class</span> <span class="nc">Data</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Contains the SPC raw data, and method to process them (file opening, noise generation, filtering).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">,</span> <span class="n">expParam</span><span class="p">):</span>
+
+        <span class="c1"># Ici cela serait du Data-Oriented Design</span>
+        <span class="c1"># http://gamesfromwithin.com/data-oriented-design</span>
+        <span class="c1"># https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.dtypes.html</span>
+        <span class="c1"># self.photonDataType = np.dtype([(&#39;timestamps&#39;, np.uint64), (&#39;nanotimes&#39;, np.uint32) , (&#39;detectors&#39;, np.uint16), (&#39;isFiltered&#39;, np.bool_)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">photonDataType</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">([(</span><span class="s1">&#39;timestamps&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;nanotimes&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;detectors&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)])</span>
+
+        <span class="c1"># Je ne fait pas une approche 100% objet avec une classe detecteur et une classe photon, car cela complique bcp l&#39;utilisation de numpy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nanotimes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isFiltered</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">results</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span> <span class="o">=</span> <span class="n">expParam</span>
+
+    <span class="k">def</span> <span class="nf">_del_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span><span class="p">[:]</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">nanotimes</span><span class="p">[:]</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">isFiltered</span><span class="p">[:]</span>
+
+<div class="viewcode-block" id="Data.load_from_file"><a class="viewcode-back" href="../index.html#Data.Data.load_from_file">[docs]</a>    <span class="k">def</span> <span class="nf">load_from_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filePath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param filePath:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">filename</span><span class="p">,</span> <span class="n">file_extension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">file_extension</span> <span class="o">==</span> <span class="s2">&quot;.spc&quot;</span><span class="p">:</span>
+            <span class="n">timestamps</span><span class="p">,</span> <span class="n">detectors</span><span class="p">,</span> <span class="n">nanotimes</span><span class="p">,</span> <span class="n">timestamps_unit</span><span class="p">,</span> <span class="n">meta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadSPC_Bh_File</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+            <span class="c1"># Done inside the loadSPC_Bh_File function</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">fill_with_SPC_meta_data</span><span class="p">(</span><span class="n">meta</span><span class="p">,</span> <span class="n">timestamps_unit</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">file_extension</span> <span class="o">==</span> <span class="s2">&quot;.pt3&quot;</span><span class="p">:</span>
+            <span class="n">timestamps</span><span class="p">,</span> <span class="n">detectors</span><span class="p">,</span> <span class="n">nanotimes</span><span class="p">,</span> <span class="n">meta</span> <span class="o">=</span> <span class="n">pqreader</span><span class="o">.</span><span class="n">load_pt3</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">fill_with_pt3_meta_data</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">file_extension</span> <span class="o">==</span> <span class="s2">&quot;.ttt&quot;</span><span class="p">:</span>
+            <span class="n">timestamps</span><span class="p">,</span> <span class="n">detectors</span><span class="p">,</span> <span class="n">nanotimes</span><span class="p">,</span> <span class="n">timestamps_unit</span><span class="p">,</span> <span class="n">meta</span> <span class="o">=</span> <span class="n">nist_fpga</span><span class="o">.</span><span class="n">load_ttt</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">fill_with_ttt_meta_data</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
+
+        <span class="c1"># Les photons ne sont pas triès par detecteur, il le sont par ordre d&#39;arrivée</span>
+        <span class="n">unique</span><span class="p">,</span> <span class="n">return_index</span><span class="p">,</span> <span class="n">unique_inverse</span><span class="p">,</span> <span class="n">unique_counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">detectors</span><span class="p">,</span> <span class="n">return_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                                        <span class="n">return_inverse</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">numChannel</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">nbOfChannel</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">unique</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">unique_counts</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">50</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">nbOfChannel</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">numChannel</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">nbOfChannel</span> <span class="o">=</span> <span class="n">nbOfChannel</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_del_data</span><span class="p">()</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[:]</span>
+
+        <span class="n">numChannel</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">soft_channel_value</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">unique</span><span class="p">:</span>
+
+            <span class="c1"># 50 is arbiratry, we do this to filter false count on some detector.</span>
+            <span class="k">if</span> <span class="n">unique_counts</span><span class="p">[</span><span class="n">numChannel</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">50</span><span class="p">:</span>
+                <span class="n">numChannel</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">soft_channel_value</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># On créé un masque et on fait une copie des elements non masqués vers le channel.</span>
+            <span class="n">m_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">masked_where</span><span class="p">(</span><span class="n">detectors</span> <span class="o">!=</span> <span class="n">value</span><span class="p">,</span> <span class="n">timestamps</span><span class="p">)</span>
+            <span class="n">timestampsMasked</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">compressed</span><span class="p">(</span><span class="n">m_</span><span class="p">)</span>
+
+            <span class="n">m_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">masked_where</span><span class="p">(</span><span class="n">detectors</span> <span class="o">!=</span> <span class="n">value</span><span class="p">,</span> <span class="n">nanotimes</span><span class="p">)</span>
+            <span class="n">nanotimesMasked</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">compressed</span><span class="p">(</span><span class="n">m_</span><span class="p">)</span>
+
+            <span class="n">photons</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">unique_counts</span><span class="p">[</span><span class="n">soft_channel_value</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">photonDataType</span><span class="p">)</span>
+
+            <span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">timestampsMasked</span>
+            <span class="n">photons</span><span class="p">[</span><span class="s1">&#39;nanotimes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nanotimesMasked</span>
+
+            <span class="c1"># self.isFiltered.append(np.ones(unique_counts[soft_channel_value], dtype=bool))</span>
+            <span class="c1"># soft_channel_value += 1</span>
+
+            <span class="c1"># Mask an array where a condition is met.</span>
+            <span class="c1"># condition : array_like</span>
+            <span class="c1"># print(np.shape(self.photons))</span>
+            <span class="c1"># print(self.photons[&#39;detectors&#39;])</span>
+
+            <span class="c1"># m_ = np.ma.masked_where(self.photons[&#39;detectors&#39;]  != i, self.photons)</span>
+            <span class="c1"># print(m_)</span>
+            <span class="c1"># print(m_[&#39;detectors&#39;])</span>
+            <span class="c1">#</span>
+            <span class="c1"># print(np.ma.getmask(m_))</span>
+            <span class="c1"># test = np.ma.compressed(m_)</span>
+            <span class="c1"># print(test)</span>
+
+            <span class="c1"># Count the non-masked elements of the array along the given axis.</span>
+            <span class="c1"># nbElementNonMasked = np.ma.MaskedArray.count(m_[&#39;detectors&#39;])</span>
+
+            <span class="n">c</span> <span class="o">=</span> <span class="n">Channel</span><span class="p">()</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">photons</span> <span class="o">=</span> <span class="n">photons</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">startTick</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">endTick</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">nbOfTick</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">CPS</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">nbOfTick</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">endTick</span> <span class="o">-</span> <span class="n">c</span><span class="o">.</span><span class="n">startTick</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">add_channel</span><span class="p">()</span>
+            <span class="c1"># TODO  ???</span>
+            <span class="n">soft_channel_value</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">numChannel</span> <span class="o">+=</span> <span class="mi">1</span></div>
+
+            <span class="c1"># grande question : quand est-il des tableaux avec des masques, ici on garderait une version masquée</span>
+            <span class="c1"># je prefere garder une copie.</span>
+            <span class="c1"># c.photons.append[np.ma.masked_where(self.photons[&#39;detectors&#39;]  == i, self.photons)]</span>
+
+        <span class="c1"># J&#39;utilise d&#39;abord np.unique sur le detector qui m&#39;indique quelle valeur de detecteur sont présent dans le fichier et où.</span>
+        <span class="c1"># Je peux par exemple savoir que trois detecteurs ont été utilisés : 0,1 et 3 et je connais l&#39;index de leur tick respectif (unique_inverse).</span>
+
+        <span class="c1"># for value in unique:</span>
+        <span class="c1">#     m_ = np.ma.masked_where(unique_inverse == return_index[soft_channel_value], timestamps)</span>
+        <span class="c1">#     self.timestamps.append(np.ma.compressed(m_))</span>
+        <span class="c1">#</span>
+        <span class="c1">#     m_ = np.ma.masked_where(unique_inverse == return_index[soft_channel_value], nanotimes)</span>
+        <span class="c1">#     self.nanotimes.append(np.ma.compressed(m_))</span>
+        <span class="c1">#</span>
+        <span class="c1">#     self.isFiltered.append(np.ones(unique_counts[soft_channel_value], dtype=bool))</span>
+        <span class="c1">#     soft_channel_value += 1</span>
+
+    <span class="k">def</span> <span class="nf">get_microtime_curve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="Data.new_generated_exp"><a class="viewcode-back" href="../index.html#Data.Data.new_generated_exp">[docs]</a>    <span class="k">def</span> <span class="nf">new_generated_exp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param type:</span>
+<span class="sd">        :param params:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;Poisson&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_del_data</span><span class="p">()</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[:]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">nbOfMicrotimeChannel</span> <span class="o">=</span> <span class="mi">256</span>
+            <span class="c1"># TODO ask user ?</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span> <span class="o">=</span> <span class="mf">50E-9</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">mIcrotime_clickEquivalentIn_second</span> <span class="o">=</span> <span class="mf">10E-12</span>
+
+            <span class="n">time_s</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">time_tick</span> <span class="o">=</span> <span class="n">time_s</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span>
+
+            <span class="n">count_per_second_s</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">count_per_tick</span> <span class="o">=</span> <span class="n">count_per_second_s</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span>
+
+            <span class="n">timeStamps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_poisson_noise</span><span class="p">(</span><span class="n">count_per_tick</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">time_tick</span><span class="p">)</span>
+            <span class="n">photons</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">timeStamps</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">photonDataType</span><span class="p">)</span>
+
+            <span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">timeStamps</span>
+            <span class="n">photons</span><span class="p">[</span><span class="s1">&#39;nanotimes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="n">c</span> <span class="o">=</span> <span class="n">Channel</span><span class="p">()</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">photons</span> <span class="o">=</span> <span class="n">photons</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">startTick</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">endTick</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">nbOfTick</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">CPS</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">nbOfTick</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">endTick</span> <span class="o">-</span> <span class="n">c</span><span class="o">.</span><span class="n">startTick</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">mAcrotime_clickEquivalentIn_second</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">loadSPC_Bh_File</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filePath</span><span class="p">):</span>
+        <span class="c1"># find associate set</span>
+        <span class="n">path_set</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filePath</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.set&#39;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path_set</span><span class="p">)):</span>
+            <span class="n">meta</span> <span class="o">=</span> <span class="n">bhreader</span><span class="o">.</span><span class="n">load_set</span><span class="p">(</span><span class="n">path_set</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">expParam</span><span class="o">.</span><span class="n">fill_with_SPC_meta_data</span><span class="p">(</span><span class="n">meta</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;default set File missing&quot;</span>
+
+        <span class="c1"># TODO fill ExpParam with set</span>
+        <span class="n">timestamps</span><span class="p">,</span> <span class="n">detector</span><span class="p">,</span> <span class="n">nanotime</span><span class="p">,</span> <span class="n">timestamps_unit</span> <span class="o">=</span> <span class="n">bhreader</span><span class="o">.</span><span class="n">load_spc</span><span class="p">(</span><span class="n">filePath</span><span class="p">,</span> <span class="n">spc_model</span><span class="o">=</span><span class="s2">&quot;SPC-130&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">timestamps</span><span class="p">,</span> <span class="n">detector</span><span class="p">,</span> <span class="n">nanotime</span><span class="p">,</span> <span class="n">timestamps_unit</span><span class="p">,</span> <span class="n">meta</span>
+
+    <span class="k">def</span> <span class="nf">searchIdxOfPhotonWithTimeSupTo_t1_and_InfTo_t2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span> <span class="n">t2</span><span class="p">):</span>
+        <span class="c1"># Find indices where elements should be inserted to maintain order</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="n">t2</span><span class="p">))</span>
+        <span class="k">pass</span>
+
+
+<div class="viewcode-block" id="Data.generate_poisson_noise"><a class="viewcode-back" href="../index.html#Data.Data.generate_poisson_noise">[docs]</a>    <span class="k">def</span> <span class="nf">generate_poisson_noise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mean_rate_in_tick</span><span class="p">,</span> <span class="n">t_start_click</span><span class="p">,</span> <span class="n">t_end_click</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param mean_rate_in_tick:</span>
+<span class="sd">        :param t_start_click:</span>
+<span class="sd">        :param t_end_click:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># http://preshing.com/20111007/how-to-generate-random-timings-for-a-poisson-process/</span>
+        <span class="c1"># ratePerClick = ratePerS / self.expParam.mAcrotime_clickEquivalentIn_second</span>
+        <span class="c1"># TODO name of ratePerClick</span>
+        <span class="n">nb_of_tick_to_generate</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">t_end_click</span> <span class="o">-</span> <span class="n">t_start_click</span><span class="p">)</span> <span class="o">*</span> <span class="n">mean_rate_in_tick</span><span class="p">)</span>
+        <span class="n">arrival_times</span> <span class="o">=</span> <span class="n">t_start_click</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span>
+            <span class="o">-</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">nb_of_tick_to_generate</span><span class="p">))</span> <span class="o">/</span> <span class="n">mean_rate_in_tick</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">))</span>
+        <span class="n">last_sample</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">arrival_times</span><span class="p">,</span> <span class="n">t_end_click</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">arrival_times</span><span class="p">[:</span><span class="n">last_sample</span><span class="p">]</span></div>
+        <span class="c1"># nbCorrelationPoint = int(maxCorrelationTime_s / self.expParam.mAcrotime_clickEquivalentIn_second)</span>
+
+<div class="viewcode-block" id="Data.filter_bin_and_threshold"><a class="viewcode-back" href="../index.html#Data.Data.filter_bin_and_threshold">[docs]</a>    <span class="k">def</span> <span class="nf">filter_bin_and_threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_channel</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">bin_in_tick</span><span class="p">,</span> <span class="n">replacement_mode</span><span class="o">=</span><span class="s2">&quot;nothing&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param num_channel:</span>
+<span class="sd">        :param threshold:</span>
+<span class="sd">        :param bin_in_tick:</span>
+<span class="sd">        :param replacement_mode:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">time_stamps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">num_channel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span>
+        <span class="c1"># Binning</span>
+        <span class="n">num_bin_for_each_photons</span> <span class="o">=</span> <span class="p">(</span><span class="n">time_stamps</span> <span class="o">/</span> <span class="n">bin_in_tick</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+        <span class="n">binned_timestamps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">num_bin_for_each_photons</span><span class="p">)</span>
+        <span class="c1"># Filter</span>
+        <span class="n">idx_bin_to_filter</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">binned_timestamps</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">)</span>
+        <span class="n">is_photons_to_be_filtered</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">num_bin_for_each_photons</span><span class="p">,</span> <span class="n">idx_bin_to_filter</span><span class="p">)</span>
+        <span class="n">idx_photons_to_filter</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">is_photons_to_be_filtered</span><span class="p">)</span>
+
+        <span class="c1"># TODO Use mask ?</span>
+
+        <span class="k">if</span> <span class="n">replacement_mode</span> <span class="ow">is</span> <span class="s2">&quot;nothing&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">num_channel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">num_channel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">,</span>
+                                                           <span class="n">idx_photons_to_filter</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">replacement_mode</span> <span class="ow">is</span> <span class="s2">&quot;poissonian_noise&quot;</span><span class="p">:</span>
+            <span class="c1"># Strategy, put artificial poisson noise at the end of the photons list and sort the photon list</span>
+            <span class="n">nb_of_time_bin_to_generate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">idx_bin_to_filter</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">filter_time_selection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_channel</span><span class="p">,</span> <span class="n">t1_tick</span><span class="p">,</span> <span class="n">t2_tick</span><span class="p">,</span> <span class="n">is_keep</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">replacement_mode</span><span class="o">=</span><span class="s2">&quot;nothing&quot;</span><span class="p">):</span>
+        <span class="n">timeStamps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">num_channel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">is_keep</span><span class="p">:</span>
+            <span class="n">idx_photons_to_be_filtered</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">t1_tick</span> <span class="o">&gt;</span> <span class="n">timeStamps</span> <span class="o">&gt;</span> <span class="n">t2_tick</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">idx_photons_to_be_filtered</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">t1_tick</span> <span class="o">&lt;</span> <span class="n">timeStamps</span> <span class="o">&lt;</span> <span class="n">t2_tick</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">replacement_mode</span> <span class="ow">is</span> <span class="s2">&quot;nothing&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">num_channel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">num_channel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">,</span>
+                                                           <span class="n">idx_photons_to_be_filtered</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">replacement_mode</span> <span class="ow">is</span> <span class="s2">&quot;poissonian_noise&quot;</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">filter_micro_time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_channel</span><span class="p">,</span> <span class="n">micro_t1</span><span class="p">,</span> <span class="n">micro_t2</span><span class="p">,</span> <span class="n">is_keep</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">replacement_mode</span><span class="o">=</span><span class="s2">&quot;nothing&quot;</span><span class="p">):</span>
+        <span class="n">nanotimes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">num_channel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">[</span><span class="s1">&#39;nanotimes&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">is_keep</span><span class="p">:</span>
+            <span class="n">idx_photons_to_be_filtered</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">micro_t1</span> <span class="o">&gt;</span> <span class="n">nanotimes</span> <span class="o">&gt;</span> <span class="n">micro_t2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">idx_photons_to_be_filtered</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">micro_t1</span> <span class="o">&lt;</span> <span class="n">nanotimes</span> <span class="o">&lt;</span> <span class="n">micro_t2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">replacement_mode</span> <span class="ow">is</span> <span class="s2">&quot;nothing&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">num_channel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">num_channel</span><span class="p">]</span><span class="o">.</span><span class="n">photons</span><span class="p">,</span>
+                                                           <span class="n">idx_photons_to_be_filtered</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">replacement_mode</span> <span class="ow">is</span> <span class="s2">&quot;poissonian_noise&quot;</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, m.loumaigne et al..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

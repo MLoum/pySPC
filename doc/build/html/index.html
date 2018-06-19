@@ -1,0 +1,546 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Welcome to pySPC’s documentation! &#8212; pySPC 0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-pyspc-s-documentation">
+<h1>Welcome to pySPC’s documentation!<a class="headerlink" href="#welcome-to-pyspc-s-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+</div>
+<div class="section" id="mvc-pattern">
+<h1>MVC pattern<a class="headerlink" href="#mvc-pattern" title="Permalink to this headline">¶</a></h1>
+<p>pySPC uses a Model View Controller <a class="reference external" href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller">(MVC) pattern</a></p>
+<p>The Model (which is contained in the repertory named core) is the heart of the software.</p>
+<p>It is <em>totally independant</em>.</p>
+<p>You can (and sometimes you better should) use it separately, typically with scripts (using it a jupyter notebook is a very efficient way to document ).</p>
+<p>The Model and the view are here for the Graphical User Interface (GUI).</p>
+<div class="section" id="the-core-model-in-mvc">
+<h2>The Core (Model in MVC)<a class="headerlink" href="#the-core-model-in-mvc" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-gui-view-and-controller-in-mvc">
+<h2>The GUI (View and Controller in MVC)<a class="headerlink" href="#the-gui-view-and-controller-in-mvc" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+<div class="section" id="api-documentation">
+<h1>API documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="the-core">
+<h2>The Core<a class="headerlink" href="#the-core" title="Permalink to this headline">¶</a></h2>
+<p>Inherintance graph :</p>
+digraph inheritanceba72734cfd {
+rankdir=LR;
+size=&quot;8.0, 12.0&quot;;
+  &quot;FCS.CorrelationMeasurement&quot; [URL=&quot;#FCS.CorrelationMeasurement&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;];
+  &quot;Measurement.Measurements&quot; -&gt; &quot;FCS.CorrelationMeasurement&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;FCS.FCSMeasurements&quot; [URL=&quot;#FCS.FCSMeasurements&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;];
+  &quot;FCS.CorrelationMeasurement&quot; -&gt; &quot;FCS.FCSMeasurements&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;Measurement.Measurements&quot; [URL=&quot;#Measurement.Measurements&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;];
+  &quot;Measurement.Measurements&quot; [fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;];
+}
+<dl class="class">
+<dt id="Data.Data">
+<em class="property">class </em><code class="descclassname">Data.</code><code class="descname">Data</code><span class="sig-paren">(</span><em>results</em>, <em>expParam</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Data.html#Data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Data.Data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Contains the SPC raw data, and method to process them (file opening, noise generation, filtering).</p>
+<dl class="method">
+<dt id="Data.Data.filter_bin_and_threshold">
+<code class="descname">filter_bin_and_threshold</code><span class="sig-paren">(</span><em>num_channel</em>, <em>threshold</em>, <em>bin_in_tick</em>, <em>replacement_mode='nothing'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Data.html#Data.filter_bin_and_threshold"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Data.Data.filter_bin_and_threshold" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>num_channel</strong> – </li>
+<li><strong>threshold</strong> – </li>
+<li><strong>bin_in_tick</strong> – </li>
+<li><strong>replacement_mode</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Data.Data.generate_poisson_noise">
+<code class="descname">generate_poisson_noise</code><span class="sig-paren">(</span><em>mean_rate_in_tick</em>, <em>t_start_click</em>, <em>t_end_click</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Data.html#Data.generate_poisson_noise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Data.Data.generate_poisson_noise" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mean_rate_in_tick</strong> – </li>
+<li><strong>t_start_click</strong> – </li>
+<li><strong>t_end_click</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Data.Data.load_from_file">
+<code class="descname">load_from_file</code><span class="sig-paren">(</span><em>filePath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Data.html#Data.load_from_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Data.Data.load_from_file" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>filePath</strong> – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Data.Data.new_generated_exp">
+<code class="descname">new_generated_exp</code><span class="sig-paren">(</span><em>type</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Data.html#Data.new_generated_exp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Data.Data.new_generated_exp" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>type</strong> – </li>
+<li><strong>params</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Experiment.Experiment">
+<em class="property">class </em><code class="descclassname">Experiment.</code><code class="descname">Experiment</code><span class="sig-paren">(</span><em>exp_param=None</em>, <em>results=None</em>, <em>data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Experiment.html#Experiment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Experiment.Experiment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Root class of the model (named here “core”) of the MVC pattern.</p>
+<p>main members :
+- exp_param
+- results
+- data</p>
+<p>main methods :
+- new_exp
+- save_state/load_state</p>
+<dl class="method">
+<dt id="Experiment.Experiment.DLS">
+<code class="descname">DLS</code><span class="sig-paren">(</span><em>num_channel_1</em>, <em>num_channel_2</em>, <em>start_tick</em>, <em>end_tick</em>, <em>max_correlation_time_ms=1000</em>, <em>start_time_mu_s=1</em>, <em>precision=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Experiment.html#Experiment.DLS"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Experiment.Experiment.DLS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dynamic Light Scattering</p>
+<p>Create a DLS_Measurements object and launch calculation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>num_channel_1</strong> – </li>
+<li><strong>num_channel_2</strong> – </li>
+<li><strong>start_tick</strong> – </li>
+<li><strong>end_tick</strong> – </li>
+<li><strong>max_correlation_time_ms</strong> – </li>
+<li><strong>start_time_mu_s</strong> – </li>
+<li><strong>precision</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Experiment.Experiment.FCS">
+<code class="descname">FCS</code><span class="sig-paren">(</span><em>num_channel_1</em>, <em>num_channel_2</em>, <em>start_tick</em>, <em>end_tick</em>, <em>max_correlation_time_ms=1000</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Experiment.html#Experiment.FCS"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Experiment.Experiment.FCS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fluctuation Correlation Spectroscopy</p>
+<p>Create a FCS_Measurements object and launch calculation
+:param num_channel_1:
+:param num_channel_2:
+:param start_tick:
+:param end_tick:
+:param max_correlation_time_ms:
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Experiment.Experiment.PCH">
+<code class="descname">PCH</code><span class="sig-paren">(</span><em>chronogram</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Experiment.html#Experiment.PCH"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Experiment.Experiment.PCH" title="Permalink to this definition">¶</a></dt>
+<dd><p>Photon Counting Histogramm
+:param chronogram:
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Experiment.Experiment.chronogram">
+<code class="descname">chronogram</code><span class="sig-paren">(</span><em>numChannel</em>, <em>startTick</em>, <em>endTick</em>, <em>bin_in_tick</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Experiment.html#Experiment.chronogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Experiment.Experiment.chronogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>The x axis is in -&gt;microsecond&lt;-</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Experiment.Experiment.load_state">
+<code class="descname">load_state</code><span class="sig-paren">(</span><em>shelf</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Experiment.html#Experiment.load_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Experiment.Experiment.load_state" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>shelf</strong> – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Experiment.Experiment.new_exp">
+<code class="descname">new_exp</code><span class="sig-paren">(</span><em>mode</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Experiment.html#Experiment.new_exp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Experiment.Experiment.new_exp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new experiment from a file or from simulated data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mode</strong> – a string telling how to create the new experiment. Can be :
+- “file” : a recorded file spc or pt3 file
+- “generate” : Poissonian Noise
+- “simulation” : Not Implemented Yet.</li>
+<li><strong>params</strong> – <p>params passed to the function based on the mode :
+- for “file mode :</p>
+<blockquote>
+<div><ul>
+<li>params[0] = filePath</li>
+</ul>
+</div></blockquote>
+<ul>
+<li><dl class="first docutils">
+<dt>for “generate” :</dt>
+<dd><ul class="first last">
+<li>params[0] = filePath</li>
+<li>params[1] = time_s</li>
+<li>params[2] = count_per_second_s</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Experiment.Experiment.save_state">
+<code class="descname">save_state</code><span class="sig-paren">(</span><em>shelf</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Experiment.html#Experiment.save_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Experiment.Experiment.save_state" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>shelf</strong> – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Experiment.Experiment.timeDifference">
+<code class="descname">timeDifference</code><span class="sig-paren">(</span><em>numChannel=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Experiment.html#Experiment.timeDifference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Experiment.Experiment.timeDifference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the tume difference between consecutive photons
+:param numChannel:
+:return:</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Results.Results">
+<em class="property">class </em><code class="descclassname">Results.</code><code class="descname">Results</code><a class="reference internal" href="_modules/Results.html#Results"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Results.Results" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="ExpParam.Experiment_param">
+<em class="property">class </em><code class="descclassname">ExpParam.</code><code class="descname">Experiment_param</code><a class="reference internal" href="_modules/ExpParam.html#Experiment_param"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ExpParam.Experiment_param" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="Measurement.Measurements">
+<em class="property">class </em><code class="descclassname">Measurement.</code><code class="descname">Measurements</code><span class="sig-paren">(</span><em>data_=None</em>, <em>time_axis_=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Measurement.html#Measurements"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Measurement.Measurements" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="Measurement.Measurements.evalParams">
+<code class="descname">evalParams</code><span class="sig-paren">(</span><em>idx_start=0</em>, <em>idx_end=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Measurement.html#Measurements.evalParams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Measurement.Measurements.evalParams" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>idx_start</strong> – </li>
+<li><strong>idx_end</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Measurement.Measurements.find_idx_of_fit_limit">
+<code class="descname">find_idx_of_fit_limit</code><span class="sig-paren">(</span><em>idx_start</em>, <em>idx_end</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Measurement.html#Measurements.find_idx_of_fit_limit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Measurement.Measurements.find_idx_of_fit_limit" title="Permalink to this definition">¶</a></dt>
+<dd><p>User selection of a a specific part of a graph is often based on a arbitraty value on the x axis
+This method find the correspoding index of the photon</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>idx_start</strong> – lowest x value of the user selected interval. Default is 0</li>
+<li><strong>idx_end</strong> – highest x value of the user selected interval. Default is -1, that is to say latest value</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Measurement.Measurements.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>idx_start=0</em>, <em>idx_end=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Measurement.html#Measurements.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Measurement.Measurements.fit" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>idx_start</strong> – </li>
+<li><strong>idx_end</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Measurement.Measurements.guess">
+<code class="descname">guess</code><span class="sig-paren">(</span><em>idx_start=0</em>, <em>idx_end=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Measurement.html#Measurements.guess"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Measurement.Measurements.guess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Guess the parameters using the guess method of the lmfit Model class instance  (i.e. the member self.model)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>idx_start</strong> – </li>
+<li><strong>idx_end</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Measurement.Measurements.set_model">
+<code class="descname">set_model</code><span class="sig-paren">(</span><em>model_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Measurement.html#Measurements.set_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Measurement.Measurements.set_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>“Virtual” Method that has to be explicited in child classes</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>model_name</strong> – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Measurement.Measurements.set_params">
+<code class="descname">set_params</code><span class="sig-paren">(</span><em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Measurement.html#Measurements.set_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Measurement.Measurements.set_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>“Virtual” Method that has to be explicited in child classes</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>params</strong> – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="FCS.CorrelationMeasurement">
+<em class="property">class </em><code class="descclassname">FCS.</code><code class="descname">CorrelationMeasurement</code><span class="sig-paren">(</span><em>data_=None</em>, <em>time_axis_=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/FCS.html#CorrelationMeasurement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FCS.CorrelationMeasurement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="FCS.FCSMeasurements">
+<em class="property">class </em><code class="descclassname">FCS.</code><code class="descname">FCSMeasurements</code><span class="sig-paren">(</span><em>correlationCurve=None</em>, <em>time_axis_=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/FCS.html#FCSMeasurements"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FCS.FCSMeasurements" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="the-controller">
+<h2>The Controller<a class="headerlink" href="#the-controller" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="Controller.Controller">
+<em class="property">class </em><code class="descclassname">Controller.</code><code class="descname">Controller</code><a class="reference internal" href="_modules/Controller.html#Controller"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Controller.Controller" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="Controller.Controller.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>analyze_type</em>, <em>mode</em>, <em>model_name</em>, <em>params</em>, <em>idx_start=0</em>, <em>idx_end=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Controller.html#Controller.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Controller.Controller.fit" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>analyze_type</strong> – is a string for lifetime FCS DLS …</td>
+</tr>
+</tbody>
+</table>
+<p>:param mode can be fit, eval or guess
+:param model_name string for the model name
+:param params: list of paramaters for the fit
+xlims_idx : index of the limits of the x axis where to perform the fit.
+:return:</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="the-view">
+<h2>The View<a class="headerlink" href="#the-view" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+<div class="section" id="tests">
+<h1>Tests<a class="headerlink" href="#tests" title="Permalink to this headline">¶</a></h1>
+<div class="math">
+\[W^{3\beta}_{\delta_1 \rho_1 \sigma_2} \approx U^{3\beta}_{\delta_1 \rho_1}\]</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Note test</p>
+</div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">warning test</p>
+</div>
+</div>
+<div class="section" id="todo">
+<h1>TODO<a class="headerlink" href="#todo" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, m.loumaigne et al..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
