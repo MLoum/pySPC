@@ -15,3 +15,6 @@ which contains the appropriate token for authenticating.
 
 Source :
 https://stackoverflow.com/questions/41736309/jupyter-notebook-in-pycharm
+
+In order to close a server :
+jupyter notebook stop 8888

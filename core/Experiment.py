@@ -106,26 +106,32 @@ class Experiment(object):
         pass
 
     # TODO put into a file in analyze and call it Bin.
-    def chronogram(self, numChannel, startTick, endTick, bin_in_tick):
+    def chronogram(self, num_channel=0, start_tick=0, end_tick=-1, bin_in_tick=1E5):
         """
         The x axis is in ->microsecond<-
         """
-        timeStamps = self.data.channels[numChannel].photons['timestamps']
+        timeStamps = self.data.channels[num_channel].photons['timestamps']
 
-        startTick = np.uint64(startTick)
-        endTick = np.uint64(endTick)
+        if start_tick == 0:
+            start_tick = self.data.channels[num_channel].start_tick
+        if end_tick == -1:
+            end_tick = self.data.channels[num_channel].end_tick
+
+
+        start_tick = np.uint64(start_tick)
+        end_tick = np.uint64(end_tick)
 
         # TODO Expliquer le +1, je pense que c'est du à des pb de valeurs arrondies... Au pire la derniere case est vide.
-        nbOfBin = int((endTick - startTick) / bin_in_tick) + 1
+        nbOfBin = int((end_tick - start_tick) / bin_in_tick) + 1
         # Find indices where elements should be inserted to maintain order
-        idxStart, idxEnd = np.searchsorted(timeStamps, (startTick, endTick))
+        idxStart, idxEnd = np.searchsorted(timeStamps, (start_tick, end_tick))
 
         timesStamps = np.copy(timeStamps[idxStart:idxEnd])
-        timesStamps -= startTick
+        timesStamps -= start_tick
 
-        numStartBin = int(startTick / bin_in_tick)
-        # numEndBin = int( endTick / binInTick)
-        numEndBin = numStartBin + nbOfBin
+        # numStartBin = int(start_tick / bin_in_tick)
+        # # numEndBin = int( end_tick / binInTick)
+        # numEndBin = numStartBin + nbOfBin
 
         # FIXME moins de divisions, ici on prend tout le fichier
         # numOfBinForEachPhoton =  timesStamps / binInTick
@@ -133,7 +139,7 @@ class Experiment(object):
 
         # #Default value for "range" seems fine  -> The lower and upper range of the bins. If not provided, range is simply (a.min(), a.max()). Values outside the range are ignored.
         # self.results.mainChronogram = Results.Chronogram()
-        # self.results.mainChronogram.tickStart, self.results.mainChronogram.tickEnd, self.results.mainChronogram.nbOfBin = startTick, endTick, nbOfBin
+        # self.results.mainChronogram.tickStart, self.results.mainChronogram.tickEnd, self.results.mainChronogram.nbOfBin = start_tick, end_tick, nbOfBin
         # self.results.mainChronogram.data, self.results.mainChronogram.xAxis  =  np.histogram(numOfBinForEachPhoton, nbOfBin)
         # #time axis in millisecond
         # self.results.mainChronogram.xAxis *= binInTick * self.expParam.mAcrotime_clickEquivalentIn_second*1E6 #ms
@@ -141,7 +147,7 @@ class Experiment(object):
         # self.results.mainChronogram.xAxis = self.results.mainChronogram.xAxis[:-1]
 
         chronogram = Results.Chronogram()
-        chronogram.tickStart, chronogramtickEnd, chronogram.nbOfBin = startTick, endTick, int(nbOfBin)
+        chronogram.tickStart, chronogramtickEnd, chronogram.nbOfBin = start_tick, end_tick, int(nbOfBin)
         # chronogram.data, chronogram.xAxis = np.histogram(numOfBinForEachPhoton, int(nbOfBin))
 
         # chronogram.data = np.zeros(chronogram.nbOfBin + 1, dtype=np.int)
@@ -154,7 +160,8 @@ class Experiment(object):
         # TODO UNDERSTAND We have to cut by one element the x axis because it is on element longer than the data (NB : there is no copy, just "a view")
         # chronogram.data = chronogram.data[:-1]
 
-        chronogram.xAxis = np.arange(numStartBin, numEndBin, dtype=np.float64)
+        # chronogram.xAxis = np.arange(numStartBin, numEndBin, dtype=np.float64)
+        chronogram.xAxis = np.arange(nbOfBin, dtype=np.float64)
         chronogram.xAxis *= bin_in_tick
         chronogram.xAxis += chronogram.tickStart
         chronogram.xAxis *= self.exp_param.mAcrotime_clickEquivalentIn_second * 1E6
@@ -215,8 +222,8 @@ class Experiment(object):
         if self.results.lifetimes[num_channel] is None:
             self.results.lifetimes[num_channel] = lifetime.lifeTimeMeasurements()
 
-        self.results.lifetimes[num_channel].createHistogramm(nanotimes, self.exp_param.nbOfMicrotimeChannel,
-                                                                       self.exp_param.mIcrotime_clickEquivalentIn_second)
+        self.results.lifetimes[num_channel].createHistogramm(nanotimes, self.exp_param.nb_of_microtime_channel,
+                                                             self.exp_param.mIcrotime_clickEquivalentIn_second)
 
     def FCS(self, num_channel_1, num_channel_2, start_tick, end_tick, max_correlation_time_ms=1000):
         """

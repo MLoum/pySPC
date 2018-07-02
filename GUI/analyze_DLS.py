@@ -27,7 +27,7 @@ class guiForFitOperation_DLS(guiForFitOperation):
                 self.listEntryParamFit[i].state(['disabled'])
 
 
-            self.setFitFormula(r"B + \beta e^{-t/\tau} (1 + \frac{\mu_2}{2!} t^2 + \frac{\mu_3}{3!} t^3 + \frac{\mu_3}{4!} t^4)^2,  \tau=1/2\Gamma " )
+            self.setFitFormula(r"B + \beta e^{-t/\tau} (1 + \frac{\mu_2}{2!} \frac{t^2}{tau^2} + \frac{\mu_3}{3!} \frac{t^3}{tau^3}+ \frac{\mu_3}{4!} \frac{t^4}{tau^4})^2,  \tau=1/2\Gamma " )
 
         elif self.comboBoxStringVar.get() == "Inv TL":
             for i in range(nbFitParam) :

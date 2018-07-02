@@ -25,7 +25,7 @@ class Cumulant(Model):
 
     .. math::
 
-        f(t; , t0, amp, tau, cst) = B + beta*np.exp(-2*Gamma*t)*((1 + mu2/2*t**2 - mu3/6*t**3 +  mu4/24*t**4)**2)
+        f(t; , t0, amp, tau, cst) = B + beta*np.exp(-2*Gamma*t)*((1 + mu2/2*t**2/Gamma**2 - mu3/6*t**3/Gamma**3 +  mu4/24*t**4/Gamma**4)**2)
 
     """
 
@@ -35,7 +35,7 @@ class Cumulant(Model):
                        'independent_vars': independent_vars})
 
         def cumulant(t, B, beta, tau, mu2, mu3, mu4):
-            return B + beta*np.exp(-t/tau)*((1 + mu2/2*t**2 - mu3/6*t**3 +  mu4/24*t**4)**2)
+            return B + beta*np.exp(-t/tau)*((1 + mu2/2*t**2/tau**2 - mu3/6*t**3/tau**3 +  mu4/24*t**4/tau**4)**2)
 
         super(Cumulant, self).__init__(cumulant, **kwargs)
 
@@ -84,6 +84,11 @@ class DLS_Measurements(CorrelationMeasurement):
             self.modelName = modelName
             self.model = Cumulant()
             self.params = self.model.make_params(B=1, beta=1, tau=100, mu2=0, mu3=0, mu4=0)
+
+    def export(self, file_path = None):
+        data = np.column_stack((self.data, self.timeAxis))
+        np.savetxt(file_path, data)
+
 
 
 

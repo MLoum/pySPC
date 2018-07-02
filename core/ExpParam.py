@@ -9,7 +9,7 @@ class Experiment_param(object):
     def __init__(self):
         self.meta = None
         self.nbOfChannel = None
-        self.nbOfMicrotimeChannel = None
+        self.nb_of_microtime_channel = None
         self.mAcrotime_clickEquivalentIn_second = None
         self.mIcrotime_clickEquivalentIn_second = None
         self.spcCountingCardType = None
@@ -20,7 +20,7 @@ class Experiment_param(object):
         self.mAcrotime_clickEquivalentIn_second = meta['timestamps_unit'][0]
         self.mIcrotime_clickEquivalentIn_second = meta['nanotimes_unit'][0]
 
-        self.nbOfMicrotimeChannel = meta['header'][0][-8]
+        self.nb_of_microtime_channel = meta['header'][0][-8]
         # FIXME
         # self.nbOfChannel = 65535
         self.spcFileType = 'pt3'
@@ -32,7 +32,7 @@ class Experiment_param(object):
         self.mIcrotime_clickEquivalentIn_second = meta["sys_params"]["SP_TAC_TC"]
         self.mAcrotime_clickEquivalentIn_second = time_stamp_unit
 
-        self.nbOfMicrotimeChannel = meta["sys_params"]["SP_ADC_RE"]
+        self.nb_of_microtime_channel = meta["sys_params"]["SP_ADC_RE"]
         self.nbOfChannel = 1
 
         self.spcFileType = 'spc'

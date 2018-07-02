@@ -20,6 +20,16 @@ class Channel():
         self.end_tick = 0
         self.CPS = 0
 
+    def update(self, mAcrotime_clickEquivalentIn_second):
+        """
+        Update  nb_of_tick,  start_tick, end_tick and CPS
+        :return:
+        """
+        self.start_tick = self.photons['timestamps'][0]
+        self.end_tick = self.photons['timestamps'][-1]
+        self.nb_of_tick = self.photons['timestamps'].size
+        self.CPS = float(self.nb_of_tick) / (self.end_tick - self.start_tick) / mAcrotime_clickEquivalentIn_second
+
 
 class Data():
     """
@@ -128,10 +138,7 @@ class Data():
 
             c = Channel()
             c.photons = photons
-            c.start_tick = c.photons['timestamps'][0]
-            c.end_tick = c.photons['timestamps'][-1]
-            c.nb_of_tick = c.photons['timestamps'].size
-            c.CPS = float(c.nb_of_tick) / (c.end_tick - c.start_tick) / self.expParam.mAcrotime_clickEquivalentIn_second
+            c.update(self.expParam.mAcrotime_clickEquivalentIn_second)
             self.channels.append(c)
             self.results.add_channel()
             # TODO  ???
@@ -230,7 +237,6 @@ class Data():
             -(np.log(1.0 - np.random.random(nb_of_tick_to_generate)) / mean_rate_in_tick).astype(np.uint64))
         last_sample = np.searchsorted(arrival_times, t_end_click)
         return arrival_times[:last_sample]
-        # nbCorrelationPoint = int(maxCorrelationTime_s / self.expParam.mAcrotime_clickEquivalentIn_second)
 
     def filter_bin_and_threshold(self, num_channel, threshold, bin_in_tick, replacement_mode="nothing"):
         """
@@ -260,18 +266,64 @@ class Data():
             nb_of_time_bin_to_generate = np.size(idx_bin_to_filter)
 
     def filter_time_selection(self, num_channel, t1_tick, t2_tick, is_keep=True, replacement_mode="nothing"):
-        timeStamps = self.channels[num_channel].photons['timestamps']
+        time_stamps = self.channels[num_channel].photons['timestamps']
 
         if is_keep:
-            idx_photons_to_be_filtered = np.where(t1_tick > timeStamps > t2_tick)
+            idx_photons_to_be_filtered = np.where(np.logical_or(time_stamps < t1_tick, time_stamps > t2_tick))
         else:
-            idx_photons_to_be_filtered = np.where(t1_tick < timeStamps < t2_tick)
+            idx_photons_to_be_filtered = np.where(np.logical_and(time_stamps > t1_tick, time_stamps < t2_tick))
 
         if replacement_mode is "nothing":
             self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                            idx_photons_to_be_filtered)
+        if replacement_mode is "glue":
+            if is_keep:
+                self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
+                                                               idx_photons_to_be_filtered)
+                time_stamps -= t1_tick
+            else:
+                idx_t2_tick = np.searchsorted(time_stamps, t2_tick)
+                time_stamps[idx_t2_tick:] -= np.int64(t2_tick - t1_tick)
+                self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
+                                                               idx_photons_to_be_filtered)
+
         elif replacement_mode is "poissonian_noise":
-            pass
+            if is_keep:
+                old_cps_per_tick = self.channels[num_channel].CPS * self.expParam.mAcrotime_clickEquivalentIn_second
+                self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
+                                                               idx_photons_to_be_filtered)
+                # Before t_1
+                poisson_signal_t1 = self.generate_poisson_noise(old_cps_per_tick, 0, t1_tick)
+                photons_poisson_t1 = np.empty(np.size(poisson_signal_t1), self.photonDataType)
+
+                photons_poisson_t1['timestamps'] = poisson_signal_t1
+                photons_poisson_t1['nanotimes'] = np.random.rand(poisson_signal_t1.size) * self.expParam.nb_of_microtime_channel
+                self.channels[num_channel].photons = np.insert(self.channels[num_channel].photons, obj=0, values=photons_poisson_t1)
+
+                # After t_2
+                poisson_signal_t2 = self.generate_poisson_noise(old_cps_per_tick, t2_tick, self.channels[num_channel].end_tick)
+                photons_poisson_t2 = np.empty(np.size(poisson_signal_t2), self.photonDataType)
+
+                photons_poisson_t2['timestamps'] = poisson_signal_t2
+                photons_poisson_t2['nanotimes'] = np.random.rand(poisson_signal_t2.size) * self.expParam.nb_of_microtime_channel
+                self.channels[num_channel].photons = np.append(self.channels[num_channel].photons, values=photons_poisson_t2)
+
+                np.sort(self.channels[num_channel].photons, order='timestamps')
+
+            if is_keep is False:
+                old_cps_per_tick = self.channels[num_channel].CPS * self.expParam.mAcrotime_clickEquivalentIn_second
+                idx_t1_tick = np.searchsorted(time_stamps, t1_tick)
+                self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
+                                                               idx_photons_to_be_filtered)
+                poisson_signal = self.generate_poisson_noise(old_cps_per_tick, t1_tick, t2_tick)
+                photons_poisson = np.empty(np.size(poisson_signal), self.photonDataType)
+
+                photons_poisson['timestamps'] = poisson_signal
+                photons_poisson['nanotimes'] = np.random.rand(photons_poisson.size) * self.expParam.nb_of_microtime_channel
+                self.channels[num_channel].photons = np.insert(self.channels[num_channel].photons, obj=idx_t1_tick, values=photons_poisson)
+                np.sort(self.channels[num_channel].photons, order='timestamps')
+
+        self.channels[num_channel].update(self.expParam.mAcrotime_clickEquivalentIn_second)
 
     def filter_micro_time(self, num_channel, micro_t1, micro_t2, is_keep=True, replacement_mode="nothing"):
         nanotimes = self.channels[num_channel].photons['nanotimes']

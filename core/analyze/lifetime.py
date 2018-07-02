@@ -20,7 +20,7 @@ class OneExpDecay(Model):
 
     .. math::
 
-        f(t; , t0, amp, tau, cst) = cst + amp * exp(-(t + t0) / tau)
+        f(t; , t0, amp, tau, cst) = cst + amp * exp(-(t - t0) / tau)
 
     """
 
@@ -47,6 +47,44 @@ class OneExpDecay(Model):
         tau = x[idx_tau] - t0
         #TODO check if it is not the case
         cst = np.min(data[np.nonzero(data)]) #Attention aux canaux à zeros
+
+        pars = self.make_params(t0=t0, amp=amp, tau=tau, cst=cst)
+        return update_param_vals(pars, self.prefix, **kwargs)
+
+    # __init__.__doc__ = COMMON_INIT_DOC
+    # guess.__doc__ = COMMON_GUESS_DOC
+    __init__.__doc__ = "TODO"
+    guess.__doc__ = "TODO"
+
+
+class TwoExpDecay(Model):
+    """Two exponential decays with a shift in time, with four Parameters ``t0``, ``amp1``, ``tau1``, ''amp2'', ''tau5'' and ``cst``.
+
+    Defined as:
+
+    .. math::
+
+        f(t; , t0, amp, tau, cst) = cst + amp1 * exp(-(t - t0) / tau1) + amp2 * exp(-(t - t0) / tau2)
+
+    """
+
+    def __init__(self, independent_vars=['t'], prefix='', nan_policy='propagate',
+                 **kwargs):
+        kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
+                       'independent_vars': independent_vars})
+
+        def oneExpDecay(t, t0, amp1, tau1, amp2, tau2, cst):
+            return cst + amp1 * np.exp(-(t - t0) / tau1) +  amp2 * np.exp(-(t - t0) / tau2)
+
+        super(TwoExpDecay, self).__init__(oneExpDecay, **kwargs)
+
+    def guess(self, data, x=None, **kwargs):
+        t0, amp1, tau1, amp2, tau2, cst = 0., 0., 0., 0., 0., 0.
+        #if x is not None:
+        idx_t0 = np.argmax(data)
+        t0 = x[idx_t0]
+        # TODO
+
 
         pars = self.make_params(t0=t0, amp=amp, tau=tau, cst=cst)
         return update_param_vals(pars, self.prefix, **kwargs)
@@ -133,13 +171,29 @@ class lifeTimeMeasurements(Measurements):
             self.params['tau'].set(value=params[2], vary=True, min=0, max=None)
             self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
 
+        if self.modelName == "Two Decays":
+            self.params['t0'].set(value=params[0],  vary=True, min=0, max=None)
+            self.params['amp1'].set(value=params[1], vary=True, min=0, max=None)
+            self.params['tau1'].set(value=params[2], vary=True, min=0, max=None)
+            self.params['amp2'].set(value=params[3], vary=True, min=0, max=None)
+            self.params['tau2'].set(value=params[4], vary=True, min=0, max=None)
+            self.params['cst'].set(value=params[5], vary=True, min=0, max=None)
+
 
     def set_model(self, modelName):
+        print(modelName)
         #il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *
         if modelName == "One Decay":
             self.modelName = modelName
             self.model = OneExpDecay()
             self.params = self.model.make_params(t0=0, amp=1, tau=1, cst=0)
+
+        if modelName == "Two Decays":
+            print (modelName)
+            self.modelName = modelName
+            self.model = TwoExpDecay()
+            self.params = self.model.make_params(t0=0, amp1=1, tau1=1, amp2=1, tau2=1, cst=0)
+
 
 
 

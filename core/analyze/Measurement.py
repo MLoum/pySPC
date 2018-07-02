@@ -116,6 +116,13 @@ class Measurements:
         """
         pass
 
+    def export(self, file_path=None):
+        """
+        Export to an external text file
+        "Virtual" Method that has to be explicited in child classes
+
+        :return:
+        """
 
 
 
