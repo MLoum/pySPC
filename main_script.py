@@ -30,9 +30,9 @@ plt.show()
 
 idx_t1 = exp.convert_seconds_in_ticks(15)
 idx_t2 = exp.convert_seconds_in_ticks(35)
-exp.data.filter_time_selection(0, idx_t1, idx_t2, is_keep=True, replacement_mode="poissonian_noise")
+exp.data.filter_bin_and_threshold(num_channel=0, threshold=60, bin_in_tick=1E5, replacement_mode="poissonian_noise")
 
 chronogram = exp.chronogram()
-plt.plot(chronogram.xAxis, chronogram.data)
+plt.plot(chronogram.xAxis, chronogram.data, "ro")
 plt.show()
 dummy = 1

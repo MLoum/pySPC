@@ -261,9 +261,36 @@ class Data():
         if replacement_mode is "nothing":
             self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                            idx_photons_to_filter)
+        elif replacement_mode is "glue":
+            """
+            Most of the times, this is a bad idea
+            """
+            pass
+
         elif replacement_mode is "poissonian_noise":
             # Strategy, put artificial poisson noise at the end of the photons list and sort the photon list
-            nb_of_time_bin_to_generate = np.size(idx_bin_to_filter)
+            old_cps_per_tick = self.channels[num_channel].CPS * self.expParam.mAcrotime_clickEquivalentIn_second
+
+            self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
+                                                           idx_photons_to_filter)
+
+            list_poisson_photons = []
+            #TODO without a loop ?
+            for bin_idx in idx_bin_to_filter[0]:
+                poisson_signal = self.generate_poisson_noise(old_cps_per_tick, bin_idx*bin_in_tick, (bin_idx+1)*bin_in_tick )
+                photons_poisson = np.empty(np.size(poisson_signal), self.photonDataType)
+
+                photons_poisson['timestamps'] = poisson_signal
+                photons_poisson['nanotimes'] = np.random.rand(poisson_signal.size) * self.expParam.nb_of_microtime_channel
+
+                list_poisson_photons.append(photons_poisson)
+
+            photons_poisson_all = np.concatenate(list_poisson_photons)
+            self.channels[num_channel].photons = np.append(self.channels[num_channel].photons,
+                                                           values=photons_poisson_all)
+
+            np.sort(self.channels[num_channel].photons, order='timestamps')
+
 
     def filter_time_selection(self, num_channel, t1_tick, t2_tick, is_keep=True, replacement_mode="nothing"):
         time_stamps = self.channels[num_channel].photons['timestamps']
@@ -329,12 +356,15 @@ class Data():
         nanotimes = self.channels[num_channel].photons['nanotimes']
 
         if is_keep:
-            idx_photons_to_be_filtered = np.where(micro_t1 > nanotimes > micro_t2)
+            idx_photons_to_be_filtered = np.where(np.logical_or(nanotimes < micro_t1, nanotimes > micro_t2))
         else:
-            idx_photons_to_be_filtered = np.where(micro_t1 < nanotimes < micro_t2)
+            idx_photons_to_be_filtered = np.where(np.logical_and(nanotimes > micro_t1, nanotimes < micro_t2))
 
         if replacement_mode is "nothing":
             self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                            idx_photons_to_be_filtered)
         elif replacement_mode is "poissonian_noise":
+            """
+            Est-ce faisable, les mircotimes ne sont pas à la suite...
+            """
             pass
