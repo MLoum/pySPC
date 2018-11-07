@@ -2,6 +2,7 @@ import multiprocessing as mp
 
 import numpy as np
 from lmfit import minimize, Parameters, Model
+import matplotlib.pyplot as plt
 from lmfit.models import LinearModel, ExponentialModel
 
 # from .correlate import correlate
@@ -11,6 +12,9 @@ from threading import Thread
 from core.analyze.pycorrelate import pcorrelate
 
 import numba
+
+#https://stackoverflow.com/questions/5442910/python-multiprocessing-pool-map-for-multiple-arguments
+# https://sebastianraschka.com/Articles/2014_multiprocessing.html
 
 
 
@@ -49,11 +53,9 @@ class OneSpeDiffusion(Model):
     def guess(self, data, x=None, **kwargs):
         G0, tdiff, cst = 0., 0., 0., 0.
         #if x is not None:
-        G0 = data[0] #beawre afterpulsing...
+        G0 = data[0] #beware afterpulsing...
         cst = np.mean(data[-10:])
         #Searching for position where G0 is divided by 2
-        subarray = data[t0:]
-        #tau = np.where(subarray < amp/np.exp(1))[0]
         tdiff = np.argmax(data < (float) (G0) / 2)
 
         pars = self.make_params(G0=G0, tdiff=tdiff, cst=cst)
@@ -69,11 +71,11 @@ class CorrelationMeasurement(Measurements):
     def __init__(self, data_=None, time_axis_=None):
         super().__init__(data_, time_axis_)
 
-    def correlateMonoProc(self, timestamps1, timestamps2, maxCorrelationTimeInTick, startCorrelationTimeInTick=1, nbOfPointPerCascade_aka_B=10, tick_duration_micros=1):
+    def correlateMonoProc(self, timestamps1, timestamps2, maxCorrelationTimeInTick, startCorrelationTimeInTick=2, nbOfPointPerCascade_aka_B=10, tick_duration_micros=1):
         self.tick_duration_micros = tick_duration_micros
         self.maxTimeInTick = timestamps1[-1]
-        self.numLastPhoton = np.searchsorted(timestamps1, self.maxTimeInTick - maxCorrelationTimeInTick)
-        self.endTimeCorrelation_tick = timestamps1[self.numLastPhoton]
+        self.num_last_photon = np.searchsorted(timestamps1, self.maxTimeInTick - maxCorrelationTimeInTick)
+        self.end_time_correlation_tick = timestamps1[self.num_last_photon]
 
         self.create_list_time_correlation(startCorrelationTimeInTick, maxCorrelationTimeInTick, pointPerDecade=nbOfPointPerCascade_aka_B)
         self.data = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)
@@ -84,7 +86,7 @@ class CorrelationMeasurement(Measurements):
 
         # self.normalize_correlation()
         self.scale_time_axis()
-        self.timeAxis = self.timeAxis[:-1]
+        self.time_axis = self.time_axis[:-1]
 
     @numba.jit(nopython=True)
     def pcorrelate_me(self, timestamps, taus, G):
@@ -108,33 +110,47 @@ class CorrelationMeasurement(Measurements):
                     #     break
                 idx_tau += 1
 
-    def correlateFCS_multi(self, timestamps_1, timestamps_2, max_correlation_time_in_tick, start_correlation_time_in_tick=1, nb_of_point_per_cascade_aka_B=10, tick_duration_micros=1):
+    def correlateFCS_multicore(self, timestamps_1, timestamps_2, max_correlation_time_in_tick, start_correlation_time_in_tick=2, nb_of_point_per_cascade_aka_B=10, tick_duration_micros=1):
+        """
+
+        :param timestamps_1:
+        :param timestamps_2:
+        :param max_correlation_time_in_tick:
+        :param start_correlation_time_in_tick:
+        :param nb_of_point_per_cascade_aka_B:
+        :param tick_duration_micros:
+        :return:
+        """
         self.tick_duration_micros = tick_duration_micros
 
         # TODO nb_of_chunk based on max correlation time and the max Time of the file.
 
-        # nb_of_chunk = 10
-        # nb_of_workers = 4
-        #
-        # # Split the timeStamps in 10 (?) array
-        # self.maxTimeInTick_1 = timestamps_1[-1]
-        # self.maxTimeInTick_2 = timestamps_2[-1]
-        #
-        # chunks_of_timestamps_1 = np.split(timestamps_1, nb_of_chunk)
-        # chunks_of_timestamps_2 = np.split(timestamps_2, nb_of_chunk)
-        #
-        #
-        #
-        #
-        # self.numLastPhoton = np.searchsorted(timestamps_1, self.maxTimeInTick - max_correlation_time_in_tick)
-        # self.endTimeCorrelation_tick = timestamps_1[self.numLastPhoton]
-        #
-        # self.create_list_time_correlation(start_correlation_time_in_tick, max_correlation_time_in_tick,
-        #                                   pointPerDecade=nb_of_point_per_cascade_aka_B)
-        # self.data = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)
-        #
-        # processes = [mp.Process(target=pcorrelate, args=(chunks_of_timestamps_1[i], chunks_of_timestamps_2[i], bins,
-        #                                                  self.timeAxis, normalize=True)) for x in range(nb_of_workers)]
+        nb_of_chunk = 4
+        nb_of_workers = 4
+
+        # Split the timeStamps in 10 (?) array
+        self.max_time_in_tick_1 = timestamps_1[-1]
+        self.max_time_in_tick_2 = timestamps_2[-1]
+
+        chunks_of_timestamps_1 = np.array_split(timestamps_1, nb_of_chunk)
+        chunks_of_timestamps_2 = np.array_split(timestamps_2, nb_of_chunk)
+
+        # TODO fix cross-correlation
+
+        self.num_last_photon = np.searchsorted(timestamps_1, self.max_time_in_tick_1 - max_correlation_time_in_tick)
+        self.end_time_correlation_tick = timestamps_1[self.num_last_photon]
+
+        self.create_list_time_correlation(start_correlation_time_in_tick, max_correlation_time_in_tick,
+                                          pointPerDecade=nb_of_point_per_cascade_aka_B)
+        self.data = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)
+
+        p = mp.Pool(nb_of_workers)
+        Gs = [p.apply(pcorrelate, args=(chunks_of_timestamps_1[i], chunks_of_timestamps_2[i], self.time_axis, True)) for i in range(nb_of_chunk)]
+
+        # p.starmap()
+        # print(p.map(f, [1, 2, 3]))
+
+        # processes = [mp.Process(target=pcorrelate_b, args=(chunks_of_timestamps_1[i], chunks_of_timestamps_2[i], self.timeAxis, Gs, True)) for i in range(nb_of_workers)]
         # # Run processes
         # for p in processes:
         #     p.start()
@@ -143,15 +159,15 @@ class CorrelationMeasurement(Measurements):
         # for p in processes:
         #     p.join()
 
+        Gs = np.vstack(Gs)
 
-
-        # correlate(timestamps, self.data, self.timeAxis, self.numLastPhoton)
-        # self.data = pcorrelate(t=timestamps_1, u=timestamps_1, bins=self.timeAxis, normalize=True)
-        # self.pcorrelate_me(timestamps1, self.timeAxis, self.data)
+        self.data = np.mean(Gs, axis=0)
+        self.error_bar = np.std(Gs, axis=0)
 
         # self.normalize_correlation()
-        # self.scale_time_axis()
-        # self.timeAxis = self.timeAxis[:-1]
+        self.scale_time_axis()
+        self.time_axis = self.time_axis[:-1]
+
 
     def normalize_correlation(self):
         self.data = self.data.astype(np.float64)
@@ -159,7 +175,7 @@ class CorrelationMeasurement(Measurements):
         for n in range(1, self.nb_of_cascade):
             self.data[n * B:(n + 1) * B] /= np.power(2, n)
 
-        self.data *= (self.maxTimeInTick - self.timeAxis) / (self.numLastPhoton ** 2)
+        self.data *= (self.maxTimeInTick - self.time_axis) / (self.num_last_photon ** 2)
 
         # maxCorrelationTimeInTick = 100000
         # G = np.zeros(maxCorrelationTimeInTick, dtype=np.int)
@@ -171,7 +187,7 @@ class CorrelationMeasurement(Measurements):
         # self.timeAxis = np.arange(maxCorrelationTimeInTick)
 
     def scale_time_axis(self):
-        self.timeAxis = self.tick_duration_micros * self.timeAxis.astype(np.float64)
+        self.time_axis = self.tick_duration_micros * self.time_axis.astype(np.float64)
 
     def create_list_time_correlation(self, startCorrelationTimeInTick, maxCorrelationTime_tick, pointPerDecade):
 
@@ -197,7 +213,7 @@ class CorrelationMeasurement(Measurements):
         for n in range(1, self.nb_of_cascade):
             taus[n * B:(n + 1) * B] = taus[:B] * np.power(2, n) + taus[n * B - 1]
         taus += startCorrelationTimeInTick
-        self.timeAxis = taus
+        self.time_axis = taus
 
     def set_params(self, params):
         if self.modelName == "1 Diff":
@@ -211,6 +227,56 @@ class CorrelationMeasurement(Measurements):
             self.modelName = modelName
             self.model = OneSpeDiffusion()
             self.params = self.model.make_params(G0=1.5, tdiff=500, cst=1)
+
+    def create_canonic_graph(self, is_plot_error_bar=False, is_plot_text=True):
+        self.canonic_fig, self.canonic_fig_ax = plt.subplots(2, 1, figsize=(10, 8), sharex=True,
+                               gridspec_kw={'height_ratios': [3, 1]})
+        plt.subplots_adjust(hspace=0)
+        ax = self.canonic_fig_ax
+        ax[0].semilogx(self.time_axis, self.data, "ro", alpha=0.5)
+        for a in ax:
+            a.grid(True)
+            a.grid(True, which='minor', lw=0.3)
+
+        if self.fit_results is not None:
+            ax[0].semilogx(self.time_axis, self.fit_results.best_fit, "b-", linewidth=3)
+        if self.residuals is not None:
+            ax[1].semilogx(self.time_axis, self.fit_results.residual, 'k')
+            ym = np.abs(self.fit_results.residual).max()
+            ax[1].set_ylim(-ym, ym)
+        # ax[1].set_xlim(bins[0]*unit, bins[-1]*unit);
+        # tau_diff_us = fitres.values['tau_diff'] * 1e6
+
+        if is_plot_text:
+            pass
+            # TODO Changer le texte selon les modeles
+            if self.modelName == "1 Diff":
+                msg = ((
+                                   r'$\G_0$ = {G0:.2f} ns' + '\n' + r'$\tau_d$ = {taud:.0f} ns' + '\n' + r'$r$ = {e:.0f}')
+                       .format(tau1=self.fit_results.values['G0'], taud=self.fit_results.values['tdiff'], e=0))
+
+            # ax[0].text(.75, .9, msg,
+            #            va='top', ha='left', transform=ax[0].transAxes, fontsize=18);
+
+        if is_plot_error_bar and self.error_bar is not None:
+            ax[0].semilogx(self.time_axis, self.data + self.error_bar, alpha=0.2)
+            ax[0].semilogx(self.time_axis, self.data - self.error_bar, alpha=0.2)
+            # ax[0].fill_between(self.time_axis, self.data + self.error_bar, self.data, alpha=0.2)
+            # ax[0].fill_between(self.time_axis, self.data - self.error_bar, self.data, alpha=0.2)
+
+
+        ax[0].set_ylabel('G(τ)', fontsize=40)
+        ax[1].set_ylabel('residuals', fontsize=20)
+        ax[1].set_xlabel('Time Lag, τ (µs)', fontsize=40)
+
+        ax[0].tick_params(axis='both', which='major', labelsize=20)
+        ax[0].tick_params(axis='both', which='minor', labelsize=8)
+
+        ax[1].tick_params(axis='x', which='major', labelsize=20)
+        ax[1].tick_params(axis='x', which='minor', labelsize=8)
+
+        return self.canonic_fig
+
 
 class FCSMeasurements(CorrelationMeasurement):
 

@@ -28,7 +28,7 @@ class Experiment(object):
         self.results = Results.Results()
         self.data = Data.Data(self.results, self.exp_param)
 
-        self.fileName = None
+        self.file_name = None
         self.defaultBinSize_s = 0.01  # default : 10ms
 
         if filepath is not None :
@@ -61,15 +61,18 @@ class Experiment(object):
         """
         if mode == "file":
             filePath = params[0]
-            self.data.load_from_file(filePath)
-            head, self.fileName = os.path.split(filePath)
+            result = self.data.load_from_file(filePath)
+            if result is not "OK":
+                return
+
+            head, self.file_name = os.path.split(filePath)
 
         elif mode == "generate":
             type = params[0]
             time_s = params[1]
             count_per_second_s = params[2]
             self.data.new_generated_exp(type, [time_s, count_per_second_s])
-            self.fileName = "Generated Poisson Noise - count per second : %f" % count_per_second_s
+            self.file_name = "Generated Poisson Noise - count per second : %f" % count_per_second_s
         elif mode == "simulation":
             pass
 
@@ -89,7 +92,7 @@ class Experiment(object):
         shelf['exp_param'] = self.exp_param
         shelf['results'] = self.results
         shelf['data'] = self.data
-        shelf['fileName'] = self.fileName
+        shelf['fileName'] = self.file_name
 
     def load_state(self, shelf):
         """
@@ -100,7 +103,7 @@ class Experiment(object):
         self.exp_param = shelf['exp_param']
         self.results = shelf['results']
         self.data = shelf['data']
-        self.fileName = shelf['fileName']
+        self.file_name = shelf['fileName']
 
     def update(self):
         pass
@@ -222,37 +225,53 @@ class Experiment(object):
         if self.results.lifetimes[num_channel] is None:
             self.results.lifetimes[num_channel] = lifetime.lifeTimeMeasurements()
 
-        self.results.lifetimes[num_channel].createHistogramm(nanotimes, self.exp_param.nb_of_microtime_channel,
-                                                             self.exp_param.mIcrotime_clickEquivalentIn_second)
+        self.results.lifetimes[num_channel].create_histogramm(nanotimes, self.exp_param.nb_of_microtime_channel,
+                                                              self.exp_param.mIcrotime_clickEquivalentIn_second)
+        return self.results.lifetimes[num_channel]
 
-    def FCS(self, num_channel_1, num_channel_2, start_tick, end_tick, max_correlation_time_ms=1000):
+    def FCS(self, num_c1=0, num_c2=0, start_tick=0, end_tick=-1, start_cor_time_micros = 0.5, max_cor_time_ms=1000):
         """
         Fluctuation Correlation Spectroscopy
 
         Create a FCS_Measurements object and launch calculation
 
-        :param num_channel_1:
-        :param num_channel_2:
+        :param num_c1:
+        :param num_c2:
         :param start_tick:
         :param end_tick:
-        :param max_correlation_time_ms:
+        :param max_cor_time_ms:
         :return:
         """
         # TODO cross correlation
-        numChannel = num_channel_1
+        num_channel = num_c1
 
-        timeStamps = self.data.channels[numChannel].photons['timestamps']
-        nanotimes = self.data.channels[numChannel].photons['nanotimes']
+        if start_tick == 0:
+            start_tick = self.data.channels[num_c1].start_tick
+
+        if end_tick == -1:
+            end_tick = self.data.channels[num_c1].end_tick
+
+
+
+        timeStamps = self.data.channels[num_channel].photons['timestamps']
+        nanotimes = self.data.channels[num_channel].photons['nanotimes']
         idxStart, idxEnd = np.searchsorted(timeStamps, (start_tick, end_tick))
         timeStamps_reduc = timeStamps[idxStart:idxEnd]
 
-        if self.results.FCS_Measurements[numChannel] == None:
-            self.results.FCS_Measurements[numChannel] = FCS.FCSMeasurements()
+        if self.results.FCS_Measurements[num_channel] == None:
+            self.results.FCS_Measurements[num_channel] = FCS.FCSMeasurements()
 
-        maxCorrelationTimeInTick = int(
-            max_correlation_time_ms / 1000.0 / self.exp_param.mAcrotime_clickEquivalentIn_second)
-        self.results.FCS_Measurements[numChannel].correlateMonoProc(timeStamps_reduc, timeStamps_reduc,
-                                                                    maxCorrelationTimeInTick)
+        max_correlation_time_in_tick = int(
+            max_cor_time_ms / 1E3 / self.exp_param.mAcrotime_clickEquivalentIn_second)
+
+        start_correlation_time_in_tick = int(
+            start_cor_time_micros / 1E6 / self.exp_param.mAcrotime_clickEquivalentIn_second)
+
+        # self.results.FCS_Measurements[num_channel].correlateMonoProc(timeStamps_reduc, timeStamps_reduc,
+        #                                                             max_correlation_time_in_tick, start_correlation_time_in_tick)
+        self.results.FCS_Measurements[num_channel].correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc,
+                                                                    max_correlation_time_in_tick, start_correlation_time_in_tick)
+        return self.results.FCS_Measurements[num_channel]
 
     def DLS(self, num_channel_1, num_channel_2, start_tick, end_tick, max_correlation_time_ms=1000, start_time_mu_s=1,
             precision=10):

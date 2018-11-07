@@ -59,24 +59,29 @@ class Data():
         del self.nanotimes[:]
         del self.isFiltered[:]
 
-    def load_from_file(self, filePath):
+    def load_from_file(self, file_path):
         """
 
-        :param filePath:
+        :param file_path:
         :return:
         """
-        filename, file_extension = os.path.splitext(filePath)
+        if (os.path.isfile(file_path)) is False:
+            print("File not existing")
+            return "File not existing"
+
+
+        filename, file_extension = os.path.splitext(file_path)
         if file_extension == ".spc":
-            timestamps, detectors, nanotimes, timestamps_unit, meta = self.loadSPC_Bh_File(filePath)
+            timestamps, detectors, nanotimes, timestamps_unit, meta = self.loadSPC_Bh_File(file_path)
             # Done inside the loadSPC_Bh_File function
             self.expParam.fill_with_SPC_meta_data(meta, timestamps_unit)
 
         elif file_extension == ".pt3":
-            timestamps, detectors, nanotimes, meta = pqreader.load_pt3(filePath)
+            timestamps, detectors, nanotimes, meta = pqreader.load_pt3(file_path)
             self.expParam.fill_with_pt3_meta_data(meta)
 
         elif file_extension == ".ttt":
-            timestamps, detectors, nanotimes, timestamps_unit, meta = nist_fpga.load_ttt(filePath)
+            timestamps, detectors, nanotimes, timestamps_unit, meta = nist_fpga.load_ttt(file_path)
             self.expParam.fill_with_ttt_meta_data(meta)
 
         # Les photons ne sont pas triès par detecteur, il le sont par ordre d'arrivée
@@ -161,6 +166,8 @@ class Data():
         #
         #     self.isFiltered.append(np.ones(unique_counts[soft_channel_value], dtype=bool))
         #     soft_channel_value += 1
+
+        return "OK"
 
     def get_microtime_curve(self, channel):
         pass

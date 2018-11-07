@@ -1,6 +1,8 @@
 import numpy as np
 from lmfit import minimize, Parameters, Model
 from lmfit.models import LinearModel, ExponentialModel
+import matplotlib.pyplot as plt
+
 
 from .Measurement import Measurements
 from .histogram import histogram
@@ -97,72 +99,89 @@ class TwoExpDecay(Model):
 #TODO creer une classe mère pour les analyses.
 class lifeTimeMeasurements(Measurements):
 
-    def __init__(self, lifetimeHistogram_=None, time_axis_= None):
-        super().__init__(lifetimeHistogram_, time_axis_)
-
+    def __init__(self, lifetime_histogram_=None, time_axis_= None):
+        super().__init__(lifetime_histogram_, time_axis_)
         self.IR = None
-        self.data = lifetimeHistogram_
-        self.timeAxis = time_axis_
 
-        self.eval_x_axis = None
-        self.eval_y_axis = None
-
-        self.residuals = None
-
-        self.fitResults = None
-
-
-    def createHistogramm(self, nanotimes, nbOfMicrotimeChannel, mIcrotime_clickEquivalentIn_second):
+    def create_histogramm(self, nanotimes, nbOfMicrotimeChannel, mIcrotime_clickEquivalentIn_second):
         #self.data, self.timeAxis = np.histogram(nanotimes, nbOfMicrotimeChannel)
         self.data = np.zeros(nbOfMicrotimeChannel, dtype=np.uint)
         #self.timeAxis = self.timeAxis[:-1]
-        self.timeAxis = np.arange(nbOfMicrotimeChannel)*mIcrotime_clickEquivalentIn_second*1E9
+        self.time_axis = np.arange(nbOfMicrotimeChannel) * mIcrotime_clickEquivalentIn_second*1E9
         #Doesnot work ??? TODO more pythonic
         #self.data[nanotimes] += 1
         histogram(nanotimes, self.data)
-        self.trimLifeTimeCurve()
+        self.trim_life_time_curve()
 
-    def trimLifeTimeCurve(self):
+    def trim_life_time_curve(self):
         nonzero = np.nonzero(self.data)
         idxStartNonZero = nonzero[0][0]
         idxEndNonZero = nonzero[0][-1]
         self.data = self.data[idxStartNonZero:idxEndNonZero]
-        self.timeAxis = self.timeAxis[idxStartNonZero:idxEndNonZero]
+        self.time_axis = self.time_axis[idxStartNonZero:idxEndNonZero]
 
-
-    def shiftHistogramm(self, shift):
+    def shift_histogramm(self, shift):
         self.data = np.roll(self.data, shift)
 
     def setIR(self, IR):
         self.IR = IR
 
-    def shiftIR(self, shift):
+    def shift_IR(self, shift):
         """
         Shift in nb of microtime channel
         """
         self.IR = np.roll(self.IR, shift)
 
-    def generateArtificialIR(self, mainWidth, secondaryWidth, secondaryAmplitude, timeOffset):
+    def generate_artificial_IR(self, mainWidth, secondaryWidth, secondaryAmplitude, timeOffset):
         self.IR = (1-secondaryWidth) * np.exp( - (self.eval_x_axis - timeOffset)**2/mainWidth) + secondaryAmplitude * np.exp( - (self.eval_x_axis - timeOffset)**2/secondaryWidth)
         #scale
         self.IR *= np.max(self.data)
 
-    def convolveWithIR(self):
-        return np.convolve(self.data , self.IR)
 
-    # def fit(self, idxStart=0, idxEnd=-1):
-    #     self.fitResults = self.model.fit(self.lifetimeHistogram[idxStart:idxEnd], self.params)
-    #     self.evalParams(idxStart, idxEnd)
-    #
-    # def evalParams(self, idxStart=0, idxEnd=-1):
-    #     x = self.timeAxis[idxStart:idxEnd]
-    #     self.eval_y_axis = self.model.eval(self.params, t=x)
-    #     self.residuals = self.eval_y_axis - self.lifetimeHistogram[idxStart:idxEnd]
-    #     self.eval_x_axis = self.timeAxis[idxStart:idxEnd]
-    #
-    # def guess(self, idxStart=0, idxEnd=-1):
-    #     self.params = self.model.guess(self.lifetimeHistogram)
-    #     self.evalParams(idxStart, idxEnd)
+    def create_canonic_graph(self, is_plot_error_bar=False, is_plot_text=False):
+        self.canonic_fig, self.canonic_fig_ax = plt.subplots(2, 1, figsize=(10, 8), sharex=True,
+                               gridspec_kw={'height_ratios': [3, 1]})
+        plt.subplots_adjust(hspace=0)
+        ax = self.canonic_fig_ax
+        ax[0].semilogy(self.time_axis, self.data, "ro", alpha=0.5)
+        for a in ax:
+            a.grid(True);
+            a.grid(True, which='minor', lw=0.3)
+
+
+        if self.fit_results is not None:
+            ax[0].semilogy(self.time_axis, self.fit_results.best_fit, "b-", linewidth=3)
+        if self.residuals is not None:
+            ax[1].plot(self.time_axis, self.fit_results.residual, 'k')
+            ym = np.abs(self.fit_results.residual).max()
+            ax[1].set_ylim(-ym, ym)
+
+
+        if is_plot_text:
+            pass
+            # TODO Changer le texte selon les modeles
+            if self.modelName == "One Decay":
+                pass
+            elif self.modelName == "Two Decays":
+                msg = ((r'$\tau_1$ = {tau1:.2f} ns' + '\n' + r'$\tau_2$ = {tau2:.0f} ns' + '\n' + r'$A_1$ = {A1:.0f}' + '\n' + r'$A_2$ = {A2:.0f}')
+                       .format(tau1=self.fit_results.values['tau1'], tau2=self.fit_results.values['tau2'], A1=self.fit_results.values['amp1'],
+                               A2=self.fit_results.values['amp2']))
+            # ax[0].text(.75, .9, msg,
+            #            va='top', ha='left', transform=ax[0].transAxes, fontsize=18)
+
+        ax[0].set_ylabel('Occurence', fontsize=40)
+        ax[1].set_ylabel('residuals', fontsize=20)
+        ax[1].set_xlabel('time (ns)', fontsize=40)
+
+        ax[0].tick_params(axis='both', which='major', labelsize=20)
+        ax[0].tick_params(axis='both', which='minor', labelsize=8)
+
+        ax[1].tick_params(axis='x', which='major', labelsize=20)
+        ax[1].tick_params(axis='x', which='minor', labelsize=8)
+        ax[1].tick_params(axis='x', which='major', labelsize=20)
+        ax[1].tick_params(axis='x', which='minor', labelsize=8)
+
+        return self.canonic_fig
 
     def set_params(self, params):
         if self.modelName == "One Decay":

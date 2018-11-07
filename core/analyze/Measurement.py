@@ -19,18 +19,19 @@ class Measurements:
         self.modelName = ""
         self.model = None
 
-        self.timeAxis = time_axis_
+        self.time_axis = time_axis_
 
         self.data = data_
+        self.error_bar = None
 
         self.eval_x_axis = None
         self.eval_y_axis = None
 
-        self.idxStart, self.idxEnd  = 0, -1
+        self.idx_start, self.idx_end = 0, -1
 
-        self.residuals = None
+        self.residuals, self.fit_results = None, None
 
-        self.fitResults = None
+        self.canonic_fig, self.canonic_fig_ax = None, None
 
     def find_idx_of_fit_limit(self, idx_start, idx_end):
         """
@@ -42,9 +43,9 @@ class Measurements:
         :return:
         """
         if idx_start != 0:
-            self.idxStart = np.searchsorted(self.timeAxis, idx_start)
+            self.idx_start = np.searchsorted(self.time_axis, idx_start)
         if idx_end != -1:
-            self.idxEnd = np.searchsorted(self.timeAxis, idx_end)
+            self.idx_end = np.searchsorted(self.time_axis, idx_end)
 
     def fit(self, idx_start=0, idx_end=-1):
         """
@@ -54,17 +55,17 @@ class Measurements:
         :return:
         """
         self.find_idx_of_fit_limit(idx_start, idx_end)
-        y = self.data[self.idxStart:self.idxEnd]
-        x = self.timeAxis[self.idxStart:self.idxEnd]
-        self.fitResults = self.model.fit(y, self.params, t=x)
+        y = self.data[self.idx_start:self.idx_end]
+        x = self.time_axis[self.idx_start:self.idx_end]
+        self.fit_results = self.model.fit(y, self.params, t=x)
 
-        self.eval_y_axis = self.fitResults.best_fit
+        self.eval_y_axis = self.fit_results.best_fit
         self.eval_x_axis = x
 
-        self.residuals = self.fitResults.residual
+        self.residuals = self.fit_results.residual
 
         #self.evalParams(idx_start, idx_end)
-        return self.fitResults
+        return self.fit_results
 
     def evalParams(self, idx_start=0, idx_end=-1):
         """
@@ -75,8 +76,8 @@ class Measurements:
         """
         self.find_idx_of_fit_limit(idx_start, idx_end)
 
-        x = self.timeAxis[self.idxStart:self.idxEnd]
-        y = self.data[self.idxStart:self.idxEnd]
+        x = self.time_axis[self.idx_start:self.idx_end]
+        y = self.data[self.idx_start:self.idx_end]
 
         self.eval_y_axis = self.model.eval(self.params, t=x)
         self.residuals = self.eval_y_axis - y
@@ -92,8 +93,8 @@ class Measurements:
         """
         self.find_idx_of_fit_limit(idx_start, idx_end)
 
-        y = self.data[self.idxStart:self.idxEnd]
-        x = self.timeAxis[self.idxStart:self.idxEnd]
+        y = self.data[self.idx_start:self.idx_end]
+        x = self.time_axis[self.idx_start:self.idx_end]
 
         self.params = self.model.guess(y, x)
         self.evalParams(idx_start, idx_end)

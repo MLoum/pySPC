@@ -6,11 +6,11 @@ from GUI.graph.interactiveGraphs import Graph_miniPCH
 from GUI.graph.Graph_timeZoom import  Graph_timeZoom
 
 class Status_area():
-    def __init__(self, masterFrame, view, controller, appearenceParam):
-        self.masterFrame = masterFrame
+    def __init__(self, master_frame, view, controller, appearence_param):
+        self.master_frame = master_frame
         self.view = view
         self.controller = controller
-        self.appearenceParam = appearenceParam
+        self.appearence_param = appearence_param
 
     def populate(self):
         # self.frameTimeStatus = tk.LabelFrame(self.masterFrame, text="Status", borderwidth=self.appearenceParam.frameLabelBorderWidth)
@@ -47,61 +47,62 @@ class Status_area():
         # self.labelCPS = ttk.Label(self.frameFileBasicInfo, textvariable=self.CPS_sv)
         # self.labelCPS.grid(column=3, row=1)
 
+        self.combobox_file_sv = tk.StringVar()
+        self.combobox_file = ttk.Combobox(self.master_frame, width=80, justify=tk.CENTER, textvariable=self.combobox_file_sv, values='')
+        self.combobox_file.pack(side="top", fill="both", expand=True)
 
-        label = ttk.Label(self.masterFrame, text='Channel :')
+        self.combobox_file.bind('<<ComboboxSelected>>', self.on_file_selected_via_combobox)
+
+
+
+        label = ttk.Label(self.master_frame, text='Channel :')
         label.pack(side=tk.LEFT, padx=2, pady=2)
         self.channelNumber = tk.StringVar()
         self.channelNumber.set('1')
-        self.spinBoxMaxOrder = tk.Spinbox(self.masterFrame, width=8, textvariable=self.channelNumber,
+        self.spinBoxMaxOrder = tk.Spinbox(self.master_frame, width=8, textvariable=self.channelNumber,
                                           justify=tk.CENTER, from_=1, to=2)
         self.spinBoxMaxOrder.pack(side=tk.LEFT, padx=2, pady=2)
 
         self.labeFileName = tk.StringVar()
-        l = ttk.Label(self.masterFrame, width=60, textvariable=self.labeFileName)
+        l = ttk.Label(self.master_frame, width=60, textvariable=self.labeFileName)
         l.pack(side=tk.LEFT, padx=2, pady=2)
 
-        label = ttk.Label(self.masterFrame, text='nbOfPhoton :')
+        label = ttk.Label(self.master_frame, text='nbOfPhoton :')
         label.pack(side=tk.LEFT, padx=2, pady=2)
 
         self.nbOfPhoton_sv = tk.StringVar()
-        self.labelNbOfPhoton = ttk.Label(self.masterFrame, textvariable=self.nbOfPhoton_sv)
+        self.labelNbOfPhoton = ttk.Label(self.master_frame, textvariable=self.nbOfPhoton_sv)
         self.labelNbOfPhoton.pack(side=tk.LEFT, padx=2, pady=2)
 
 
-        label = ttk.Label(self.masterFrame, text='CPS :')
+        label = ttk.Label(self.master_frame, text='CPS :')
         label.pack(side=tk.LEFT, padx=2, pady=2)
 
         self.CPS_sv = tk.StringVar()
-        self.labelCPS = ttk.Label(self.masterFrame, textvariable=self.CPS_sv)
+        self.labelCPS = ttk.Label(self.master_frame, textvariable=self.CPS_sv)
         self.labelCPS.pack(side=tk.LEFT, padx=2, pady=2)
 
-
-        self.toggleDockButton_text_sv = tk.StringVar()
-        b = ttk.Button(self.masterFrame, textvariable=self.toggleDockButton_text_sv, width=10, command=self.toggleDock)
-        b.pack(side=tk.RIGHT, padx=2, pady=2)
-        self.toggleDockButton_text_sv.set("undock")
-
-        b = ttk.Button(self.masterFrame, text="?", width=2, command=self.askFileInfo)
+        b = ttk.Button(self.master_frame, text="?", width=2, command=self.ask_file_info)
         b.pack(side=tk.RIGHT, padx=2, pady=2)
 
+    def add_file_combobox(self, file_name):
+        pass
 
-    def setFileName(self, name):
+    def remove_file_combobox(self):
+        pass
+
+    def on_file_selected_via_combobox(self):
+        pass
+
+    def set_file_name(self, name):
         self.labeFileName.set(name)
 
-    def setNbOfPhotonAndCPS(self, nbOfPhoton=0, CPS=0):
+    def set_nb_of_photon_and_CPS(self, nbOfPhoton=0, CPS=0):
         self.nbOfPhoton_sv.set(str(nbOfPhoton))
         self.CPS_sv.set(str(int(CPS)))
 
 
-    def askFileInfo(self):
+    def ask_file_info(self):
         pass
 
-
-    def toggleDock(self):
-        if self.toggleDockButton_text_sv.get() == "undock":
-            self.toggleDockButton_text_sv.set("dock")
-        else:
-            self.toggleDockButton_text_sv.set("undock")
-
-        self.view.archi.toggleDock()
 

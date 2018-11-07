@@ -141,7 +141,7 @@ class lifeTimeAnalyze_gui():
                                                     initialvalue=0.05, minvalue=1.0, maxvalue=1.0)
                     if answer4 != None:
                         timeOffset = answer4
-                        self.controller.generateArtificialIR(mainWidth, secondaryWidth, secondaryAmplitude, timeOffset)
+                        self.controller.generate_artificial_IR(mainWidth, secondaryWidth, secondaryAmplitude, timeOffset)
 
 
     def autoShiftIR(self):

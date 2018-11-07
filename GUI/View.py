@@ -108,8 +108,6 @@ class View():
         self.archi = Architecture.Architecture(self.master, self)
 
 
-
-
     def onclickMainGraph(self, event):
         print('button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
               (event.button, event.x, event.y, event.xdata, event.ydata))

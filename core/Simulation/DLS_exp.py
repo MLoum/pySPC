@@ -88,7 +88,7 @@ class DLS_Exp:
 
             # I[i] = np.abs(np.sum(np.exp(1j * (self.k * Xp - self.k * np.linalg.norm(posParticles - posDetecteur)))))
 
-            mvtEvolution = self.sp.brownianMotionMultiStep(self.sp.particles, nbTickPerCalculation)
+            mvtEvolution = self.sp.brownian_motion_multi_step(self.sp.particles, nbTickPerCalculation)
 
             Xp = mvtEvolution[:,:]['x']
             Yp = mvtEvolution[:,:]['y']

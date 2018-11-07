@@ -37,3 +37,11 @@ class Chronogram():
         self.tickStart = None
         self.tickEnd = None
         self.nbOfBin = None
+
+class FCS():
+    def __init__(self):
+        self.xAxis = None
+        self.data = None
+        self.tickStart = None
+        self.tickEnd = None
+        self.nbOfBin = None
