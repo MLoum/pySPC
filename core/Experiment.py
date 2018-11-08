@@ -222,6 +222,7 @@ class Experiment(object):
 
         nanotimes = nanotimes[idxStart:idxEnd]
 
+
         if self.results.lifetimes[num_channel] is None:
             self.results.lifetimes[num_channel] = lifetime.lifeTimeMeasurements()
 
@@ -229,7 +230,7 @@ class Experiment(object):
                                                               self.exp_param.mIcrotime_clickEquivalentIn_second)
         return self.results.lifetimes[num_channel]
 
-    def FCS(self, num_c1=0, num_c2=0, start_tick=0, end_tick=-1, start_cor_time_micros = 0.5, max_cor_time_ms=1000):
+    def FCS(self, num_c1=0, num_c2=0, start_tick=0, end_tick=-1, start_cor_time_micros = 0.5, max_cor_time_ms=100):
         """
         Fluctuation Correlation Spectroscopy
 
@@ -269,11 +270,13 @@ class Experiment(object):
 
         # self.results.FCS_Measurements[num_channel].correlateMonoProc(timeStamps_reduc, timeStamps_reduc,
         #                                                             max_correlation_time_in_tick, start_correlation_time_in_tick)
+        tick_duration_micros = self.exp_param.mAcrotime_clickEquivalentIn_second*1E6
+        B = 10
         self.results.FCS_Measurements[num_channel].correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc,
-                                                                    max_correlation_time_in_tick, start_correlation_time_in_tick)
+                                                                    max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros)
         return self.results.FCS_Measurements[num_channel]
 
-    def DLS(self, num_channel_1, num_channel_2, start_tick, end_tick, max_correlation_time_ms=1000, start_time_mu_s=1,
+    def DLS(self, num_channel_1, num_channel_2, start_tick, end_tick, max_correlation_time_ms=100, start_time_mu_s=1,
             precision=10):
         """
         Dynamic Light Scattering
@@ -306,8 +309,18 @@ class Experiment(object):
 
         self.results.DLS_Measurements[numChannel].correlateMonoProc(timeStamps_reduc,
                                                                     timeStamps_reduc, max_correlation_time_tick,
-                                                                    startCorrelationTimeInTick=start_time_tick,
+                                                                    start_correlation_time_in_tick=start_time_tick,
                                                                     nbOfPointPerCascade_aka_B=int(precision),
                                                                     tick_duration_micros=
                                                                     self.exp_param.mAcrotime_clickEquivalentIn_second * 1E6)
 
+    def get_info(self):
+        print(self.file_name)
+        print("%d channel(s)" % self.data.channels.size)
+        i = 1
+        for c in self.data.channels:
+            print("Channel %d" % i)
+            print("Total time %0.1f" % c.end_tick / self.exp_param.mAcrotime_clickEquivalentIn_second)
+            print("Number of Photon %d" % c.nb_of_tick)
+            print("CPS %d" % c.CPS)
+            i += 1

@@ -9,7 +9,7 @@ from lmfit.models import LinearModel, ExponentialModel
 
 from threading import Thread
 
-from core.analyze.pycorrelate import pcorrelate
+from core.analyze.pycorrelate import pcorrelate, make_loglags
 
 import numba
 
@@ -51,7 +51,7 @@ class OneSpeDiffusion(Model):
         super(OneSpeDiffusion, self).__init__(oneSpeDiffusion, **kwargs)
 
     def guess(self, data, x=None, **kwargs):
-        G0, tdiff, cst = 0., 0., 0., 0.
+        G0, tdiff, cst = 0., 0., 0.
         #if x is not None:
         G0 = data[0] #beware afterpulsing...
         cst = np.mean(data[-10:])
@@ -71,17 +71,20 @@ class CorrelationMeasurement(Measurements):
     def __init__(self, data_=None, time_axis_=None):
         super().__init__(data_, time_axis_)
 
-    def correlateMonoProc(self, timestamps1, timestamps2, maxCorrelationTimeInTick, startCorrelationTimeInTick=2, nbOfPointPerCascade_aka_B=10, tick_duration_micros=1):
+    def correlateMonoProc(self, timestamps1, timestamps2, max_correlation_time_in_tick, start_correlation_time_in_tick=2, nbOfPointPerCascade_aka_B=10, tick_duration_micros=1):
+        #FIXME
+        timestamps2 = timestamps1
+
         self.tick_duration_micros = tick_duration_micros
         self.maxTimeInTick = timestamps1[-1]
-        self.num_last_photon = np.searchsorted(timestamps1, self.maxTimeInTick - maxCorrelationTimeInTick)
+        self.num_last_photon = np.searchsorted(timestamps1, self.maxTimeInTick - max_correlation_time_in_tick)
         self.end_time_correlation_tick = timestamps1[self.num_last_photon]
 
-        self.create_list_time_correlation(startCorrelationTimeInTick, maxCorrelationTimeInTick, pointPerDecade=nbOfPointPerCascade_aka_B)
-        self.data = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)
+        self.create_list_time_correlation(start_correlation_time_in_tick, max_correlation_time_in_tick, pointPerDecade=nbOfPointPerCascade_aka_B)
+        # self.data = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)
 
         # correlate(timestamps, self.data, self.timeAxis, self.numLastPhoton)
-        self.data = pcorrelate(t=timestamps1, u=timestamps1, bins=self.timeAxis, normalize=True)
+        self.data = pcorrelate(t=timestamps1, u=timestamps2, bins=self.timeAxis, normalize=True)
         # self.pcorrelate_me(timestamps1, self.timeAxis, self.data)
 
         # self.normalize_correlation()
@@ -142,6 +145,8 @@ class CorrelationMeasurement(Measurements):
 
         self.create_list_time_correlation(start_correlation_time_in_tick, max_correlation_time_in_tick,
                                           pointPerDecade=nb_of_point_per_cascade_aka_B)
+
+        # make_loglags(exp_min=, exp_max=, points_per_base=nb_of_point_per_cascade_aka_B)
         self.data = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)
 
         p = mp.Pool(nb_of_workers)
@@ -239,9 +244,9 @@ class CorrelationMeasurement(Measurements):
             a.grid(True, which='minor', lw=0.3)
 
         if self.fit_results is not None:
-            ax[0].semilogx(self.time_axis, self.fit_results.best_fit, "b-", linewidth=3)
+            ax[0].semilogx(self.time_axis[:-1], self.fit_results.best_fit, "b-", linewidth=3)
         if self.residuals is not None:
-            ax[1].semilogx(self.time_axis, self.fit_results.residual, 'k')
+            ax[1].semilogx(self.time_axis[:-1], self.fit_results.residual, 'k')
             ym = np.abs(self.fit_results.residual).max()
             ax[1].set_ylim(-ym, ym)
         # ax[1].set_xlim(bins[0]*unit, bins[-1]*unit);

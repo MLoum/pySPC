@@ -32,10 +32,14 @@ def pnormalize(G, t, u, bins):
     """
     duration = max((t.max(), u.max())) - min((t.min(), u.min()))
     Gn = G.copy()
+    # for i, tau in enumerate(bins[1:]):
+    #     Gn[i] *= ((duration - tau) /
+    #               (float((t >= tau).sum()) *
+    #                float((u <= (u.max() - tau)).sum())))
     for i, tau in enumerate(bins[1:]):
         Gn[i] *= ((duration - tau) /
-                  (float((t >= tau).sum()) *
-                   float((u <= (u.max() - tau)).sum())))
+                  (float((t - t[0] >= tau).sum()) *
+                   float((u - u[0] <= (u.max() - u[0] - tau)).sum())))
     return Gn
 
 

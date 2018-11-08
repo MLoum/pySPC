@@ -32,6 +32,10 @@ class OneExpDecay(Model):
                        'independent_vars': independent_vars})
 
         def oneExpDecay(t, t0, amp, tau, cst):
+            #TODO Heavyside.
+            # if t < t0:
+            #     return 0
+            # else:
             return cst + amp * np.exp(-(t - t0) / tau)
 
         super(OneExpDecay, self).__init__(oneExpDecay, **kwargs)
@@ -75,8 +79,11 @@ class TwoExpDecay(Model):
         kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
                        'independent_vars': independent_vars})
 
-        def oneExpDecay(t, t0, amp1, tau1, amp2, tau2, cst):
-            return cst + amp1 * np.exp(-(t - t0) / tau1) +  amp2 * np.exp(-(t - t0) / tau2)
+        def twoExpDecay(t, t0, amp1, tau1, amp2, tau2, cst):
+            if t < t0:
+                return 0
+            else:
+                return cst + amp1 * np.exp(-(t - t0) / tau1) + amp2 * np.exp(-(t - t0) / tau2)
 
         super(TwoExpDecay, self).__init__(oneExpDecay, **kwargs)
 

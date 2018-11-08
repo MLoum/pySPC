@@ -20,13 +20,17 @@ exp.micro_time_life_time()
 # Alias variables from the results object.
 # There are as many lifetime results as there are channels.
 lifetime_histogram = exp.results.lifetimes[0].data
-lifetime_time_axis = exp.results.lifetimes[0].timeAxis
+lifetime_time_axis = exp.results.lifetimes[0].time_axis
+
+# fig = exp.results.lifetimes[0].create_canonic_graph()
+# fig.savefig("test.png")
+# (self, is_plot_error_bar=False, is_plot_text=False):
 
 # Plot
-plt.plot(lifetime_time_axis, lifetime_histogram)
-plt.xlabel("time (ns)")
-plt.ylabel("Occurence")
-plt.show()
+# plt.plot(lifetime_time_axis, lifetime_histogram)
+# plt.xlabel("time (ns)")
+# plt.ylabel("Occurence")
+# plt.show()
 
 # Fit
 t0_ini = 7
@@ -46,7 +50,8 @@ print(fit_results.best_values)
 
 fig, GridSpec  = fit_results.plot()
 fig.show()
-fig.savefig("test2.png")
+# fig = exp.results.lifetimes[0].create_canonic_graph()
+fig.savefig("test.png")
 
 # # Plot
 # plt.plot(lifetime_time_axis, lifetime_histogram)
