@@ -33,10 +33,11 @@ class guiForFitOperation_FCS(guiForFitOperation):
 
 
 class FCS_Analyze_gui():
-    def __init__(self, masterFrame, controller, appearenceParam):
+    def __init__(self, masterFrame, controller, appearenceParam, measurement=None):
         self.masterFrame = masterFrame
         self.controller = controller
         self.appearenceParam = appearenceParam
+        self.measurement = measurement
 
 
     def populate(self):
@@ -55,6 +56,21 @@ class FCS_Analyze_gui():
         e = ttk.Entry(self.frame_Correlate, textvariable=self.maxCorrelTime_sv, justify=tk.CENTER, width=7)
         e.grid(row=0, column=1)
         self.maxCorrelTime_sv.set('1000')
+
+
+        label = ttk.Label(self.frame_Correlate, text='channel A')
+        label.grid(row=0, column=2)
+        self.num_c1_sv = tk.StringVar()
+        e = ttk.Entry(self.frame_Correlate, textvariable=self.num_c1_sv, justify=tk.CENTER, width=7)
+        e.grid(row=0, column=3)
+        self.num_c1_sv.set('1')
+
+        label = ttk.Label(self.frame_Correlate, text='channel B')
+        label.grid(row=0, column=4)
+        self.num_c2_sv = tk.StringVar()
+        e = ttk.Entry(self.frame_Correlate, textvariable=self.num_c2_sv, justify=tk.CENTER, width=7)
+        e.grid(row=0, column=5)
+        self.num_c2_sv.set('1')
 
         b = ttk.Button(self.frame_Correlate, text="AutoCorrelation", width=12, command=self.launchAutoCorrelationFCS)
         b.grid(row=1, column=0)

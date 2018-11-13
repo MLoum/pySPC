@@ -72,19 +72,19 @@ class Menu():
 
     def askGeneratePoissonianNoise(self):
         d = generatePoissonianDialog(self.master, title="Generate Poissonian Noise")
-        if d.result != None:
+        if d.result is not None:
             time_s, count_per_secound = d.result
 
             self.controller.generate_poisson_noise_file(time_s, count_per_secound)
 
 
-    def saveState(self, event):
-        filePath = filedialog.askopenfilename(title="Save State", initialdir=self.mainGUI.saveDir)
-        if filePath == None or filePath == '':
+    def saveState(self):
+        filePath = filedialog.asksaveasfile(title="Save State", initialdir=self.mainGUI.saveDir)
+        if filePath == None or filePath.name == '':
             return None
-        self.controller.save_state(filePath)
+        self.controller.save_state(filePath.name)
 
-    def loadState(self, event):
+    def loadState(self):
         filePath = filedialog.askopenfilename(title="Load State", initialdir=self.mainGUI.saveDir)
         if filePath == None or filePath == '':
             return None
@@ -100,7 +100,7 @@ class Menu():
             return None
         else:
             extension = os.path.splitext(filePath)[1]
-            if extension  not in (".spc", ".pt3", ".ttt"):
+            if extension not in (".spc", ".pt3", ".ttt"):
                 messagebox.showwarning("Open file", "The file has not the correct .spc, .pt3, .ttt, extension. Aborting")
                 return None
             else:

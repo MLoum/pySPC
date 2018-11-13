@@ -2,9 +2,9 @@ import tkinter as tk
 from tkinter import ttk
 import copy
 
-from GUI.graph.Graph_navigation import  Graph_navigation
-from GUI.graph.interactiveGraphs import Graph_miniPCH
-from GUI.graph.Graph_timeZoom import  Graph_timeZoom
+from GUI.graph.Graph_navigation import Graph_navigation
+from GUI.graph.Graph_miniPCH import Graph_miniPCH
+from GUI.graph.Graph_timeZoom import Graph_timeZoom
 
 class navigation_area():
     def __init__(self, masterFrame, view, controller, appearenceParam):
@@ -14,7 +14,7 @@ class navigation_area():
         self.appearenceParam = appearenceParam
 
     def populate(self):
-        self.graph_navigation = Graph_navigation(self.masterFrame, self.view, self.controller, figsize=(15, 2), dpi=50)
+        self.graph_navigation = Graph_navigation(self.masterFrame, self.view, self.controller, figsize=(30, 2), dpi=50)
 
         self.frameTimeZoom = tk.LabelFrame(self.masterFrame, text="Time Evolution (zoom)", borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameTimeZoom.pack(side="top", fill="both", expand=True)
@@ -62,17 +62,17 @@ class TimeZoom_gui():
         label = ttk.Label(self.frameTimeGraphCommand, text='Bin size (µs)')
         label.grid(row=2, column=0)
 
-        self.binSizeMicros_sv = tk.StringVar()
+        self.bin_size_micros_sv = tk.StringVar()
         self.entryBinSize = ttk.Entry(self.frameTimeGraphCommand, width=6, justify=tk.CENTER,
-                                      textvariable=self.binSizeMicros_sv, validatecommand = self.updateChronoBinSize)
+                                      textvariable=self.bin_size_micros_sv, validatecommand = self.updateChronoBinSize)
         # self.entryBinSize.pack(side=tk.LEFT,  validate = 'key', validatecommand = self.vcmd, padx=self.padx, pady=self.pady)
         # TODO validate
         self.entryBinSize.grid(row=2, column=1)
-        self.binSizeMicros_sv.set('100')
+        self.bin_size_micros_sv.set('100')
 
         self.isChronoAutoScale = tk.IntVar()
-        self.ischronoAutoScaleCheckBox =  ttk.Checkbutton(self.frameTimeGraphCommand, text="Autoscale ?", variable=self.isChronoAutoScale)
-        self.ischronoAutoScaleCheckBox.grid(row=3, column=0, columnspan=2)
+        self.ischrono_auto_scale_check_box =  ttk.Checkbutton(self.frameTimeGraphCommand, text="Autoscale ?", variable=self.isChronoAutoScale)
+        self.ischrono_auto_scale_check_box.grid(row=3, column=0, columnspan=2)
 
         label = ttk.Label(self.frameTimeGraphCommand, text='x')
         label.grid(row=4, column=0)
@@ -101,29 +101,39 @@ class TimeZoom_gui():
 
         #TODO les autre commandes necessaire. Redraw ?
 
-        # mainGraph for time zoom (cf class Graph_timeZoom in InteractiveGraph.py)
+        b = ttk.Button(self.frameTimeGraphCommand, text="redraw", width=6, command=self.redraw_time_zoom_graph)
+        b.grid(row=8, column=1)
+
+        # mainGraph for time zoom (cf class Graph_timeZoom in Graph_timeZoom.py)
         self.frameTimeGraph = tk.LabelFrame(self.masterFrame, text="Graph", borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameTimeGraph.pack(side=tk.LEFT, fill="both", expand=True)
 
         self.graph_timeZoom = Graph_timeZoom(self.frameTimeGraph, self.view, self.controller,
-                                                 figsize=(15, 5), dpi=50)
+                                                 figsize=(17, 5), dpi=50)
 
         #mini PCH
         self.frameMiniPCH= tk.LabelFrame(self.masterFrame, text="PCH", borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameMiniPCH.pack(side=tk.LEFT, fill="both", expand=True)
 
         self.graph_miniPCH = Graph_miniPCH(self.frameMiniPCH, self.view, self.controller,
-                                                 figsize=(1, 5), dpi=20)
+                                                 figsize=(3, 5), dpi=30)
 
 
     def updateChronoBinSize(self):
-        self.view.currentBinSize_s = float(self.binSizeMicros_sv.get())/1E6
+        self.controller.view.timezoom_bin_size_s = float(self.bin_size_micros_sv.get()) / 1E6
         self.controller.update_navigation()
+
+    def redraw_time_zoom_graph(self):
+        self.controller.view.timezoom_bin_size_s = float(self.bin_size_micros_sv.get())/1E6
+        self.controller.update_navigation()
+
+
+
 
     def copyData(self, target):
         target.chronoStart_sv.set(self.chronoStart_sv.get())
         target.chronoEnd_sv.set(self.chronoEnd_sv.get())
-        target.binSizeMicros_sv.set(self.binSizeMicros_sv.get())
+        target.binSizeMicros_sv.set(self.bin_size_micros_sv.get())
         target.isChronoAutoScale.set(self.isChronoAutoScale.get())
         target.chronoPos_x.set(self.chronoPos_x.get())
         target.chronoPos_y.set(self.chronoPos_y.get())

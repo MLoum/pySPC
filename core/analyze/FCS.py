@@ -68,8 +68,8 @@ class OneSpeDiffusion(Model):
 
 
 class CorrelationMeasurement(Measurements):
-    def __init__(self, data_=None, time_axis_=None):
-        super().__init__(data_, time_axis_)
+    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="correlation", name="", comment=""):
+        super().__init__(exp_param, num_channel, start_tick, end_tick, type, name, comment)
 
     def correlateMonoProc(self, timestamps1, timestamps2, max_correlation_time_in_tick, start_correlation_time_in_tick=2, nbOfPointPerCascade_aka_B=10, tick_duration_micros=1):
         #FIXME
@@ -115,7 +115,6 @@ class CorrelationMeasurement(Measurements):
 
     def correlateFCS_multicore(self, timestamps_1, timestamps_2, max_correlation_time_in_tick, start_correlation_time_in_tick=2, nb_of_point_per_cascade_aka_B=10, tick_duration_micros=1):
         """
-
         :param timestamps_1:
         :param timestamps_2:
         :param max_correlation_time_in_tick:
@@ -179,23 +178,12 @@ class CorrelationMeasurement(Measurements):
         B = self.pointPerDecade
         for n in range(1, self.nb_of_cascade):
             self.data[n * B:(n + 1) * B] /= np.power(2, n)
-
         self.data *= (self.maxTimeInTick - self.time_axis) / (self.num_last_photon ** 2)
-
-        # maxCorrelationTimeInTick = 100000
-        # G = np.zeros(maxCorrelationTimeInTick, dtype=np.int)
-        # temp = np.zeros(maxCorrelationTimeInTick, dtype=np.int)
-        # nbOfTick = np.size(self.data)
-        # #correlate(timestamps1, G, temp, maxCorrelationTimeInTick, nbOfTick)
-        # self.data = correlate(timestamps1, G, maxCorrelationTimeInTick)
-        # #self.data = G
-        # self.timeAxis = np.arange(maxCorrelationTimeInTick)
 
     def scale_time_axis(self):
         self.time_axis = self.tick_duration_micros * self.time_axis.astype(np.float64)
 
     def create_list_time_correlation(self, startCorrelationTimeInTick, maxCorrelationTime_tick, pointPerDecade):
-
         B = self.pointPerDecade = pointPerDecade
         # How many "cascade" do we need ?
         # maxCorrelationTime_tick =  2^(n_casc - 1/B)
@@ -285,17 +273,14 @@ class CorrelationMeasurement(Measurements):
 
 class FCSMeasurements(CorrelationMeasurement):
 
-    def __init__(self, correlationCurve=None, time_axis_= None):
-        super().__init__(correlationCurve, time_axis_)
-
+    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
+        super().__init__(exp_param, num_channel, start_tick, end_tick, "FCS", name, comment)
 
     def set_params(self, params):
         if self.modelName == "1 Diff":
             self.params['G0'].set(value=params[0],  vary=True, min=0, max=None)
             self.params['tdiff'].set(value=params[1], vary=True, min=0, max=None)
             self.params['cst'].set(value=params[2], vary=True, min=0, max=None)
-
-
 
     def set_model(self, modelName):
         #il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *

@@ -13,6 +13,7 @@ import numpy as np
 from matplotlib.widgets import SpanSelector
 from matplotlib.widgets import Cursor
 from matplotlib.widgets import MultiCursor
+import matplotlib.patches as patches
 
 from .interactiveGraphs import InteractiveGraph
 
@@ -41,18 +42,29 @@ class Graph_timeZoom(InteractiveGraph):
         self.ax.clear()
 
         #reduce nb of point to 1000 (approximative size in pixel
-        if chrono.nbOfBin > 1000:
-            skipsize = int(chrono.nbOfBin/1000)
+        if chrono.nb_of_bin > 1000:
+            skipsize = int(chrono.nb_of_bin/1000)
             idx = np.arange(0, len(chrono.data), skipsize)
             chronoPlot = chrono.data[idx]
-            chronoPlotX = chrono.xAxis[idx]
+            chronoPlotX = chrono.time_axis[idx]
         else:
             chronoPlot = chrono.data
-            chronoPlotX = chrono.xAxis
+            chronoPlotX = chrono.time_axis
 
-        self.ax.set_xlim(chrono.xAxis[0], chrono.xAxis[-1])
+        self.ax.set_xlim(chrono.time_axis[0], chrono.time_axis[-1])
 
         self.ax.fill_between(chronoPlotX, 0, chronoPlot)
+
+        if self.view.current_time_zoom_window != [0, 0]:
+            self.ax.add_patch(
+                patches.Rectangle(
+                    (self.view.current_time_zoom_window[0], 0),  # (x,y)
+                    self.view.current_time_zoom_window[1]-self.view.current_time_zoom_window[0],  # width
+                    chrono.data.max(),  # height
+                    alpha=0.2
+                )
+            )
+
         self.figure.canvas.draw()
 
     def scrollEvent(self, event):
@@ -80,23 +92,25 @@ class Graph_timeZoom(InteractiveGraph):
     def button_press_event(self, event):
         #print('you pressed', event.button, event.xdata, event.ydata)
         if event.button == 1:
+            pass
             # click gauche
 
             #Test if filter mode or if the cursord is needed.
             #put horizontal cursor at mouse position
-            self.cursor_h.set_active(True)
-            self.cursor_h.eventson = True
+            # self.cursor_h.set_active(True)
+            # self.cursor_h.eventson = True
             #activate cursor drag
             #tell other graph, via the controller ?, that the cursor has changed its position
             pass
 
     def button_release_event(self, event):
         if event.button == 1:
+            pass
             # click gauche
 
             #self.cursor_h.set_active(False)
             #self.cursor_h.eventson = False
-            self.cursor_h.visible = True
+            # self.cursor_h.visible = True
             #self.cursor_h.drawon = True
 
     def onSpanMove(self, xmin, xmax):
@@ -104,7 +118,7 @@ class Graph_timeZoom(InteractiveGraph):
             # swap
             xmax, xmin = xmin, xmax
         #print(xmin, xmax)
-        # self.view.currentTimeWindow = [xmin, xmax]
+        self.view.current_time_zoom_window = [xmin, xmax]
         # self.controller.zoom()
 
     def onSpanSelect(self, xmin, xmax):
@@ -112,15 +126,15 @@ class Graph_timeZoom(InteractiveGraph):
             # swap
             xmax, xmin = xmin, xmax
         #print(xmin, xmax)
-        # self.view.currentTimeWindow = [xmin, xmax]
-        # self.controller.zoom()
+        self.view.current_time_zoom_window = [xmin, xmax]
+        self.controller.update_navigation()
 
     def createWidgets(self):
         super().createWidgets()
-        self.cursor_h = Cursor(self.ax, useblit=True, color='red', horizOn=True, vertOn=False, linewidth=2)
-
-        self.cursor_h.set_active(False)
-        self.cursor_h.drawon = True
+        # self.cursor_h = Cursor(self.ax, useblit=True, color='red', horizOn=True, vertOn=False, linewidth=2)
+        #
+        # self.cursor_h.set_active(False)
+        # self.cursor_h.drawon = True
         #drawon
         #eventson
         # self.setOnOffCursors(True)
@@ -128,7 +142,7 @@ class Graph_timeZoom(InteractiveGraph):
 
     def createCallBacks(self):
         super().createCallBacks()
-        self.cursor_h.connect_event('onmove', callback=self.cursorMove)
+        # self.cursor_h.connect_event('onmove', callback=self.cursorMove)
 
 
     def cursorMove(self, event):

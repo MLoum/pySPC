@@ -23,7 +23,6 @@ class Architecture():
         self.appearenceParam = main_GUI.appearenceParam
 
         # self.isDocked = False
-
         self.create_architecture()
 
     def create_architecture(self):

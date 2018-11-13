@@ -66,8 +66,9 @@ class Cumulant(Model):
 
 class DLS_Measurements(CorrelationMeasurement):
 
-    def __init__(self, data_=None, time_axis_= None):
-        super().__init__(data_, time_axis_)
+    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
+        super().__init__(exp_param, num_channel, start_tick, end_tick, "DLS", name, comment)
+
 
     def set_params(self, params):
         if self.modelName == "Cumulant":

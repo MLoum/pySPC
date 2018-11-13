@@ -4,7 +4,7 @@ from core import Results
 import os
 import numpy as np
 
-from core.analyze import lifetime, FCS, DLS
+from core.analyze import lifetime, FCS, DLS, chronogram, PCH
 
 """
 Test Experiment
@@ -25,10 +25,18 @@ class Experiment(object):
 
     def __init__(self, filepath=None):
         self.exp_param = ExpParam.Experiment_param()
-        self.results = Results.Results()
-        self.data = Data.Data(self.results, self.exp_param)
+        # self.results = Results.Results()
+        self.measurements = {}
+        self.data = Data.Data(self.exp_param)
+
+        self.navigation_chronogram = None
+        self.time_zoom_chronogram = None
+        self.mini_PCH = None
+
 
         self.file_name = None
+        self.comment = ""
+
         self.defaultBinSize_s = 0.01  # default : 10ms
 
         if filepath is not None :
@@ -78,129 +86,113 @@ class Experiment(object):
 
         # Display chronogram as proof od new exp.
         # chronogram(self, numChannel, startTick, endTick, binInTick):
-        binInTick = self.convert_seconds_in_ticks(self.defaultBinSize_s)
-        self.results.navigationChronogram = self.chronogram(0, 0, self.data.channels[0].end_tick, binInTick)
+
         # self.results.mainChronogram = self.data.chronogram(0, 0, self.data.channels[0].endTick, binInTick)
         # self.data.PCH(self.results.mainChronogram)
 
-    def save_state(self, shelf):
-        """
-
-        :param shelf:
-        :return:
-        """
-        shelf['exp_param'] = self.exp_param
-        shelf['results'] = self.results
-        shelf['data'] = self.data
-        shelf['fileName'] = self.file_name
-
-    def load_state(self, shelf):
-        """
-
-        :param shelf:
-        :return:
-        """
-        self.exp_param = shelf['exp_param']
-        self.results = shelf['results']
-        self.data = shelf['data']
-        self.file_name = shelf['fileName']
-
-    def update(self):
-        pass
-
-    # TODO put into a file in analyze and call it Bin.
-    def chronogram(self, num_channel=0, start_tick=0, end_tick=-1, bin_in_tick=1E5):
+    def calculate_chronogram(self, chronogram_, bin_in_tick):
         """
         The x axis is in ->microsecond<-
         """
-        timeStamps = self.data.channels[num_channel].photons['timestamps']
+        num_channel = chronogram_.num_channel
+        start_tick = chronogram_.start_tick
+        end_tick = chronogram_.end_tick
+        time_stamps = self.data.channels[num_channel].photons['timestamps']
 
         if start_tick == 0:
             start_tick = self.data.channels[num_channel].start_tick
         if end_tick == -1:
             end_tick = self.data.channels[num_channel].end_tick
 
-
         start_tick = np.uint64(start_tick)
         end_tick = np.uint64(end_tick)
 
-        # TODO Expliquer le +1, je pense que c'est du à des pb de valeurs arrondies... Au pire la derniere case est vide.
-        nbOfBin = int((end_tick - start_tick) / bin_in_tick) + 1
-        # Find indices where elements should be inserted to maintain order
-        idxStart, idxEnd = np.searchsorted(timeStamps, (start_tick, end_tick))
+        idx_start, idx_end = np.searchsorted(time_stamps, (start_tick, end_tick))
+        chronogram_.create_chronogram(time_stamps[idx_start:idx_end], bin_in_tick)
 
-        timesStamps = np.copy(timeStamps[idxStart:idxEnd])
-        timesStamps -= start_tick
+        # self.store_measurement(chrono)
+        return chronogram_
 
-        # numStartBin = int(start_tick / bin_in_tick)
-        # # numEndBin = int( end_tick / binInTick)
-        # numEndBin = numStartBin + nbOfBin
+    def get_measurement(self, name):
+        if name in self.measurements:
+            return self.measurements["name"]
+        else:
+            return None
 
-        # FIXME moins de divisions, ici on prend tout le fichier
-        # numOfBinForEachPhoton =  timesStamps / binInTick
-        # numOfBinForEachPhoton = numOfBinForEachPhoton.astype(int)
+    def create_measurement(self, num_channel, start_tick, end_tick, type, name, comment, is_store=True):
+        if type == "FCS":
+            fcs = FCS.FCSMeasurements(self.exp_param, num_channel, start_tick, end_tick, name, comment)
+            if is_store :
+                self.store_measurement(fcs)
+            return fcs
+        elif type == "chronogram":
+            chrono = chronogram.Chronogram(self.exp_param, num_channel, start_tick, end_tick, name, comment)
+            if is_store:
+                self.store_measurement(chrono)
+            return chrono
+        elif type == "lifetime":
+            lifetime_ =  lifetime.lifeTimeMeasurements(self.exp_param, num_channel, start_tick, end_tick, name, comment)
+            if is_store:
+                self.store_measurement(lifetime_)
+            return lifetime_
+        elif type == "DLS":
+            dls = DLS.DLS_Measurements(self.exp_param, num_channel, start_tick, end_tick, name, comment)
+            if is_store:
+                self.store_measurement(dls)
+            return dls
+        elif type == "PCH":
+            pch = PCH.PCH(self.exp_param, num_channel, start_tick, end_tick, name, comment)
+            if is_store:
+                self.store_measurement(pch)
+            return pch
 
-        # #Default value for "range" seems fine  -> The lower and upper range of the bins. If not provided, range is simply (a.min(), a.max()). Values outside the range are ignored.
-        # self.results.mainChronogram = Results.Chronogram()
-        # self.results.mainChronogram.tickStart, self.results.mainChronogram.tickEnd, self.results.mainChronogram.nbOfBin = start_tick, end_tick, nbOfBin
-        # self.results.mainChronogram.data, self.results.mainChronogram.xAxis  =  np.histogram(numOfBinForEachPhoton, nbOfBin)
-        # #time axis in millisecond
-        # self.results.mainChronogram.xAxis *= binInTick * self.expParam.mAcrotime_clickEquivalentIn_second*1E6 #ms
-        # #We have to cut by one element the x axis because it is on element longer than the data (NB : there is no copy, just "a view")
-        # self.results.mainChronogram.xAxis = self.results.mainChronogram.xAxis[:-1]
+    def del_measurement(self, name):
+        self.measurements.pop(name, None)
 
-        chronogram = Results.Chronogram()
-        chronogram.tickStart, chronogramtickEnd, chronogram.nbOfBin = start_tick, end_tick, int(nbOfBin)
-        # chronogram.data, chronogram.xAxis = np.histogram(numOfBinForEachPhoton, int(nbOfBin))
+    def add_measurement(self, measurement):
+        #TODO Test etc
+        self.measurements[measurement.name] = measurement
 
-        # chronogram.data = np.zeros(chronogram.nbOfBin + 1, dtype=np.int)
-        # bin.bin(timesStamps, chronogram.data, bin_in_tick)
+    def duplicate_measurement(self, name):
+        new_key = self.measurements[name] + "_b"
+        self.measurements[new_key] = self.measurements[name]
 
-        num_bin = (timesStamps / bin_in_tick).astype(np.int64)
-        chronogram.data = np.bincount(num_bin)
+    def set_measurement_channel(self, measurement, channel):
+        measurement.num_channel = channel
 
-        # chronogram.data
-        # TODO UNDERSTAND We have to cut by one element the x axis because it is on element longer than the data (NB : there is no copy, just "a view")
-        # chronogram.data = chronogram.data[:-1]
 
-        # chronogram.xAxis = np.arange(numStartBin, numEndBin, dtype=np.float64)
-        chronogram.xAxis = np.arange(nbOfBin, dtype=np.float64)
-        chronogram.xAxis *= bin_in_tick
-        chronogram.xAxis += chronogram.tickStart
-        chronogram.xAxis *= self.exp_param.mAcrotime_clickEquivalentIn_second * 1E6
-
-        # time axis in millisecond
-        # chronogram.xAxis += chronogram.tickStart
-        # chronogram.xAxis *= binInTick * self.expParam.mAcrotime_clickEquivalentIn_second * 1E6  # microsecond
-        # We have to cut by one element the x axis because it is on element longer than the data (NB : there is no copy, just "a view")
-        # chronogram.xAxis = chronogram.xAxis[:-1]
-
-        return chronogram
-
-    def PCH(self, chronogram):
+    def calculate_PCH(self, pch, chronogram, bin_size=1):
         """
         Photon Counting Histogramm
         :param chronogram:
         :return:
         """
-        pass
-        # self.results.mainPCH = Results.PCH()
-        # self.results.mainPCH.data, self.results.mainPCH.xAxis = np.histogram(chronogram.data, chronogram.data.max())
-        #
-        # self.results.mainPCH.nbOfBin = len(self.results.mainPCH.data)
-        #
-        # # We have to cut by one element the x axis because it is on element longer than the data (NB : there is no copy, just "a view")
-        # self.results.mainPCH.xAxis = self.results.mainPCH.xAxis[:-1]
+        # pch = PCH.PCH(self.exp_param, num_channel, start_tick, end_tick, name=name, comment=comment)
+        pch.create_histogram(chronogram, timestamps=None,  bin_size=1)
 
-    def timeDifference(self, numChannel=0):
-        """
-        Compute the tume difference between consecutive photons
-        :param numChannel:
-        :return:
-        """
-        self.results.timeDifference[numChannel] = np.diff(self.data.timestamps[numChannel])
+        return pch
 
-    def micro_time_life_time(self, num_channel=0, start_tick=0, end_tick=-1):
+    #TODO put it in the controller or view module ?
+    def create_navigation_chronogram(self, num_channel, t1_tick, t2_tick, bin_in_tick):
+        binInTick = self.convert_seconds_in_ticks(self.defaultBinSize_s)
+        if self.navigation_chronogram is None:
+            self.navigation_chronogram = self.create_measurement(num_channel, t1_tick, t2_tick, type="chronogram", name="dont_store", comment="", is_store=False)
+        self.navigation_chronogram = self.calculate_chronogram(self.navigation_chronogram, bin_in_tick)
+
+    def create_time_zoom_chronogram(self, num_channel, t1_tick, t2_tick, bin_in_tick):
+        if self.time_zoom_chronogram is None:
+            self.time_zoom_chronogram = self.create_measurement(num_channel, t1_tick, t2_tick, type="chronogram", name="dont_store", comment="", is_store=False)
+        self.time_zoom_chronogram = self.calculate_chronogram(self.time_zoom_chronogram, bin_in_tick)
+
+    def create_mini_PCH(self, num_channel):
+        if self.time_zoom_chronogram is not None:
+            if self.mini_PCH is None:
+                start_tick, end_tick = self.time_zoom_chronogram.start_tick, self.time_zoom_chronogram.end_tick
+                self.mini_PCH = self.create_measurement(num_channel, start_tick, end_tick, "PCH",
+                                                                    name="dont_store", comment="", is_store=False)
+            self.mini_PCH = self.calculate_PCH(self.mini_PCH, self.time_zoom_chronogram, bin_size=1)
+
+    def calculate_life_time(self, measurement):
         """
         Calculate the histogramm of the microtime and fill the corresponding "results" member
         with a lifeTimeMeasurement object
@@ -210,6 +202,10 @@ class Experiment(object):
         :param end_tick: Default value is -1
         :return: Fill the "results" member with a lifeTimeMeasurement object
         """
+        num_channel = measurement.num_channel
+        start_tick = measurement.start_tick
+        end_tick = measurement.end_tick
+
         timeStamps = self.data.channels[num_channel].photons['timestamps']
         nanotimes = self.data.channels[num_channel].photons['nanotimes']
         if start_tick == 0:
@@ -219,18 +215,35 @@ class Experiment(object):
             end_tick = self.data.channels[num_channel].end_tick
 
         idxStart, idxEnd = np.searchsorted(timeStamps, (start_tick, end_tick))
-
         nanotimes = nanotimes[idxStart:idxEnd]
 
+        measurement.create_histogramm(nanotimes)
+        return measurement
 
-        if self.results.lifetimes[num_channel] is None:
-            self.results.lifetimes[num_channel] = lifetime.lifeTimeMeasurements()
+    def get_available_name_for_measurement(self, type):
+        nb_of_existing_type = 0
+        for m in self.measurements.values():
+            if m.type ==type:
+                nb_of_existing_type += 1
+        return type + "_" + str(nb_of_existing_type)
 
-        self.results.lifetimes[num_channel].create_histogramm(nanotimes, self.exp_param.nb_of_microtime_channel,
-                                                              self.exp_param.mIcrotime_clickEquivalentIn_second)
-        return self.results.lifetimes[num_channel]
+    def store_measurement(self, measurement):
 
-    def FCS(self, num_c1=0, num_c2=0, start_tick=0, end_tick=-1, start_cor_time_micros = 0.5, max_cor_time_ms=100):
+        def auto_generate_name(measurement):
+            nb_of_existing_type = 0
+            for m in self.measurements.values():
+                if m.type == measurement.type:
+                    nb_of_existing_type += 1
+            return measurement.type + "_" + str(nb_of_existing_type)
+
+        if measurement.name == "":
+            name = auto_generate_name(measurement)
+
+        if measurement.name != "dont_store":
+            self.measurements[measurement.name] = measurement
+
+
+    def calculate_FCS(self, measurement, num_c1=0, num_c2=0, start_cor_time_micros = 0.5, max_cor_time_ms=100):
         """
         Fluctuation Correlation Spectroscopy
 
@@ -245,6 +258,8 @@ class Experiment(object):
         """
         # TODO cross correlation
         num_channel = num_c1
+        start_tick = measurement.start_tick
+        end_tick = measurement.end_tick
 
         if start_tick == 0:
             start_tick = self.data.channels[num_c1].start_tick
@@ -252,15 +267,9 @@ class Experiment(object):
         if end_tick == -1:
             end_tick = self.data.channels[num_c1].end_tick
 
-
-
         timeStamps = self.data.channels[num_channel].photons['timestamps']
-        nanotimes = self.data.channels[num_channel].photons['nanotimes']
         idxStart, idxEnd = np.searchsorted(timeStamps, (start_tick, end_tick))
         timeStamps_reduc = timeStamps[idxStart:idxEnd]
-
-        if self.results.FCS_Measurements[num_channel] == None:
-            self.results.FCS_Measurements[num_channel] = FCS.FCSMeasurements()
 
         max_correlation_time_in_tick = int(
             max_cor_time_ms / 1E3 / self.exp_param.mAcrotime_clickEquivalentIn_second)
@@ -272,9 +281,12 @@ class Experiment(object):
         #                                                             max_correlation_time_in_tick, start_correlation_time_in_tick)
         tick_duration_micros = self.exp_param.mAcrotime_clickEquivalentIn_second*1E6
         B = 10
-        self.results.FCS_Measurements[num_channel].correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc,
+        # TODO store in measurement all the aqvuisiiton parameters
+
+        measurement.correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc,
                                                                     max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros)
-        return self.results.FCS_Measurements[num_channel]
+
+        return measurement
 
     def DLS(self, num_channel_1, num_channel_2, start_tick, end_tick, max_correlation_time_ms=100, start_time_mu_s=1,
             precision=10):

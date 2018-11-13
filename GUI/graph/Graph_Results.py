@@ -94,18 +94,21 @@ class Graph_Results(InteractiveGraph):
         self.createCallBacks()
         self.createWidgets()
 
-    def plot(self, type_, data, is_plot_fit=False, is_zoom_x_selec=False, is_autoscale=False):
-        self.type = type_
-        self.data = data
+    def plot(self, measurement, is_plot_fit=False, is_zoom_x_selec=False, is_autoscale=False):
+        self.type = measurement.type
+        self.measurement = measurement
         self.is_plot_fit = is_plot_fit
         self.ax.clear()
         self.axResidual.clear()
 
-        self.data_y = y = data.data
-        self.data_x = x = data.timeAxis
-        self.data_fit = fit_y = data.eval_y_axis
-        self.fit_x = fit_x = data.eval_x_axis
-        self.data_residual = residuals_y = data.residuals
+        self.data_y = y = measurement.data
+        self.data_x = x = measurement.time_axis
+        self.data_fit = fit_y = measurement.eval_y_axis
+        self.fit_x = fit_x = measurement.eval_x_axis
+        self.data_residual = residuals_y = measurement.residuals
+
+        if y is None:
+            return
 
         # Default :
         plt_function = self.ax.plot
@@ -114,7 +117,7 @@ class Graph_Results(InteractiveGraph):
         self.ax.set_xlim(x[0], x[-1])
         self.axResidual.set_xlim(x[0], x[-1])
 
-        if type_ == "lifetime":
+        if self.type == "lifetime":
             self.ax.set_xlabel("Microtime")
             self.ax.set_ylabel("Intensity")
             self.axResidual.set_xlabel("Microtime")
@@ -125,7 +128,8 @@ class Graph_Results(InteractiveGraph):
             plt_function = self.ax.plot
             plt_residual_fct = self.axResidual.plot
 
-        elif type_ == "FCS":
+        elif self.type == "FCS":
+            #TODO use canonic graph
             self.ax.set_xlabel("time lag µs")
             self.ax.set_ylabel("Correlation")
             self.axResidual.set_xlabel("time lag µs")
@@ -134,7 +138,7 @@ class Graph_Results(InteractiveGraph):
             plt_function = self.ax.semilogx
             plt_residual_fct = self.axResidual.semilogx
 
-        elif type_ == "DLS":
+        elif self.type == "DLS":
             self.ax.set_xlabel("time lag µs")
             self.ax.set_ylabel("Correlation")
             self.axResidual.set_xlabel("time lag µs")

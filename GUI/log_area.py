@@ -18,7 +18,7 @@ class Log_area():
 
         self.logArea.pack(side=tk.LEFT, padx=2, pady=2)
 
-        self.addLogMessage("Hi !")
+        self.add_log_message("Hi !")
 
-    def addLogMessage(self, msg):
+    def add_log_message(self, msg):
         self.logArea.insert(tk.INSERT, msg)

@@ -106,19 +106,16 @@ class TwoExpDecay(Model):
 #TODO creer une classe mère pour les analyses.
 class lifeTimeMeasurements(Measurements):
 
-    def __init__(self, lifetime_histogram_=None, time_axis_= None):
-        super().__init__(lifetime_histogram_, time_axis_)
+    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
+        super().__init__(exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment)
         self.IR = None
 
-    def create_histogramm(self, nanotimes, nbOfMicrotimeChannel, mIcrotime_clickEquivalentIn_second):
-        #self.data, self.timeAxis = np.histogram(nanotimes, nbOfMicrotimeChannel)
-        self.data = np.zeros(nbOfMicrotimeChannel, dtype=np.uint)
-        #self.timeAxis = self.timeAxis[:-1]
-        self.time_axis = np.arange(nbOfMicrotimeChannel) * mIcrotime_clickEquivalentIn_second*1E9
-        #Doesnot work ??? TODO more pythonic
-        #self.data[nanotimes] += 1
-        histogram(nanotimes, self.data)
-        self.trim_life_time_curve()
+    def create_histogramm(self, nanotimes):
+        self.data = np.zeros(self.exp_param.nb_of_microtime_channel, dtype=np.uint)
+        # self.time_axis = np.arange(self.exp_param.nb_of_microtime_channel) * self.exp_param.mIcrotime_clickEquivalentIn_second*1E9
+        self.data = np.bincount(nanotimes)
+        self.time_axis = np.arange(0, self.data.size) * self.exp_param.mIcrotime_clickEquivalentIn_second*1E9
+        # self.trim_life_time_curve()
 
     def trim_life_time_curve(self):
         nonzero = np.nonzero(self.data)

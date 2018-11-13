@@ -37,8 +37,9 @@ class View():
 
         self.currentTab = "macro"
         self.currentTimeWindow = [0,0] #µs
+        self.current_time_zoom_window = [0, 0]  # µs
         self.currentChannel = 0
-        self.currentBinSize_s = 0.01
+        self.timezoom_bin_size_s = 0.01
 
         self.is_a_FileLoaded = False
 
@@ -154,17 +155,17 @@ class View():
             self.controller.change_tab()
 
     def zoomOnMainChrono(self, t1_ms, t2_ms):
-        self.controller.drawMainChronogram(self.currentChannel, t1_ms, t2_ms, self.currentBinSize_s)
+        self.controller.drawMainChronogram(self.currentChannel, t1_ms, t2_ms, self.timezoom_bin_size_s)
 
 
     def saveState(self, shelf):
         shelf['appearenceParam'] = self.appearenceParam
-        shelf['menu'] = self.menu
+        # shelf['menu'] = self.menu
         shelf['archi'] = self.archi
 
     def loadState(self, shelf):
-        self.appearenceParam =  shelf['appearenceParam']
-        self.menu = shelf['menu']
+        self.appearenceParam = shelf['appearenceParam']
+        # self.menu = shelf['menu']
         self.archi = shelf['archi']
 
 

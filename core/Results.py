@@ -16,7 +16,7 @@ class Results(object):
         # self.timeZoomChronogram = None
         self.navigationChronogram = None
 
-        self.mainPCH = None
+        self.mini_pch = None
 
         self.intensityHistogram = [None] * self.maxNbOfChannel
         self.correlationCurve = [None] * self.maxNbOfChannel
@@ -37,6 +37,12 @@ class Chronogram():
         self.tickStart = None
         self.tickEnd = None
         self.nbOfBin = None
+
+class PCH():
+    def __init__(self):
+        self.x_axis = None
+        self.data = None
+        self.bin_size = None
 
 class FCS():
     def __init__(self):

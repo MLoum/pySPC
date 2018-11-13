@@ -13,25 +13,37 @@ def update_param_vals(pars, prefix, **kwargs):
 
 
 class Measurements:
+    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="", name="", comment=""):
+        self.exp_param = exp_param
 
-    def __init__(self, data_=None, time_axis_= None):
+        self.type = type
+        self.name = name
+        self.comment = comment
+
+        self.start_tick = start_tick
+        self.end_tick = end_tick
+
+        self.num_channel = num_channel
+        self.nb_of_photon = 0
+        
+        #Fit
         self.params = Parameters()
         self.modelName = ""
         self.model = None
-
-        self.time_axis = time_axis_
-
-        self.data = data_
-        self.error_bar = None
-
         self.eval_x_axis = None
         self.eval_y_axis = None
-
+        self.residuals, self.fit_results = None, None
         self.idx_start, self.idx_end = 0, -1
 
-        self.residuals, self.fit_results = None, None
+        self.time_axis = None
+        self.data = None
+        self.error_bar = None
+
+        # in tick
+
 
         self.canonic_fig, self.canonic_fig_ax = None, None
+
 
     def find_idx_of_fit_limit(self, idx_start, idx_end):
         """
@@ -124,6 +136,13 @@ class Measurements:
 
         :return:
         """
+        pass
 
+    def get_info(self):
+        """
+        return a string with all the parameters of the measurement in a nicely formatted text
+        :return:
+        """
+        return "TODO !"
 
 

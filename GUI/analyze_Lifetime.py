@@ -48,39 +48,33 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
                 self.listLabelStringVariableFit[i].set("")
                 self.listEntryParamFit[i].state(['disabled'])
 
-
-
-
-
-
-
-
 class lifeTimeAnalyze_gui():
-    def __init__(self, masterFrame, controller, appearenceParam):
+    def __init__(self, masterFrame, controller, appearenceParam, measurement):
         self.masterFrame = masterFrame
         self.controller = controller
         self.appearenceParam = appearenceParam
+        self.measurement = measurement
 
 
     def populate(self):
         self.frameMicro_graph = tk.LabelFrame(self.masterFrame, text="Graph",
                                          borderwidth=self.appearenceParam.frameLabelBorderWidth)
-        self.frameMicro_PTOFS = tk.LabelFrame(self.masterFrame, text="PTOFS",
-                                         borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        # self.frameMicro_PTOFS = tk.LabelFrame(self.masterFrame, text="PTOFS",
+        #                                  borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameMicro_IR = tk.LabelFrame(self.masterFrame, text="IR",
                                          borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameMicro_fit = tk.LabelFrame(self.masterFrame, text="Fit",
                                          borderwidth=self.appearenceParam.frameLabelBorderWidth)
 
         self.frameMicro_graph.pack(side="left", fill="both", expand=True)
-        self.frameMicro_PTOFS.pack(side="left", fill="both", expand=True)
+        # self.frameMicro_PTOFS.pack(side="left", fill="both", expand=True)
         self.frameMicro_IR.pack(side="left", fill="both", expand=True)
         self.frameMicro_fit.pack(side="left", fill="both", expand=True)
 
 
         #Graph
 
-        b = ttk.Button(self.frameMicro_graph, text="Graph", width=6, command=self.launchMicroTimeHisto)
+        b = ttk.Button(self.frameMicro_graph, text="Graph", width=6, command=self.launch_micro_time_histo)
         b.pack(side=tk.LEFT, padx=2, pady=2)
 
         self.isSemiLog = tk.IntVar()
@@ -150,10 +144,10 @@ class lifeTimeAnalyze_gui():
     def changeIR_shift(self, e):
         pass
 
-    def launchMicroTimeHisto(self):
+    def launch_micro_time_histo(self):
         #FIXME
-        self.currentOperation = "micro"
-        self.controller.update_analyze()
+        self.controller.calculate_measurement()
+        self.controller.graph_measurement()
         # self.mainGUI.controller.drawMicroTimeHisto(self.mainGUI.currentChannel, self.mainGUI.currentTimeWindow[0], self.mainGUI.currentTimeWindow[1])
         # print("launchMicroTimeHisto")
 

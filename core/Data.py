@@ -36,7 +36,7 @@ class Data():
     Contains the SPC raw data, and method to process them (file opening, noise generation, filtering).
     """
 
-    def __init__(self, results, expParam):
+    def __init__(self, expParam):
 
         # Ici cela serait du Data-Oriented Design
         # http://gamesfromwithin.com/data-oriented-design
@@ -51,7 +51,6 @@ class Data():
 
         self.channels = []
 
-        self.results = results
         self.expParam = expParam
 
     def _del_data(self):
@@ -145,7 +144,7 @@ class Data():
             c.photons = photons
             c.update(self.expParam.mAcrotime_clickEquivalentIn_second)
             self.channels.append(c)
-            self.results.add_channel()
+            # self.results.add_channel()
             # TODO  ???
             soft_channel_value += 1
             numChannel += 1
@@ -168,9 +167,6 @@ class Data():
         #     soft_channel_value += 1
 
         return "OK"
-
-    def get_microtime_curve(self, channel):
-        pass
 
     def new_generated_exp(self, type, params):
         """
@@ -225,7 +221,6 @@ class Data():
         # Find indices where elements should be inserted to maintain order
         return np.searchsorted(array, (t1, t2))
         pass
-
 
     def generate_poisson_noise(self, mean_rate_in_tick, t_start_click, t_end_click):
         """
