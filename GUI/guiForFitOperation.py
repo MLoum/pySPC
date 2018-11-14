@@ -121,9 +121,9 @@ class guiForFitOperation():
             else:
                 params.append(float(sv.get()))
 
-        if  self.idx_lim_for_fit_min_sv.get() == "":
+        if self.idx_lim_for_fit_min_sv.get() == "":
             xlimMinFit = 0
-        else :
+        else:
             xlimMinFit = float(self.idx_lim_for_fit_min_sv.get())
 
         if  self.idx_lim_for_fit_max_sv.get() == "":
@@ -131,22 +131,22 @@ class guiForFitOperation():
         else :
             xlimMaxFit = float(self.idx_lim_for_fit_max_sv.get())
 
-        self.controller.fit(self.fitModeName, "eval", self.comboBoxStringVar.get(),
-                                         params, xlimMinFit, xlimMaxFit)
+        self.controller.fit(mode="eval", model_name=self.comboBoxStringVar.get(),
+                            params=params, idx_start=xlimMinFit, idx_end=xlimMaxFit)
 
 
     def iniGuessFit(self):
-        if  self.idx_lim_for_fit_min_sv.get() == "":
+        if self.idx_lim_for_fit_min_sv.get() == "":
             xlimMinFit = 0
-        else :
+        else:
             xlimMinFit = float(self.idx_lim_for_fit_min_sv.get())
 
-        if  self.idx_lim_for_fit_max_sv.get() == "":
+        if self.idx_lim_for_fit_max_sv.get() == "":
             xlimMaxFit = -1
-        else :
+        else:
             xlimMaxFit = float(self.idx_lim_for_fit_max_sv.get())
 
-        self.controller.fit(self.fitModeName, mode="guess", model_name=self.comboBoxStringVar.get(),
+        self.controller.guess_eval_fit(mode="guess", model_name=self.comboBoxStringVar.get(),
                             params=None, idx_start=xlimMinFit, idx_end=xlimMaxFit)
 
 
@@ -160,7 +160,7 @@ class guiForFitOperation():
             else:
                 params.append(float(sv.get()))
 
-        if  self.idx_lim_for_fit_min_sv.get() == "":
+        if self.idx_lim_for_fit_min_sv.get() == "":
             xlimMinFit = 0
         else :
             xlimMinFit = float(self.idx_lim_for_fit_min_sv.get())
@@ -170,7 +170,7 @@ class guiForFitOperation():
         else :
             xlimMaxFit = float(self.idx_lim_for_fit_max_sv.get())
 
-        self.controller.fit(self.fitModeName, mode="fit", model_name=self.comboBoxStringVar.get(),
+        self.controller.guess_eval_fit(mode="fit", model_name=self.comboBoxStringVar.get(),
                             params=params, idx_start=xlimMinFit, idx_end=xlimMaxFit)
 
     def setParamsFromFit(self, params):

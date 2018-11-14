@@ -32,6 +32,8 @@ class Graph_timeZoom(InteractiveGraph):
         #self.ax.axis('off')
         self.figure.tight_layout()
 
+        self.threshold = None
+
         self.createWidgets()
         self.createCallBacks()
 
@@ -54,6 +56,9 @@ class Graph_timeZoom(InteractiveGraph):
         self.ax.set_xlim(chrono.time_axis[0], chrono.time_axis[-1])
 
         self.ax.fill_between(chronoPlotX, 0, chronoPlot)
+
+        if self.threshold is not None:
+            self.ax.hlines(self.threshold, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
 
         if self.view.current_time_zoom_window != [0, 0]:
             self.ax.add_patch(

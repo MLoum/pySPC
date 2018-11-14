@@ -34,10 +34,8 @@ class Controller:
 
     def __init__(self):
         self.root = Tk.Tk()
-        self.num_current_exp = 0
         self.model = Experiments.Experiments()
         self.current_exp = None
-        self.list_of_exp = self.model.experiments
         self.current_measurement = None
         self.view = View.View(self.root, self)
 
@@ -50,22 +48,6 @@ class Controller:
         self.root.mainloop()
 
     ############
-
-    def change_current_exp(self, num):
-        if num == -1:
-            num = len(self.list_of_exp) - 1
-        self.num_current_exp = num
-        self.current_exp = self.list_of_exp[num]
-        self.update_all()
-
-    def close_exp(self, num):
-        del(self.list_of_exp[num])
-        if num != 1:
-            self.change_current_exp(num-1)
-
-    def add_exp(self):
-        self.model.add_new_exp()
-        self.change_current_exp(-1)
 
     def open_SPC_File(self, file_path):
         # filePath = self.view.menu.askOpenFile('Choose the SPC file to analyse (.spc, .pt3, .ttt, ...')
@@ -98,18 +80,7 @@ class Controller:
 
     ############
 
-    def update_all(self):
-        self.update_status()
-        self.update_navigation()
-        self.update_analyze()
 
-    def update_status(self):
-        if not self.view.is_a_FileLoaded:
-            return
-
-        # self.view.archi.status_area.set_file_name(self.current_exp.file_name)
-        # c = self.current_exp.data.channels[self.view.currentChannel]
-        # self.view.archi.status_area.set_nb_of_photon_and_CPS(c.nb_of_tick, c.CPS)
 
 
     def get_analysis_start_end_tick(self):
@@ -134,8 +105,111 @@ class Controller:
 
         return start_tick, end_tick
 
+
+
+    def update_all(self, is_full_update=False):
+        self.update_status(is_full_update)
+        self.update_navigation(is_full_update)
+        self.update_analyze(is_full_update)
+
+    def update_status(self, is_full_update=False):
+        if not self.view.is_a_FileLoaded:
+            return
+
+        self.view.archi.status_area.update_tree_view()
+
+        # self.view.archi.status_area.set_file_name(self.current_exp.file_name)
+        # c = self.current_exp.data.channels[self.view.currentChannel]
+        # self.view.archi.status_area.set_nb_of_photon_and_CPS(c.nb_of_tick, c.CPS)
+
+    def update_analyze(self, is_full_update=False):
+        if self.view.is_a_FileLoaded is False:
+            return
+
+        t1_tick, t2_tick = self.get_analysis_start_end_tick()
+
+        channel = self.view.currentChannel
+        guiGraphResult = self.view.archi.analyze_area.resultArea_gui.graph_results
+
+
+    # def updateNavigation(self, channel, t1_microsec, t2_microsec, binSize_s=0.01):
+    def update_navigation(self, is_full_update=False):
+        if self.view.is_a_FileLoaded is False:
+            return
+
+        #FIXME notion of "currentChannel"
+        channel = self.view.currentChannel
+        t1_microsec, t2_microsec = self.view.currentTimeWindow[0], self.view.currentTimeWindow[1]
+        binSize_s = self.view.timezoom_bin_size_s
+
+        # FIXME main channel and bin size
+        t1_tick, t2_tick = self.current_exp.convert_seconds_in_ticks(t1_microsec / 1E6), self.current_exp.convert_seconds_in_ticks(
+            t2_microsec / 1E6)
+        bin_in_tick = self.current_exp.convert_seconds_in_ticks(binSize_s)
+
+        # navigation
+        if is_full_update :
+            self.current_exp.create_navigation_chronogram(0, 0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
+            self.view.currentTimeWindow = [0, self.current_exp.convert_ticks_in_seconds(
+                self.current_exp.data.channels[0].end_tick) * 1E6]
+
+        # Time zoom
+        self.current_exp.create_time_zoom_chronogram(channel, t1_tick, t2_tick, bin_in_tick)
+        self.view.archi.navigation_area.timeZoom.graph_timeZoom.plot(self.current_exp.time_zoom_chronogram)
+
+        self.view.archi.navigation_area.graph_navigation.plot(self.current_exp.navigation_chronogram,
+                                                              self.view.currentTimeWindow[0],
+                                                              self.view.currentTimeWindow[1])
+
+        self.view.archi.navigation_area.timeZoom.chronoStart_sv.set(str(int(self.view.currentTimeWindow[0] / 1000)))
+        self.view.archi.navigation_area.timeZoom.chronoEnd_sv.set(str(int(self.view.currentTimeWindow[1] / 1000)))
+
+        self.view.archi.navigation_area.filtre_t1_sv.set(str(self.view.current_time_zoom_window[0]))
+        self.view.archi.navigation_area.filtre_t2_sv.set(str(self.view.current_time_zoom_window[1]))
+
+        self.current_exp.create_mini_PCH(channel)
+        self.view.archi.navigation_area.timeZoom.graph_miniPCH.plot(self.current_exp.mini_PCH)
+
+    def set_chrono_bin_size_s(self, binSize_s):
+        self.view.archi.navigation_area.timeZoom.bin_size_micros_sv.set(str(binSize_s * 1E6))
+        self.view.timezoom_bin_size_s = binSize_s
+
+    # Measurement management
+    def create_measurement(self, type, name, comment):
+        start_tick, end_tick = self.get_analysis_start_end_tick()
+        num_channel = self.view.currentChannel
+        return self.current_exp.create_measurement(num_channel, start_tick, end_tick, type, name, comment)
+
+    def get_measurement(self, measurement_name):
+        return self.current_exp.get_measurement(measurement_name)
+
+    def add_measurement(self, measurement):
+        self.current_exp.add_measurement(measurement)
+
+    def del_measurement(self, name):
+        self.current_exp.del_measurement(name)
+
+    def duplicate_measurement(self, name):
+        self.current_exp.duplicate_measurement(name)
+
+    def set_current_measurement(self, name):
+        if name in self.current_exp.measurements:
+            measurement = self.current_exp.measurements[name]
+            self.current_measurement = measurement
+            return measurement
+        else:
+            return None
+        # self.view.archi.analyze_area.set_current_measurement(measurement)
+
+    def get_available_name_for_measurement(self, type):
+        #FIXME
+        if self.current_exp is None:
+            return "no exp"
+        else:
+            return self.current_exp.get_available_name_for_measurement(type)
+
     def display_measurement(self, measurement_name):
-        measurement = self.current_exp.get_measurement(name)
+        measurement = self.current_exp.get_measurement(measurement_name)
 
         # Display data
         self.graph_measurement(measurement)
@@ -151,7 +225,7 @@ class Controller:
             measurement = self.current_exp.get_measurement(measurement_name)
         param = None
 
-        start_tick, end_tick = self.get_analysis_start_end_tick
+        start_tick, end_tick = self.get_analysis_start_end_tick()
 
 
         if measurement.type == "FCS":
@@ -182,117 +256,6 @@ class Controller:
         guiGraphResult = self.view.archi.analyze_area.resultArea_gui.graph_results
         guiGraphResult.plot(measurement)
 
-
-    def update_analyze(self):
-        if self.view.is_a_FileLoaded is False:
-            return
-
-        t1_tick, t2_tick = self.get_analysis_start_end_tick()
-
-        channel = self.view.currentChannel
-        guiGraphResult = self.view.archi.analyze_area.resultArea_gui.graph_results
-
-        # if self.view.currentOperation == "macro":
-        #     pass
-        #     # FIXME main channel and bin size
-        #     # binSize_s = 100
-        #     #
-        #     # binInTick = self.current_exp.convert_seconds_in_ticks(binSize_s)
-        #     # self.current_exp.results.chronograms[channel] = self.current_exp.chronogram(channel, t1_tick, t2_tick,
-        #     #                                                                           binInTick)
-        #     # # self.view.plotMainChronogram(self.model.results.chronograms[channel])
-        #     # # TODO plot dans la fenetre result.
-        #
-        # elif self.view.currentOperation == "micro":
-        #     #TODO name and comment
-        #     lifetime = self.current_exp.micro_time_life_time(channel, t1_tick, t2_tick)
-        #     guiGraphResult.plot("lifetime", lifetime)
-        #
-        # elif self.view.currentOperation == "FCS":
-        #     gui = self.view.archi.analyze_area.FCS_TimeAnalyze_gui
-        #     # FIXME recuperer les data
-        #     channel1 = channel2 = channel
-        #
-        #     max_correlTime_ms = float(gui.maxCorrelTime_sv.get())
-        #     self.view.archi.analyze_area.analyzePgb.start()
-        #     self.current_exp.FCS(channel1, channel2, t1_tick, t2_tick, max_correlTime_ms)
-        #     self.view.archi.analyze_area.analyzePgb.stop()
-        #     guiGraphResult.plot("FCS", self.current_exp.results.FCS_Measurements[channel])
-        #
-        # elif self.view.currentOperation == "DLS":
-        #     gui = self.view.archi.analyze_area.DLS_TimeAnalyze_gui
-        #     # FIXME recuperer les data
-        #     channel1 = channel2 = channel
-        #     max_correlTime_ms = float(gui.maxCorrelTime_sv.get())
-        #     start_time_mu_s = float(gui.start_time_micro_sv.get())
-        #     precision = float(gui.corel_precision_sv.get())
-        #     self.view.archi.analyze_area.analyzePgb.start()
-        #     self.current_exp.DLS(channel1, channel2, t1_tick, t2_tick, max_correlTime_ms, start_time_mu_s, precision)
-        #     self.view.archi.analyze_area.analyzePgb.stop()
-        #     guiGraphResult.plot("DLS", self.current_exp.results.DLS_Measurements[channel])
-
-    # def updateNavigation(self, channel, t1_microsec, t2_microsec, binSize_s=0.01):
-    def update_navigation(self):
-        if self.view.is_a_FileLoaded is False:
-            return
-        channel = self.view.currentChannel
-        t1_microsec, t2_microsec = self.view.currentTimeWindow[0], self.view.currentTimeWindow[1]
-        binSize_s = self.view.timezoom_bin_size_s
-
-        # FIXME main channel and bin size
-        t1_tick, t2_tick = self.current_exp.convert_seconds_in_ticks(t1_microsec / 1E6), self.current_exp.convert_seconds_in_ticks(
-            t2_microsec / 1E6)
-        bin_in_tick = self.current_exp.convert_seconds_in_ticks(binSize_s)
-
-        self.current_exp.create_time_zoom_chronogram(channel, t1_tick, t2_tick, bin_in_tick)
-        self.view.archi.navigation_area.timeZoom.graph_timeZoom.plot(self.current_exp.time_zoom_chronogram)
-
-        self.view.archi.navigation_area.graph_navigation.plot(self.current_exp.navigation_chronogram,
-                                                              self.view.currentTimeWindow[0],
-                                                              self.view.currentTimeWindow[1])
-
-        self.view.archi.navigation_area.timeZoom.chronoStart_sv.set(str(int(self.view.currentTimeWindow[0] / 1000)))
-        self.view.archi.navigation_area.timeZoom.chronoEnd_sv.set(str(int(self.view.currentTimeWindow[1] / 1000)))
-
-        self.current_exp.create_mini_PCH(channel)
-        self.view.archi.navigation_area.timeZoom.graph_miniPCH.plot(self.current_exp.mini_PCH)
-
-    def set_chrono_bin_size_s(self, binSize_s):
-        self.view.archi.navigation_area.timeZoom.bin_size_micros_sv.set(str(binSize_s * 1E6))
-        self.view.timezoom_bin_size_s = binSize_s
-
-    # Measurement management
-    def create_measurement(self, type, name, comment):
-        start_tick, end_tick = self.get_analysis_start_end_tick()
-        num_channel = self.view.currentChannel
-        return self.current_exp.create_measurement(num_channel, start_tick, end_tick, type, name, comment)
-
-
-    def add_measurement(self, measurement):
-        self.current_exp.add_measurement(measurement)
-
-    def del_measurement(self, name):
-        self.current_exp.del_measurement(name)
-
-    def duplicate_measurement(self, name):
-        self.current_exp.duplicate_measurement(name)
-
-    def set_current_measurement(self, name):
-        if name in self.current_exp.measurements:
-            measurement = self.current_exp.measurements[name]
-            self.current_measurement = measurement
-            return measurement
-        else:
-            return None
-        # self.view.archi.analyze_area.set_current_measurement(measurement)
-
-    def get_available_name_for_measurement(self, type):
-        #FIXME
-        if self.current_exp is None:
-            return "no exp"
-        else:
-            return self.current_exp.get_available_name_for_measurement(type)
-
     def set_current_exp(self, exp_name):
         if exp_name in self.model.experiments:
             exp = self.model.experiments[exp_name]
@@ -301,30 +264,48 @@ class Controller:
         else:
             return None
 
+    def get_experiment(self, exp_name):
+        return self.model.get_exp(exp_name)
 
-    def create_short_cut(self):
-        pass
 
-    def set_lim_X_fit(self, idxStart, idxEnd):
-        self.view.archi.analyze_area.FCS_TimeAnalyze_gui.guiForFitOperation_FCS.idx_lim_for_fit_min_sv.set(
-            "%.2f"%(idxStart))
-        self.view.archi.analyze_area.FCS_TimeAnalyze_gui.guiForFitOperation_FCS.idx_lim_for_fit_max_sv.set("%.2f"%(idxEnd))
+    def microtime_filter(self, num_channel, is_keep):
+        #FIXME if absicce en ns
+        micro_t1, micro_t2 = self.view.current_graph_result_limit
+        micro_t1 = int(micro_t1 / self.current_exp.exp_param.mIcrotime_clickEquivalentIn_second*1E-9)
+        micro_t2 = int(micro_t2 / self.current_exp.exp_param.mIcrotime_clickEquivalentIn_second*1E-9)
+        self.current_exp.data.filter_micro_time(num_channel, micro_t1, micro_t2, is_keep, replacement_mode="nothing")
+        self.update_all(is_full_update=True)
 
-        self.view.archi.analyze_area.lifeTimeAnalyze_gui.guiForFitOperation_Lifetime.idx_lim_for_fit_min_sv.set(
-            "%.2f"%(idxStart))
-        self.view.archi.analyze_area.lifeTimeAnalyze_gui.guiForFitOperation_Lifetime.idx_lim_for_fit_max_sv.set(
-            "%.2f"%(idxEnd))
+    def macrotime_time_selection_filter(self, t1_micro, t2_micro, num_channel, is_keep_time_selection, replacement_mode):
+        t1_tick = self.current_exp.convert_seconds_in_ticks(t1_micro * 1E-6)
+        t2_tick = self.current_exp.convert_seconds_in_ticks(t2_micro * 1E-6)
+        self.current_exp.data.filter_time_selection(num_channel, t1_tick, t2_tick, is_keep_time_selection, replacement_mode)
+        self.update_all(is_full_update=True)
 
-        self.view.archi.analyze_area.DLS_TimeAnalyze_gui.guiForFitOperation_DLS.idx_lim_for_fit_min_sv.set(
-            "%.2f"%(idxStart))
-        self.view.archi.analyze_area.DLS_TimeAnalyze_gui.guiForFitOperation_DLS.idx_lim_for_fit_max_sv.set("%.2f"%(idxEnd))
+    def macrotime_bin_threshold_filter(self, num_channel, threshold, is_keep, replacement_mode):
+        bin_in_tick = self.current_exp.convert_seconds_in_ticks(self.view.timezoom_bin_size_s)
+        self.current_exp.data.filter_bin_and_threshold(num_channel, threshold, bin_in_tick, is_keep, replacement_mode)
+        self.update_all(is_full_update=True)
+
+    def set_macrotime_filter_threshold(self, threshold):
+        self.view.archi.navigation_area.timeZoom.graph_timeZoom.threshold = threshold
+        self.view.archi.navigation_area.timeZoom.graph_miniPCH.threshold = threshold
+        self.view.archi.navigation_area.filter_threshold_sv.set(str(threshold))
+        self.update_navigation()
+
+    def set_lim_X_fit(self, idx_start, idx_end):
+        self.view.current_graph_result_limit = [idx_start, idx_end]
+
+        if self.view.archi.analyze_area.gui_for_fit_operation is not None:
+            gui = self.view.archi.analyze_area.gui_for_fit_operation
+            gui.idx_lim_for_fit_min_sv.set("%.2f"%(idx_start))
+            gui.idx_lim_for_fit_max_sv.set("%.2f" % (idx_end))
 
     def replot_result(self, is_zoom_x_selec=False, is_autoscale=False):
         self.view.archi.analyze_area.resultArea_gui.graph_results.replot(is_zoom_x_selec, is_autoscale)
 
-    def fit(self, analyze_type, mode, model_name, params, idx_start=0, idx_end=-1):
+    def guess_eval_fit(self, mode, model_name, params, idx_start=0, idx_end=-1):
         """
-        :param analyze_type: is a string for lifetime FCS DLS ...
         :param mode can be fit, eval or guess
         :param model_name string for the model name
         :param params: list of paramaters for the fit
@@ -334,42 +315,32 @@ class Controller:
         """
         data, gui, fit_plot_mode = None, None, None
 
+        measurement = self.current_measurement
+
+        gui = self.view.archi.analyze_area.gui_for_fit_operation
+
         channel = self.view.currentChannel
         # TODO cursor with fit limits.
 
-        if analyze_type == "lifetime":
-            data = self.current_exp.results.lifetimes[channel]
-            gui = self.view.archi.analyze_area.lifeTimeAnalyze_gui.guiForFitOperation_Lifetime
-            fit_plot_mode = "lifetime"
-        elif analyze_type == "DLS":
-            data = self.current_exp.results.DLS_Measurements[channel]
-            gui = self.view.archi.analyze_area.DLS_TimeAnalyze_gui.guiForFitOperation_DLS
-            fit_plot_mode = "DLS"
-        elif analyze_type == "FCS":
-            data = self.current_exp.results.FCS_Measurements[channel]
-            gui = self.view.archi.analyze_area.FCS_TimeAnalyze_gui.guiForFitOperation_FCS
-            fit_plot_mode = "FCS"
+        measurement.set_model(model_name)
 
-        if data is not None:
+        if measurement.data is not None:
             if mode == "eval":
-                data.set_model(model_name)
-                data.set_params(params)
-                data.evalParams(idx_start, idx_end)
+                measurement.set_params(params)
+                measurement.evalParams(idx_start, idx_end)
 
             elif mode == "guess":
-                data.set_model(model_name)
-                data.guess(idx_start, idx_end)
-                gui.setParamsFromFit(data.params)
+                measurement.guess(idx_start, idx_end)
+                gui.setParamsFromFit(measurement.params)
 
             elif mode == "fit":
-                data.set_model(model_name)
-                data.set_params(params)
-                fitResults = data.fit(idx_start, idx_end)
+                measurement.set_params(params)
+                fitResults = measurement.fit(idx_start, idx_end)
                 # TODO set option to tell if user want fit results exported to fit params
-                gui.setParamsFromFit(data.params)
+                gui.setParamsFromFit(measurement.params)
                 self.view.archi.analyze_area.resultArea_gui.setTextResult(fitResults.fit_report())
 
-            self.view.archi.analyze_area.resultArea_gui.graph_results.plot(fit_plot_mode, data, is_plot_fit=True)
+            self.view.archi.analyze_area.resultArea_gui.graph_results.plot(measurement, is_plot_fit=True)
 
     def shift_IR(self, main_width, secondary_width, secondary_amplitude, time_offset):
         channel = self.view.currentChannel
@@ -380,22 +351,45 @@ class Controller:
         self.view.archi.analyze_area.resultArea_gui.graph_results.export(mode, file_path)
 
     def save_state(self, savefile_path):
+        if self.current_exp.file_name is None:
+            self.log_message("No experiment to save !\n")
+            return
         self.shelf = shelve.open(savefile_path, 'n')  # n for new
         self.model.save_state(self.shelf)
-        # self.current_exp.save_state(self.shelf)
-        # self.view.saveState(self.shelf)
+
+        # save in the controller
+        self.shelf['current_exo_name'] = self.current_exp.file_name
+        if  self.current_measurement is None :
+            self.shelf['current_measurement_name'] = "None"
+        else:
+            self.shelf['current_measurement_name'] = self.current_measurement.name
+
+        self.view.saveState(self.shelf)
+
         self.shelf.close()
 
     def load_state(self, load_file_path):
         self.shelf = shelve.open(load_file_path)
         # self.current_exp.load_state(self.shelf)
         self.model.load_state(self.shelf)
-        # self.view.loadState(self.shelf)
+
+        # load for the controller
+        exp_name = self.shelf['current_exo_name']
+        self.current_exp = self.get_experiment(exp_name)
+        measurement_name = self.shelf['current_measurement_name']
+        self.current_measurement = self.current_exp.get_measurement(measurement_name)
+
+        self.view.loadState(self.shelf)
+
         self.shelf.close()
 
-        self.update_all()
-        # self.current_exp.update()
-        # self.view.update()
+        self.view.is_a_FileLoaded = True
+
+        #update
+        self.view.archi.status_area.insert_list_of_exp(self.model.experiments)
+        self.update_navigation(is_full_update=True)
+        self.update_analyze(is_full_update=True)
+
 
     def log_message(self, msg):
         print(msg)

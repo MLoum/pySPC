@@ -35,9 +35,9 @@ class View():
 
         self.appearenceParam = appearenceParam()
 
-        self.currentTab = "macro"
         self.currentTimeWindow = [0,0] #µs
         self.current_time_zoom_window = [0, 0]  # µs
+        self.current_graph_result_limit = [0, 0]  # µs
         self.currentChannel = 0
         self.timezoom_bin_size_s = 0.01
 
@@ -67,9 +67,6 @@ class View():
 
 
         #https://stackoverflow.com/questions/27215326/tkinter-keypress-keyrelease-events
-
-
-        self.currentOperation = "macro"
         self.initialize()
         self.saveDir = None
 
@@ -108,14 +105,15 @@ class View():
 
         self.archi = Architecture.Architecture(self.master, self)
 
-
-    def onclickMainGraph(self, event):
-        print('button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
-              (event.button, event.x, event.y, event.xdata, event.ydata))
-
-    def onclickNavigation(self, event):
-        print('button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
-              (event.button, event.x, event.y, event.xdata, event.ydata))
+    def pressed_key_shortcut(self, event):
+        if event.char == "1":
+            self.archi.status_area.master_frame.focus_set()
+        if event.char == "2":
+            self.archi.navigation_area.master_frame.focus_set()
+        if event.char == "3":
+            self.archi.analyze_area.master_frame.focus_set()
+        if event.char == "4":
+            self.archi.log_area.master_frame.focus_set()
 
 
     def validateEntryNumeric(self, action, index, value_if_allowed,
@@ -161,12 +159,32 @@ class View():
     def saveState(self, shelf):
         shelf['appearenceParam'] = self.appearenceParam
         # shelf['menu'] = self.menu
-        shelf['archi'] = self.archi
+        shelf['appearenceParam'] = self.appearenceParam = appearenceParam()
+
+        shelf['currentTimeWindow'] = self.currentTimeWindow
+        shelf['current_time_zoom_window'] = self.current_time_zoom_window
+        shelf['current_graph_result_limit'] = self.current_graph_result_limit
+        shelf['currentChannel'] = self.currentChannel
+        shelf['timezoom_bin_size_s'] = self.timezoom_bin_size_s
+
+        # shelf['exp_iid_dict'] = self.archi.status_area.exp_iid_dict
+        # shelf['mes_iid_dict'] = self.archi.status_area.mes_iid_dict
 
     def loadState(self, shelf):
         self.appearenceParam = shelf['appearenceParam']
         # self.menu = shelf['menu']
-        self.archi = shelf['archi']
+
+        self.currentTimeWindow = shelf['currentTimeWindow']
+        self.current_time_zoom_window = shelf['current_time_zoom_window']
+        self.current_graph_result_limit = shelf['current_graph_result_limit']
+        self.currentChannel = shelf['currentChannel']
+        self.timezoom_bin_size_s = shelf['timezoom_bin_size_s']
+
+        # self.archi.status_area.exp_iid_dict = shelf['exp_iid_dict']
+        # self.archi.status_area.mes_iid_dict = shelf['mes_iid_dict']
+
+
+
 
 
 

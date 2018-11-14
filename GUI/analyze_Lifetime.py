@@ -54,20 +54,21 @@ class lifeTimeAnalyze_gui():
         self.controller = controller
         self.appearenceParam = appearenceParam
         self.measurement = measurement
-
+        self.is_keep_selection_for_filter = True
+        # self.is_graph_x_ns = True
 
     def populate(self):
         self.frameMicro_graph = tk.LabelFrame(self.masterFrame, text="Graph",
                                          borderwidth=self.appearenceParam.frameLabelBorderWidth)
-        # self.frameMicro_PTOFS = tk.LabelFrame(self.masterFrame, text="PTOFS",
-        #                                  borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frameMicro_filter = tk.LabelFrame(self.masterFrame, text="Filter",
+                                         borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameMicro_IR = tk.LabelFrame(self.masterFrame, text="IR",
                                          borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameMicro_fit = tk.LabelFrame(self.masterFrame, text="Fit",
                                          borderwidth=self.appearenceParam.frameLabelBorderWidth)
 
         self.frameMicro_graph.pack(side="left", fill="both", expand=True)
-        # self.frameMicro_PTOFS.pack(side="left", fill="both", expand=True)
+        self.frameMicro_filter.pack(side="left", fill="both", expand=True)
         self.frameMicro_IR.pack(side="left", fill="both", expand=True)
         self.frameMicro_fit.pack(side="left", fill="both", expand=True)
 
@@ -75,13 +76,29 @@ class lifeTimeAnalyze_gui():
         #Graph
 
         b = ttk.Button(self.frameMicro_graph, text="Graph", width=6, command=self.launch_micro_time_histo)
-        b.pack(side=tk.LEFT, padx=2, pady=2)
+        b.grid(row=0, column=0)
 
         self.isSemiLog = tk.IntVar()
         self.is_draw_IR_check_box = ttk.Checkbutton(self.frameMicro_graph, text="SemiLog ?", variable=self.isSemiLog)
-        self.is_draw_IR_check_box.pack(side=tk.TOP, fill=tk.X)
+        self.is_draw_IR_check_box.grid(row=0, column=1)
 
-        #PTOFS
+        # self.toggle_button_graph = ttk.Button(self.frameMicro_graph, text="ns", width=15, command=self.toggle_graph_x)
+        # self.toggle_button_graph.grid(row=0, column=0)
+
+        label = ttk.Label(self.frameMicro_graph, text='channel :')
+        label.grid(row=1, column=0)
+        self.num_channel_sv = tk.StringVar()
+        e = ttk.Entry(self.frameMicro_graph, textvariable=self.num_channel_sv, justify=tk.CENTER, width=7)
+        e.grid(row=1, column=1)
+        self.num_channel_sv.set('0')
+
+        #Filter
+
+        self.toggle_button = ttk.Button(self.frameMicro_filter, text="Keep selection", width=15, command=self.toggle_filter_mode)
+        self.toggle_button.grid(row=0, column=0)
+
+        b = ttk.Button(self.frameMicro_filter, text="Filter", width=6, command=self.microtime_filter)
+        b.grid(row=1, column=0)
 
 
         #IR
@@ -106,8 +123,8 @@ class lifeTimeAnalyze_gui():
         b.grid(row=1, column=2)
 
         #FIT
-        self.guiForFitOperation_Lifetime = guiForFitOperation_Lifetime(self.frameMicro_fit, self.controller, ('One Decay', 'Two Decays', 'Rotation'),  nbParamFit=8)
-        self.guiForFitOperation_Lifetime.populate()
+        self.gui_for_fit_operation = guiForFitOperation_Lifetime(self.frameMicro_fit, self.controller, ('One Decay', 'Two Decays', 'Rotation'),  nbParamFit=8)
+        self.gui_for_fit_operation.populate()
 
     def openIR_file(self):
         file_path = filedialog.askopenfilename(title="OPen IR File", initialdir=self.mainGUI.saveDir)
@@ -150,4 +167,24 @@ class lifeTimeAnalyze_gui():
         self.controller.graph_measurement()
         # self.mainGUI.controller.drawMicroTimeHisto(self.mainGUI.currentChannel, self.mainGUI.currentTimeWindow[0], self.mainGUI.currentTimeWindow[1])
         # print("launchMicroTimeHisto")
+
+    def toggle_filter_mode(self):
+        if self.is_keep_selection_for_filter:
+            self.toggle_button.config(text='Filter selection')
+            self.is_keep_selection_for_filter = False
+        else:
+            self.toggle_button.config(text='Keep selection')
+            self.is_keep_selection_for_filter = True
+
+    # def toggle_graph_x(self):
+    #     if self.is_graph_x_ns:
+    #         self.toggle_button_graph.config(text='num channel')
+    #         self.is_graph_x_ns = False
+    #     else:
+    #         self.toggle_button.config(text='ns')
+    #         self.is_graph_x_ns = True
+
+    def microtime_filter(self):
+        num_channel = int(self.num_channel_sv.get())
+        self.controller.microtime_filter(num_channel, self.is_keep_selection_for_filter)
 

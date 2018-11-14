@@ -26,10 +26,15 @@ class Graph_miniPCH(InteractiveGraph):
         #self.ax.axis('off')
         self.figure.tight_layout()
 
+        self.threshold = None
+        self.pch = None
+
         self.createCallBacks()
         self.createWidgets()
 
     def plot(self, PCH):
+        self.pch = PCH
+
         if self.ax is None:
             self.mainAx = self.figure.add_subplot(111)
             self.subplot3D = None
@@ -41,8 +46,16 @@ class Graph_miniPCH(InteractiveGraph):
 
         self.ax.semilogx(PCH.data, PCH.time_axis)
 
+        if self.threshold is not None:
+            self.ax.hlines(self.threshold, 0, PCH.data.max(), linewidth=4)
+
         self.figure.canvas.draw()
 
+    def button_press_event(self, event):
+        if event.button == 1:
+            # self.threshold = event.ydata
+            # self.plot(self.pch)
+            self.controller.set_macrotime_filter_threshold(event.ydata)
 
     def onSpanMove(self, xmin, xmax):
         pass
@@ -52,5 +65,15 @@ class Graph_miniPCH(InteractiveGraph):
 
     def scrollEvent(self, event):
         pass
+
+    def createWidgets(self):
+        # super().createWidgets()
+        self.cursor_h = Cursor(self.ax, useblit=True, color='red', horizOn=True, vertOn=False, linewidth=4)
+
+        # self.cursor_h.set_active(False)
+        # self.cursor_h.drawon = True
+        # drawon
+        # eventson
+        # self.setOnOffCursors(True)
 
 

@@ -79,8 +79,8 @@ class FCS_Analyze_gui():
         b.grid(row=1, column=1)
 
         #FIT
-        self.guiForFitOperation_FCS = guiForFitOperation_FCS(self.frame_fit, self.controller, ('OneSpecies', 'Rotation'),  nbParamFit=8)
-        self.guiForFitOperation_FCS.populate()
+        self.gui_for_fit_operation = guiForFitOperation_FCS(self.frame_fit, self.controller, ('OneSpecies', 'Rotation'),  nbParamFit=8)
+        self.gui_for_fit_operation.populate()
 
 
     def launchAutoCorrelationFCS(self):

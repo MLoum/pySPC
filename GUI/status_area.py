@@ -170,6 +170,18 @@ class Status_area():
     def duplicate_exp_fil(self):
         pass
 
+    def insert_list_of_exp(self, dict_of_exp):
+        """
+        Mianly used for load state
+        :param dict_of_exp:
+        :return:
+        """
+        for exp_name, exp in dict_of_exp.items():
+            iid_exp = self.insert_exp(exp)
+            for mes_name, measurement in exp.measurements.items():
+                self.insert_measurement(measurement, iid_exp)
+
+
     def insert_exp(self, exp):
         # iid = self.tree_view.insert(parent="", index='end', text=exp.file_name)
         nb_photon = exp.data.channels[0].nb_of_tick
@@ -178,12 +190,48 @@ class Status_area():
         t_start_micros = exp.convert_ticks_in_seconds(exp.data.channels[0].start_tick) * 1E6
         t_end_micros =  exp.convert_ticks_in_seconds(exp.data.channels[0].end_tick) * 1E6
         iid = self.tree_view.insert(parent="", index='end', values=(exp.file_name, "", "",  nb_photon, CPS, nb_of_channel,  "", t_start_micros, t_end_micros))
-        self.exp_iid_dict[exp.file_name] = iid
+        if exp.file_name not in self.exp_iid_dict:
+            self.exp_iid_dict[exp.file_name] = iid
         self.tree_view.focus(iid)
+        return iid
+
+    def insert_measurement(self, measurement, parent_exp_iid):
+        """
+        Miunaly used for load state
+        :param measurement:
+        :param parent_exp_iid:
+        :return:
+        """
+        iid = self.tree_view.insert(parent=parent_exp_iid, index='end',
+                                    values=("", measurement.name, measurement.type, measurement.nb_of_photon, "NA", measurement.num_channel,
+            measurement.comment, measurement.start_tick, measurement.end_tick))
+
+        self.tree_view.item(parent_exp_iid, open=True)
+        if measurement.name not in self.mes_iid_dict:
+            self.mes_iid_dict[measurement.name] = iid
+        # self.tree_view.focus(iid)
+
+        # self.treeview_measurement_select(None)
+
 
     def update_tree_view_line(self, measurement):
         iid = self.mes_iid_dict[measurement.name]
         self.tree_view.item(iid, values=("", measurement.name, measurement.type, measurement.nb_of_photon, "NA", measurement.num_channel,  measurement.comment, measurement.start_tick, measurement.end_tick))
+
+    def update_tree_view(self):
+        for mes_name, iid in self.mes_iid_dict.items():
+            measurement = self.controller.get_measurement(mes_name)
+            self.tree_view.item(iid, values=(
+            "", measurement.name, measurement.type, measurement.nb_of_photon, "NA", measurement.num_channel,
+            measurement.comment, measurement.start_tick, measurement.end_tick))
+        for exp_name, iid in self.exp_iid_dict.items():
+            exp = self.controller.get_experiment(exp_name)
+            nb_photon = exp.data.channels[0].nb_of_tick
+            nb_of_channel = len(exp.data.channels)
+            CPS = int(exp.data.channels[0].CPS)
+            t_start_micros = exp.convert_ticks_in_seconds(exp.data.channels[0].start_tick) * 1E6
+            t_end_micros = exp.convert_ticks_in_seconds(exp.data.channels[0].end_tick) * 1E6
+            self.tree_view.item(iid, values=(exp.file_name, "", "",  nb_photon, CPS, nb_of_channel,  "", t_start_micros, t_end_micros))
 
 
     def add_measurement(self):
@@ -232,41 +280,8 @@ class Status_area():
             # this is a measurement
             measurement = self.controller.set_current_measurement(item_name_mes)
             self.controller.view.archi.analyze_area.display_measurement(measurement)
+            self.controller.display_measurement(measurement.name)
 
-
-    def set_current_measurement(self, measurement):
-        if measurement.type == "FCS":
-            # grid_forget
-            self.FCS_gui = FCS_Analyze_gui(self.frame_operation, self.controller,
-                                                       self.appearence_param)
-            self.FCS_gui.populate()
-        elif measurement.type == "lifetime":
-            self.life_time_analyze_gui = lifeTimeAnalyze_gui(self.frame_operation, self.controller, self.appearence_param)
-            self.life_time_analyze_gui.populate()
-        elif measurement.type == "DLS":
-            pass
-
-
-
-    # def add_file_combobox(self, file_name):
-    #     pass
-    #
-    # def remove_file_combobox(self):
-    #     pass
-    #
-    # def on_file_selected_via_combobox(self):
-    #     pass
-    #
-    # def set_file_name(self, name):
-    #     self.labeFileName.set(name)
-    #
-    # def set_nb_of_photon_and_CPS(self, nbOfPhoton=0, CPS=0):
-    #     self.nbOfPhoton_sv.set(str(nbOfPhoton))
-    #     self.CPS_sv.set(str(int(CPS)))
-
-
-    # def ask_file_info(self):
-    #     pass
 
     def launch_Ipython(self):
         embed()

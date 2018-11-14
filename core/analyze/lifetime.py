@@ -32,11 +32,9 @@ class OneExpDecay(Model):
                        'independent_vars': independent_vars})
 
         def oneExpDecay(t, t0, amp, tau, cst):
-            #TODO Heavyside.
-            # if t < t0:
-            #     return 0
-            # else:
-            return cst + amp * np.exp(-(t - t0) / tau)
+            exp_decay = cst + amp * np.exp(-(t - t0) / tau)
+            exp_decay[t < t0] = cst
+            return exp_decay
 
         super(OneExpDecay, self).__init__(oneExpDecay, **kwargs)
 

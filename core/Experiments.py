@@ -25,6 +25,12 @@ class Experiments(object):
     def add_exp(self, exp):
         self.experiments[exp.file_name] = exp
 
+    def get_exp(self, exp_name):
+        if exp_name in self.experiments:
+            return self.experiments[exp_name]
+        else:
+            return None
+
     def save_state(self, shelf):
         # shelf = shelve.open(savefilePath, 'n') #n for new
         shelf['experiments'] = self.experiments

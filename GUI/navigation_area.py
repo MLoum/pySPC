@@ -7,20 +7,121 @@ from GUI.graph.Graph_miniPCH import Graph_miniPCH
 from GUI.graph.Graph_timeZoom import Graph_timeZoom
 
 class navigation_area():
-    def __init__(self, masterFrame, view, controller, appearenceParam):
-        self.masterFrame = masterFrame
+    def __init__(self, master_frame, view, controller, appearenceParam):
+        self.master_frame = master_frame
         self.view = view
         self.controller = controller
         self.appearenceParam = appearenceParam
 
-    def populate(self):
-        self.graph_navigation = Graph_navigation(self.masterFrame, self.view, self.controller, figsize=(30, 2), dpi=50)
+        self.is_keep_time_selection = True
+        self.is_keep_bin_thre = True
 
-        self.frameTimeZoom = tk.LabelFrame(self.masterFrame, text="Time Evolution (zoom)", borderwidth=self.appearenceParam.frameLabelBorderWidth)
+    def populate(self):
+        self.graph_navigation = Graph_navigation(self.master_frame, self.view, self.controller, figsize=(30, 2), dpi=50)
+
+        self.frameTimeZoom = tk.LabelFrame(self.master_frame, text="Time Evolution (zoom)", borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameTimeZoom.pack(side="top", fill="both", expand=True)
 
         self.timeZoom = TimeZoom_gui(self.frameTimeZoom, self.view, self.controller, self.appearenceParam)
         self.timeZoom.populate()
+
+        self.frame_filter = tk.LabelFrame(self.master_frame, text="Macrotime Filtering", borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frame_filter.pack(side="top", fill="both", expand=True)
+
+        self.frame_filter_common = tk.LabelFrame(self.frame_filter, text="Common", borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frame_filter_common.grid(row=0, column=0)
+
+        #TODO multiple channel ?
+        label = ttk.Label(self.frame_filter_common, text='channel :')
+        label.grid(row=0, column=0)
+        self.num_channel_sv = tk.StringVar()
+        e = ttk.Entry(self.frame_filter_common, textvariable=self.num_channel_sv, justify=tk.CENTER, width=7)
+        e.grid(row=0, column=1)
+        self.num_channel_sv.set('0')
+
+        label = ttk.Label(self.frame_filter_common, text='Replacement :')
+        label.grid(row=1, column=0)
+        self.analyze_cb_replacement_sv = tk.StringVar()
+        cb = ttk.Combobox(self.frame_filter_common, width=25, justify=tk.CENTER, textvariable=self.analyze_cb_replacement_sv, values='')
+        # cb.bind('<<ComboboxSelected>>', self.frame_filter_time_selection)
+        cb['values'] = ('nothing', 'glue', 'poissonian_noise')
+        self.analyze_cb_replacement_sv.set('nothing')
+        cb.grid(row=1, column=1)
+
+
+
+        self.frame_filter_time_selection = tk.LabelFrame(self.frame_filter, text="Time Selection", borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frame_filter_time_selection.grid(row=0, column=1)
+
+        label = ttk.Label(self.frame_filter_time_selection, text='t1(µs)')
+        label.grid(row=0, column=0)
+        self.filtre_t1_sv = tk.StringVar()
+        e = ttk.Entry(self.frame_filter_time_selection, width=20, justify=tk.CENTER, textvariable=self.filtre_t1_sv)
+        e.grid(row=0, column=1)
+
+        label = ttk.Label(self.frame_filter_time_selection, text='t2 (µs)')
+        label.grid(row=1, column=0)
+        self.filtre_t2_sv = tk.StringVar()
+        e = ttk.Entry(self.frame_filter_time_selection, width=20, justify=tk.CENTER, textvariable=self.filtre_t2_sv)
+        e.grid(row=1, column=1)
+
+        label = ttk.Label(self.frame_filter_time_selection, text='Action')
+        label.grid(row=2, column=0)
+        self.toggle_button_action_timeselec = ttk.Button(self.frame_filter_time_selection, text="Keep", width=15, command=self.toggle_filter_mode)
+        self.toggle_button_action_timeselec.grid(row=2, column=1)
+
+        b = ttk.Button(self.frame_filter_time_selection, text="Filter", width=15, command=self.filter_time_selection)
+        b.grid(row=3, column=0, columnspan=2)
+
+        self.frame_filter_bin_and_threshold = tk.LabelFrame(self.frame_filter, text="Bin and Threshold", borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frame_filter_bin_and_threshold.grid(row=0, column=2)
+
+        label = ttk.Label(self.frame_filter_bin_and_threshold, text='Threshold')
+        label.grid(row=0, column=0)
+        self.filter_threshold_sv = tk.StringVar()
+        e = ttk.Entry(self.frame_filter_bin_and_threshold, width=20, justify=tk.CENTER, textvariable=self.filter_threshold_sv)
+        e.grid(row=0, column=1)
+
+        label = ttk.Label(self.frame_filter_bin_and_threshold, text='Action')
+        label.grid(row=1, column=0)
+        self.toggle_button_action_threshold = ttk.Button(self.frame_filter_bin_and_threshold, text="Filter above", width=15, command=self.toggle_filter_mode_bin_thre)
+        self.toggle_button_action_threshold.grid(row=1, column=1)
+
+        b = ttk.Button(self.frame_filter_bin_and_threshold, text="Filter", width=15, command=self.filter_bin_threshold)
+        b.grid(row=2, column=0, columnspan=2)
+
+
+
+    def toggle_filter_mode(self):
+        if self.is_keep_time_selection:
+            self.toggle_button_action_timeselec.config(text='Discard')
+            self.is_keep_time_selection = False
+        else:
+            self.toggle_button_action_timeselec.config(text='Keep')
+            self.is_keep_time_selection = True
+
+    def toggle_filter_mode_bin_thre(self):
+        if self.is_keep_bin_thre:
+            self.toggle_button_action_threshold.config(text='Filter below')
+            self.is_keep_bin_thre = False
+        else:
+            self.toggle_button_action_threshold.config(text='Filter above')
+            self.is_keep_bin_thre = True
+
+
+    def filter_time_selection(self):
+        t1_micro = float(self.filtre_t1_sv.get())
+        t2_micro = float(self.filtre_t2_sv.get())
+        num_channel = int(self.num_channel_sv.get())
+        replacement_mode = self.analyze_cb_replacement_sv.get()
+        is_keep_time_selection = self.is_keep_time_selection
+        self.controller.macrotime_time_selection_filter(t1_micro, t2_micro, num_channel, is_keep_time_selection, replacement_mode)
+
+    def filter_bin_threshold(self):
+        num_channel = int(self.num_channel_sv.get())
+        replacement_mode = self.analyze_cb_replacement_sv.get()
+        threshold = float(self.filter_threshold_sv.get())
+        self.controller.macrotime_bin_threshold_filter(num_channel, threshold, self.is_keep_bin_thre, replacement_mode)
 
     def copyData(self, target):
         """

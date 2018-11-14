@@ -31,13 +31,14 @@ class Architecture():
 
         # 1 Status and file selection
         self.frame_status = tk.LabelFrame(self.master, text="Status", borderwidth=self.appearenceParam.frameLabelBorderWidth)
-
+        self.frame_status.bind("<Key>", self.mainGUI.pressed_key_shortcut)
         self.status_area = Status_area(self.frame_status, self.mainGUI, self.controller, self.appearenceParam)
         self.status_area.populate()
         self.frame_status.pack(side="top", fill="both", expand=True)
 
         # 2 Navigation
         self.top_level_navigation = tk.Toplevel(self.master)
+        self.top_level_navigation.bind("<Key>", self.mainGUI.pressed_key_shortcut)
         self.top_level_navigation.title("Navigation")
         self.frame_navigation = tk.LabelFrame(self.top_level_navigation, text="Navigation",
                                               borderwidth=self.appearenceParam.frameLabelBorderWidth)
@@ -48,6 +49,7 @@ class Architecture():
 
         # 3 Analyze
         self.top_level_analyze = tk.Toplevel(self.master)
+        self.top_level_analyze.bind("<Key>", self.mainGUI.pressed_key_shortcut)
         self.top_level_analyze.title("Analysis")
         self.frame_analyze = tk.LabelFrame(self.top_level_analyze, text="Analyze", borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.analyze_area = Analyze_area(self.frame_analyze, self.mainGUI, self.controller, self.appearenceParam)
@@ -57,6 +59,7 @@ class Architecture():
 
         # 4 Log
         self.top_level_log = tk.Toplevel(self.master)
+        self.top_level_log.bind("<Key>", self.mainGUI.pressed_key_shortcut)
         self.frame_log = tk.LabelFrame(self.top_level_log, text="Log", borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.log_area = Log_area(self.frame_log, self.mainGUI, self.controller, self.appearenceParam)
         self.log_area.populate()

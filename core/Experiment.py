@@ -115,7 +115,7 @@ class Experiment(object):
 
     def get_measurement(self, name):
         if name in self.measurements:
-            return self.measurements["name"]
+            return self.measurements[name]
         else:
             return None
 

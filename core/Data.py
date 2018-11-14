@@ -240,7 +240,7 @@ class Data():
         last_sample = np.searchsorted(arrival_times, t_end_click)
         return arrival_times[:last_sample]
 
-    def filter_bin_and_threshold(self, num_channel, threshold, bin_in_tick, replacement_mode="nothing"):
+    def filter_bin_and_threshold(self, num_channel, threshold, bin_in_tick, is_keep=True, replacement_mode="nothing"):
         """
 
         :param num_channel:
@@ -254,22 +254,25 @@ class Data():
         num_bin_for_each_photons = (time_stamps / bin_in_tick).astype(np.int64)
         binned_timestamps = np.bincount(num_bin_for_each_photons)
         # Filter
-        idx_bin_to_filter = np.where(binned_timestamps > threshold)
+        if is_keep:
+            idx_bin_to_filter = np.where(binned_timestamps > threshold)
+        else:
+            idx_bin_to_filter = np.where(binned_timestamps < threshold)
         is_photons_to_be_filtered = np.isin(num_bin_for_each_photons, idx_bin_to_filter)
         idx_photons_to_filter = np.nonzero(is_photons_to_be_filtered)
 
         # TODO Use mask ?
 
-        if replacement_mode is "nothing":
+        if replacement_mode == "nothing":
             self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                            idx_photons_to_filter)
-        elif replacement_mode is "glue":
+        elif replacement_mode == "glue":
             """
             Most of the times, this is a bad idea
             """
             pass
 
-        elif replacement_mode is "poissonian_noise":
+        elif replacement_mode == "poissonian_noise":
             # Strategy, put artificial poisson noise at the end of the photons list and sort the photon list
             old_cps_per_tick = self.channels[num_channel].CPS * self.expParam.mAcrotime_clickEquivalentIn_second
 
@@ -302,10 +305,10 @@ class Data():
         else:
             idx_photons_to_be_filtered = np.where(np.logical_and(time_stamps > t1_tick, time_stamps < t2_tick))
 
-        if replacement_mode is "nothing":
+        if replacement_mode == "nothing":
             self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                            idx_photons_to_be_filtered)
-        if replacement_mode is "glue":
+        if replacement_mode == "glue":
             if is_keep:
                 self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                                idx_photons_to_be_filtered)
@@ -316,7 +319,7 @@ class Data():
                 self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                                idx_photons_to_be_filtered)
 
-        elif replacement_mode is "poissonian_noise":
+        elif replacement_mode == "poissonian_noise":
             if is_keep:
                 old_cps_per_tick = self.channels[num_channel].CPS * self.expParam.mAcrotime_clickEquivalentIn_second
                 self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
@@ -355,6 +358,16 @@ class Data():
         self.channels[num_channel].update(self.expParam.mAcrotime_clickEquivalentIn_second)
 
     def filter_micro_time(self, num_channel, micro_t1, micro_t2, is_keep=True, replacement_mode="nothing"):
+        """
+
+        :param num_channel:
+        :param micro_t1: microtime in channel number (not in ns)
+        :param micro_t2: microtime in channel number (not in ns)
+        :param is_keep:
+        :param replacement_mode:
+        :return:
+        """
+        #TODO think about another mode of replacement than nothing
         nanotimes = self.channels[num_channel].photons['nanotimes']
 
         if is_keep:
@@ -362,10 +375,10 @@ class Data():
         else:
             idx_photons_to_be_filtered = np.where(np.logical_and(nanotimes > micro_t1, nanotimes < micro_t2))
 
-        if replacement_mode is "nothing":
+        if replacement_mode == "nothing":
             self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                            idx_photons_to_be_filtered)
-        elif replacement_mode is "poissonian_noise":
+        elif replacement_mode == "poissonian_noise":
             """
             Est-ce faisable, les mircotimes ne sont pas à la suite...
             """

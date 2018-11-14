@@ -11,10 +11,12 @@ from .resultsArea import Results_area
 
 class Analyze_area():
     def __init__(self, masterFrame, view, controller, appearenceParam):
-        self.masterFrame = masterFrame
+        self.master_frame = masterFrame
         self.view = view
         self.controller = controller
         self.appearence_param = appearenceParam
+
+        self.gui_for_fit_operation = None
 
     def populate(self):
         # self.frame_common = tk.LabelFrame(self.masterFrame, text="Common", borderwidth=self.appearence_param.frameLabelBorderWidth)
@@ -23,7 +25,7 @@ class Analyze_area():
         # self.frame_common_cmd = tk.LabelFrame(self.frame_common, text="cmd", borderwidth=self.appearence_param.frameLabelBorderWidth)
         # self.frame_common_cmd.pack(side="top", fill="both", expand=True)
 
-        self.frame_selection = tk.LabelFrame(self.masterFrame, text="Selection", borderwidth=self.appearence_param.frameLabelBorderWidth)
+        self.frame_selection = tk.LabelFrame(self.master_frame, text="Selection", borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_selection.pack(side="top", fill="both", expand=True)
 
         #combo box analyse Source
@@ -160,11 +162,11 @@ class Analyze_area():
         # b.grid(row=0, column=5)
 
 
-        self.frame_operation = tk.LabelFrame(self.masterFrame, text="Operation", borderwidth=self.appearence_param.frameLabelBorderWidth)
+        self.frame_operation = tk.LabelFrame(self.master_frame, text="Operation", borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_operation.pack(side="top", fill="both", expand=True)
 
 
-        self.frameResult = tk.LabelFrame(self.masterFrame, text="Results", borderwidth=self.appearence_param.frameLabelBorderWidth)
+        self.frameResult = tk.LabelFrame(self.master_frame, text="Results", borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frameResult.pack(side="top", fill="both", expand=True)
 
         self.resultArea_gui = Results_area(self.frameResult, self.view, self.controller, self.appearence_param)
@@ -180,15 +182,17 @@ class Analyze_area():
             self.FCS_gui = FCS_Analyze_gui(self.frame_operation, self.controller,
                                                        self.appearence_param, measurement)
             self.FCS_gui.populate()
+            self.gui_for_fit_operation = self.FCS_gui.gui_for_fit_operation
         elif measurement.type == "chronogram":
             pass
         elif measurement.type == "lifetime":
-            self.lifeTimeAnalyze_gui = lifeTimeAnalyze_gui(self.frame_operation, self.controller, self.appearence_param, measurement)
-            self.lifeTimeAnalyze_gui.populate()
+            self.life_time_analyze_gui = lifeTimeAnalyze_gui(self.frame_operation, self.controller, self.appearence_param, measurement)
+            self.life_time_analyze_gui.populate()
+            self.gui_for_fit_operation = self.life_time_analyze_gui.gui_for_fit_operation
         elif measurement.type == "DLS":
-            pass
+            self.gui_for_fit_operation = None
         elif measurement.type == "PCH":
-            pass
+            self.gui_for_fit_operation = None
 
         self.frame_operation.pack(side="top", fill="both", expand=True)
 
@@ -204,7 +208,7 @@ class Analyze_area():
 
     def add_measurement(self):
         if self.controller.current_exp is not None:
-            d = add_measurement_dialog(self.masterFrame, "add experiment", self.controller)
+            d = add_measurement_dialog(self.master_frame, "add experiment", self.controller)
             if d.result is not None:
                 exp_type, exp_name, exp_comment = d.result
                 new_measurement = self.controller.create_measurement(exp_type, exp_name, exp_comment)

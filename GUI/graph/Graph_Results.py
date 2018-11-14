@@ -177,6 +177,19 @@ class Graph_Results(InteractiveGraph):
                 plt_function(fit_x, fit_y, self.appearanceParam.line_type_fit_lifetime)
                 plt_residual_fct(fit_x, residuals_y)
 
+        #selection patch
+        if self.x_selec_min is not None :
+            self.ax.add_patch(
+                patches.Rectangle(
+                    (self.x_selec_min, 0),  # (x,y)
+                    self.x_selec_max-self.x_selec_min,  # width
+                    measurement.data.max(),  # height
+                    alpha=0.1
+                )
+            )
+
+
+
         self.figure.canvas.draw()
 
     def replot(self, is_zoom_x_selec=False, is_autoscale=False):
@@ -215,7 +228,7 @@ class Graph_Results(InteractiveGraph):
         self.x_selec_max = xmax
         #Update GUI
         self.controller.set_lim_X_fit(self.x_selec_min, self.x_selec_max)
-        self.plot(self.type, self.data)
+        self.plot(self.measurement)
 
 
     def scrollEvent(self, event):
