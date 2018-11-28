@@ -95,6 +95,12 @@ class Graph_Results(InteractiveGraph):
         self.createWidgets()
 
     def plot(self, measurement, is_plot_fit=False, is_zoom_x_selec=False, is_autoscale=False):
+        if measurement is None:
+            return
+        if measurement is None:
+            return
+
+
         self.type = measurement.type
         self.measurement = measurement
         self.is_plot_fit = is_plot_fit
@@ -123,10 +129,13 @@ class Graph_Results(InteractiveGraph):
             self.axResidual.set_xlabel("Microtime")
             self.axResidual.set_ylabel("Residual")
 
-            # TODO : semilogy
-
-            plt_function = self.ax.plot
+            plt_function = self.ax.semilogy
             plt_residual_fct = self.axResidual.plot
+
+            if measurement.use_IR:
+                rescale_factor = measurement.data.max() / measurement.IR_processed.max()
+                self.ax.plot(measurement.IR_time_axis_processed, measurement.IR_processed*rescale_factor, "b--")
+
 
         elif self.type == "FCS":
             #TODO use canonic graph
@@ -177,7 +186,7 @@ class Graph_Results(InteractiveGraph):
                 plt_function(fit_x, fit_y, self.appearanceParam.line_type_fit_lifetime)
                 plt_residual_fct(fit_x, residuals_y)
 
-        #selection patch
+        # selection patch
         if self.x_selec_min is not None :
             self.ax.add_patch(
                 patches.Rectangle(

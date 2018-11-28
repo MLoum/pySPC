@@ -26,15 +26,22 @@ class OneExpDecay(Model):
 
     """
 
-    def __init__(self, independent_vars=['t'], prefix='', nan_policy='propagate',
+    def __init__(self, IR=None, use_IR=False, independent_vars=['t'], prefix='', nan_policy='propagate',
                  **kwargs):
+
+        self.IR = IR
+        self.use_IR = use_IR
+
         kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
                        'independent_vars': independent_vars})
 
         def oneExpDecay(t, t0, amp, tau, cst):
             exp_decay = cst + amp * np.exp(-(t - t0) / tau)
             exp_decay[t < t0] = cst
-            return exp_decay
+            if self.use_IR:
+                return np.convolve(exp_decay, self.IR)
+            else:
+                return exp_decay
 
         super(OneExpDecay, self).__init__(oneExpDecay, **kwargs)
 
@@ -106,14 +113,18 @@ class lifeTimeMeasurements(Measurements):
 
     def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
         super().__init__(exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment)
-        self.IR = None
+        self.IR_raw, self.IR_processed = None, None
+        self.IR_start, self.IR_end = None, None
+        self.IR_shift = None
+        self.IR_time_axis, self.IR_time_axis_processed = None, None
+        self.use_IR = False
 
     def create_histogramm(self, nanotimes):
         self.data = np.zeros(self.exp_param.nb_of_microtime_channel, dtype=np.uint)
         # self.time_axis = np.arange(self.exp_param.nb_of_microtime_channel) * self.exp_param.mIcrotime_clickEquivalentIn_second*1E9
         self.data = np.bincount(nanotimes)
         self.time_axis = np.arange(0, self.data.size) * self.exp_param.mIcrotime_clickEquivalentIn_second*1E9
-        # self.trim_life_time_curve()
+        self.trim_life_time_curve()
 
     def trim_life_time_curve(self):
         nonzero = np.nonzero(self.data)
@@ -125,14 +136,24 @@ class lifeTimeMeasurements(Measurements):
     def shift_histogramm(self, shift):
         self.data = np.roll(self.data, shift)
 
-    def setIR(self, IR):
-        self.IR = IR
+    def set_model_IR(self):
+        self.model.IR = self.IR_processed
 
-    def shift_IR(self, shift):
+    def set_use_IR(self, use_IR=False):
+        self.use_IR = use_IR
+        if self.model is not None:
+            self.model.use_IR = use_IR
+
+    def process_IR(self):
         """
         Shift in nb of microtime channel
         """
-        self.IR = np.roll(self.IR, shift)
+        idx_begin = int( self.IR_start/100.0 *self.exp_param.nb_of_microtime_channel)
+        idx_end = int(self.IR_end/100.0 * self.exp_param.nb_of_microtime_channel)
+        shift = int(self.IR_shift/100.0*self.exp_param.nb_of_microtime_channel)
+        # self.IR_processed = np.roll(self.IR_raw[idx_begin:idx_end], int(self.IR_shift/100.0*self.exp_param.nb_of_microtime_channel))
+        self.IR_processed = self.IR_raw[idx_begin:idx_end]
+        self.IR_time_axis_processed = self.IR_time_axis[idx_begin - shift:idx_end - shift]
 
     def generate_artificial_IR(self, mainWidth, secondaryWidth, secondaryAmplitude, timeOffset):
         self.IR = (1-secondaryWidth) * np.exp( - (self.eval_x_axis - timeOffset)**2/mainWidth) + secondaryAmplitude * np.exp( - (self.eval_x_axis - timeOffset)**2/secondaryWidth)
@@ -202,8 +223,7 @@ class lifeTimeMeasurements(Measurements):
 
 
     def set_model(self, modelName):
-        print(modelName)
-        #il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *
+
         if modelName == "One Decay":
             self.modelName = modelName
             self.model = OneExpDecay()

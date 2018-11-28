@@ -131,6 +131,8 @@ class Controller:
         channel = self.view.currentChannel
         guiGraphResult = self.view.archi.analyze_area.resultArea_gui.graph_results
 
+        self.graph_measurement("current")
+
 
     # def updateNavigation(self, channel, t1_microsec, t2_microsec, binSize_s=0.01):
     def update_navigation(self, is_full_update=False):
@@ -226,7 +228,6 @@ class Controller:
         param = None
 
         start_tick, end_tick = self.get_analysis_start_end_tick()
-
 
         if measurement.type == "FCS":
             gui = self.view.archi.analyze_area.FCS_TimeAnalyze_gui

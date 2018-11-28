@@ -16,6 +16,7 @@ class Analyze_area():
         self.controller = controller
         self.appearence_param = appearenceParam
 
+        self.analyze_gui = None
         self.gui_for_fit_operation = None
 
     def populate(self):
@@ -179,16 +180,16 @@ class Analyze_area():
             child.destroy()
 
         if measurement.type == "FCS":
-            self.FCS_gui = FCS_Analyze_gui(self.frame_operation, self.controller,
+            self.analyze_gui = FCS_Analyze_gui(self.frame_operation, self.controller,
                                                        self.appearence_param, measurement)
-            self.FCS_gui.populate()
-            self.gui_for_fit_operation = self.FCS_gui.gui_for_fit_operation
+            self.analyze_gui.populate()
+            self.gui_for_fit_operation = self.analyze_gui.gui_for_fit_operation
         elif measurement.type == "chronogram":
             pass
         elif measurement.type == "lifetime":
-            self.life_time_analyze_gui = lifeTimeAnalyze_gui(self.frame_operation, self.controller, self.appearence_param, measurement)
-            self.life_time_analyze_gui.populate()
-            self.gui_for_fit_operation = self.life_time_analyze_gui.gui_for_fit_operation
+            self.analyze_gui = lifeTimeAnalyze_gui(self.frame_operation, self.controller, self.appearence_param, measurement)
+            self.analyze_gui.populate()
+            self.gui_for_fit_operation = self.analyze_gui.gui_for_fit_operation
         elif measurement.type == "DLS":
             self.gui_for_fit_operation = None
         elif measurement.type == "PCH":

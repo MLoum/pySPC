@@ -4,6 +4,8 @@ from tkinter import simpledialog
 from .guiForFitOperation import guiForFitOperation
 from core import Experiment
 
+from tkinter import filedialog, messagebox, simpledialog
+
 class guiForFitOperation_Lifetime(guiForFitOperation):
 
     def __init__(self, masterFrame, controller, modelNames, nbParamFit):
@@ -115,27 +117,47 @@ class lifeTimeAnalyze_gui():
         label = tk.Label(self.frameMicro_IR, text="Shift :")
         label.grid(row=1, column=0)
 
-        self.shiftIR_amount = tk.IntVar()
-        w = ttk.Scale(self.frameMicro_IR, from_=0, to=200, orient=tk.HORIZONTAL, variable=self.shiftIR_amount, command=self.changeIR_shift)
+        label = tk.Label(self.frameMicro_IR, text="Beginning :")
+        label.grid(row=1, column=0)
+        self.ir_start_iv = tk.IntVar()
+        w = ttk.Scale(self.frameMicro_IR, from_=0, to=100, orient=tk.HORIZONTAL, variable=self.ir_start_iv, command=self.change_IR)
         w.grid(row=1, column=1)
 
+        label = tk.Label(self.frameMicro_IR, text="End :")
+        label.grid(row=2, column=0)
+        self.ir_end_iv = tk.IntVar()
+        w = ttk.Scale(self.frameMicro_IR, from_=0, to=100, orient=tk.HORIZONTAL, variable=self.ir_end_iv, command=self.change_IR)
+        self.ir_end_iv.set(100)
+        w.grid(row=2, column=1)
+
+        label = tk.Label(self.frameMicro_IR, text="Shift :")
+        label.grid(row=3, column=0)
+        self.shiftIR_amount = tk.IntVar()
+        w = ttk.Scale(self.frameMicro_IR, from_=-100, to=100, orient=tk.HORIZONTAL, variable=self.shiftIR_amount, command=self.change_IR)
+        w.grid(row=3, column=1)
+        self.shiftIR_amount.set(0)
+
         b = ttk.Button(self.frameMicro_IR, text="Auto",  command=self.autoShiftIR)
-        b.grid(row=1, column=2)
+        b.grid(row=3, column=2)
 
         #FIT
         self.gui_for_fit_operation = guiForFitOperation_Lifetime(self.frameMicro_fit, self.controller, ('One Decay', 'Two Decays', 'Rotation'),  nbParamFit=8)
         self.gui_for_fit_operation.populate()
 
     def openIR_file(self):
-        file_path = filedialog.askopenfilename(title="OPen IR File", initialdir=self.mainGUI.saveDir)
+        file_path = filedialog.askopenfilename(title="Open IR File", initialdir=self.controller.view.saveDir)
         if file_path == None or file_path == '':
             return None
-        ir_exp = Experiment.Experiment()
-        # ir_exp..new_exp("file", [file_path])
-
+        ir_exp = Experiment.Experiment(file_path)
+        measurement_ir = ir_exp.create_measurement(0, 0, -1,"lifetime", "", "")
+        ir_exp.calculate_life_time(measurement_ir)
+        self.controller.current_measurement.IR_raw = measurement_ir.data
+        self.controller.current_measurement.IR_time_axis = measurement_ir.time_axis
+        self.controller.update_analyze()
 
     def is_use_IR(self):
-        pass
+        self.change_IR(None)
+
 
     def generateIR_file(self):
         #TODO Custom Dialog !
@@ -158,8 +180,13 @@ class lifeTimeAnalyze_gui():
     def autoShiftIR(self):
         pass
 
-    def changeIR_shift(self, e):
-        pass
+    def change_IR(self, e):
+        self.controller.current_measurement.IR_start = self.ir_start_iv.get()
+        self.controller.current_measurement.IR_end = self.ir_end_iv.get()
+        self.controller.current_measurement.IR_shift = self.shiftIR_amount.get()
+        self.controller.current_measurement.set_use_IR(self.isDraw_IR.get())
+        self.controller.current_measurement.process_IR()
+        self.controller.update_analyze()
 
     def launch_micro_time_histo(self):
         #FIXME

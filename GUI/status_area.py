@@ -253,11 +253,28 @@ class Status_area():
             self.controller.log_message("No experiment loaded")
 
     def del_measurement(self):
-        # list_selection = self.list_measurement.curselection()
-        # num = int(list_selection[0])
+        id_selected_item = self.tree_view.focus()
+        selected_item = self.tree_view.item(id_selected_item)
+
+        item_name_exp = selected_item["values"][0]
+        item_name_mes = selected_item["values"][1]
+
+        if item_name_exp in self.controller.model.experiments:
+            # this is an experiment
+            # exp = self.controller.set_current_measurement(item_name_exp)
+            # self.controller.update_navigation()
+            #TODO how to remove an exp ?
+            pass
+        elif item_name_mes in self.controller.current_exp.measurements:
+            # this is a measurement
+            self.controller.del_measurement(item_name_mes)
+            self.tree_view.delete(id_selected_item)
+            #TODO display nothing on the GUI
+
+
         # measurement_name = self.list_measurement.get(num)
-        self.controller.del_measurement(measurement_name)
-        # self.list_measurement.delete(num)
+
+
 
     def duplicate_measurement(self):
         # list_selection = self.list_measurement.curselection()
