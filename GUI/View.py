@@ -106,13 +106,14 @@ class View():
         self.archi = Architecture.Architecture(self.master, self)
 
     def pressed_key_shortcut(self, event):
-        if event.char == "1":
+        # print(event.char)
+        if event.char == "a":
             self.archi.status_area.master_frame.focus_set()
-        if event.char == "2":
+        if event.char == "z":
             self.archi.navigation_area.master_frame.focus_set()
-        if event.char == "3":
+        if event.char == "e":
             self.archi.analyze_area.master_frame.focus_set()
-        if event.char == "4":
+        if event.char == "r":
             self.archi.log_area.master_frame.focus_set()
 
 

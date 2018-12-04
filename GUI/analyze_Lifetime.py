@@ -114,28 +114,37 @@ class lifeTimeAnalyze_gui():
         b = ttk.Button(self.frameMicro_IR, text="Generate",  command=self.generateIR_file)
         b.grid(row=0, column=2)
 
-        label = tk.Label(self.frameMicro_IR, text="Shift :")
+        label = tk.Label(self.frameMicro_IR, text="IR Name :")
         label.grid(row=1, column=0)
+        self.ir_name_sv = tk.StringVar()
+        w = ttk.Entry(self.frameMicro_IR, textvariable=self.ir_name_sv, justify=tk.CENTER, width=50)
+        w.grid(row=1, column=1, columnspan=2)
+        self.ir_name_sv.set("None loaded yet")
 
-        label = tk.Label(self.frameMicro_IR, text="Beginning :")
-        label.grid(row=1, column=0)
-        self.ir_start_iv = tk.IntVar()
-        w = ttk.Scale(self.frameMicro_IR, from_=0, to=100, orient=tk.HORIZONTAL, variable=self.ir_start_iv, command=self.change_IR)
-        w.grid(row=1, column=1)
 
-        label = tk.Label(self.frameMicro_IR, text="End :")
+        label = tk.Label(self.frameMicro_IR, text="Beginning % :")
         label.grid(row=2, column=0)
-        self.ir_end_iv = tk.IntVar()
-        w = ttk.Scale(self.frameMicro_IR, from_=0, to=100, orient=tk.HORIZONTAL, variable=self.ir_end_iv, command=self.change_IR)
-        self.ir_end_iv.set(100)
+        self.ir_start_sv = tk.StringVar()
+        w = ttk.Entry(self.frameMicro_IR, textvariable=self.ir_start_sv, justify=tk.CENTER, width=15)
+        w.bind('<Return>', self.change_IR)
+        self.ir_start_sv.set(0)
         w.grid(row=2, column=1)
 
-        label = tk.Label(self.frameMicro_IR, text="Shift :")
+        label = tk.Label(self.frameMicro_IR, text="End % :")
         label.grid(row=3, column=0)
-        self.shiftIR_amount = tk.IntVar()
-        w = ttk.Scale(self.frameMicro_IR, from_=-100, to=100, orient=tk.HORIZONTAL, variable=self.shiftIR_amount, command=self.change_IR)
+        self.ir_end_sv = tk.StringVar()
+        w = ttk.Entry(self.frameMicro_IR, textvariable=self.ir_end_sv, justify=tk.CENTER, width=15)
+        w.bind('<Return>', self.change_IR)
+        self.ir_end_sv.set(100)
         w.grid(row=3, column=1)
-        self.shiftIR_amount.set(0)
+
+        label = tk.Label(self.frameMicro_IR, text="Shift (µchannel) :")
+        label.grid(row=4, column=0)
+        self.shiftIR_amount_sv = tk.StringVar()
+        w = ttk.Entry(self.frameMicro_IR, textvariable=self.shiftIR_amount_sv, justify=tk.CENTER, width=15)
+        w.bind('<Return>', self.change_IR)
+        w.grid(row=4, column=1)
+        self.shiftIR_amount_sv.set(0)
 
         b = ttk.Button(self.frameMicro_IR, text="Auto",  command=self.autoShiftIR)
         b.grid(row=3, column=2)
@@ -151,6 +160,7 @@ class lifeTimeAnalyze_gui():
         ir_exp = Experiment.Experiment(file_path)
         measurement_ir = ir_exp.create_measurement(0, 0, -1,"lifetime", "", "")
         ir_exp.calculate_life_time(measurement_ir)
+        self.ir_name_sv.set(ir_exp.file_name)
         self.controller.current_measurement.IR_raw = measurement_ir.data
         self.controller.current_measurement.IR_time_axis = measurement_ir.time_axis
         self.controller.update_analyze()
@@ -175,18 +185,31 @@ class lifeTimeAnalyze_gui():
                     if answer4 != None:
                         timeOffset = answer4
                         self.controller.generate_artificial_IR(mainWidth, secondaryWidth, secondaryAmplitude, timeOffset)
+                        self.ir_name_sv.set("artificial " + str(mainWidth) + " " +  str(secondaryWidth))
 
 
     def autoShiftIR(self):
         pass
 
     def change_IR(self, e):
-        self.controller.current_measurement.IR_start = self.ir_start_iv.get()
-        self.controller.current_measurement.IR_end = self.ir_end_iv.get()
-        self.controller.current_measurement.IR_shift = self.shiftIR_amount.get()
+        start = float(self.ir_start_sv.get())
+        if start < 0:
+            start = 0
+        elif start > 100:
+            start = 100
+        self.controller.current_measurement.IR_start = start
+
+        end = float(self.ir_end_sv.get())
+        if end < 0:
+            end = 0
+        elif end > 100:
+            end = 100
+        self.controller.current_measurement.IR_end = end
+
+        self.controller.current_measurement.IR_shift = float(self.shiftIR_amount_sv.get())
         self.controller.current_measurement.set_use_IR(self.isDraw_IR.get())
-        self.controller.current_measurement.process_IR()
-        self.controller.update_analyze()
+        if self.controller.current_measurement.process_IR() == "OK":
+            self.controller.update_analyze()
 
     def launch_micro_time_histo(self):
         #FIXME

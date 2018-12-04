@@ -39,7 +39,7 @@ class OneExpDecay(Model):
             exp_decay = cst + amp * np.exp(-(t - t0) / tau)
             exp_decay[t < t0] = cst
             if self.use_IR:
-                return np.convolve(exp_decay, self.IR)
+                return np.convolve(exp_decay, self.IR)[0:np.size(exp_decay)]
             else:
                 return exp_decay
 
@@ -90,7 +90,7 @@ class TwoExpDecay(Model):
             else:
                 return cst + amp1 * np.exp(-(t - t0) / tau1) + amp2 * np.exp(-(t - t0) / tau2)
 
-        super(TwoExpDecay, self).__init__(oneExpDecay, **kwargs)
+        super(TwoExpDecay, self).__init__(twoExpDecay, **kwargs)
 
     def guess(self, data, x=None, **kwargs):
         t0, amp1, tau1, amp2, tau2, cst = 0., 0., 0., 0., 0., 0.
@@ -152,13 +152,20 @@ class lifeTimeMeasurements(Measurements):
         idx_end = int(self.IR_end/100.0 * self.exp_param.nb_of_microtime_channel)
         shift = int(self.IR_shift/100.0*self.exp_param.nb_of_microtime_channel)
         # self.IR_processed = np.roll(self.IR_raw[idx_begin:idx_end], int(self.IR_shift/100.0*self.exp_param.nb_of_microtime_channel))
-        self.IR_processed = self.IR_raw[idx_begin:idx_end]
-        self.IR_time_axis_processed = self.IR_time_axis[idx_begin - shift:idx_end - shift]
+        if self.IR_raw is not None:
+            # We divide by the sum of the IR so that the convolution doesn't change the amplitude of the signal.
+            self.IR_processed = self.IR_raw[idx_begin:idx_end] / self.IR_raw[idx_begin:idx_end].sum()
+            if self.model is not None:
+                self.model.IR = self.IR_processed
+            self.IR_time_axis_processed = self.IR_time_axis[idx_begin - shift:idx_end - shift]
+            return "OK"
+        else:
+            return "No IR was loaded"
 
     def generate_artificial_IR(self, mainWidth, secondaryWidth, secondaryAmplitude, timeOffset):
         self.IR = (1-secondaryWidth) * np.exp( - (self.eval_x_axis - timeOffset)**2/mainWidth) + secondaryAmplitude * np.exp( - (self.eval_x_axis - timeOffset)**2/secondaryWidth)
         #scale
-        self.IR *= np.max(self.data)
+        self.IR /= self.IR.sum()
 
 
     def create_canonic_graph(self, is_plot_error_bar=False, is_plot_text=False):
@@ -234,6 +241,9 @@ class lifeTimeMeasurements(Measurements):
             self.modelName = modelName
             self.model = TwoExpDecay()
             self.params = self.model.make_params(t0=0, amp1=1, tau1=1, amp2=1, tau2=1, cst=0)
+
+        self.model.use_IR = self.use_IR
+        self.model.IR = self.IR_processed
 
 
 

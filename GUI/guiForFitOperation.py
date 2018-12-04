@@ -109,7 +109,7 @@ class guiForFitOperation():
 
     def changeModel(self, event):
         # Methode virtuelle, voir les classes dérivées.
-        raise  NotImplementedError()
+        raise NotImplementedError()
 
     def evalFit(self):
         params = []
@@ -126,13 +126,13 @@ class guiForFitOperation():
         else:
             xlimMinFit = float(self.idx_lim_for_fit_min_sv.get())
 
-        if  self.idx_lim_for_fit_max_sv.get() == "":
+        if self.idx_lim_for_fit_max_sv.get() == "":
             xlimMaxFit = -1
         else :
             xlimMaxFit = float(self.idx_lim_for_fit_max_sv.get())
 
-        self.controller.fit(mode="eval", model_name=self.comboBoxStringVar.get(),
-                            params=params, idx_start=xlimMinFit, idx_end=xlimMaxFit)
+        self.controller.guess_eval_fit(mode="eval", model_name=self.comboBoxStringVar.get(),
+                       params=params, idx_start=xlimMinFit, idx_end=xlimMaxFit)
 
 
     def iniGuessFit(self):
