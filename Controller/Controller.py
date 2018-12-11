@@ -230,11 +230,12 @@ class Controller:
         start_tick, end_tick = self.get_analysis_start_end_tick()
 
         if measurement.type == "FCS":
-            gui = self.view.archi.analyze_area.FCS_TimeAnalyze_gui
-            num_c1 = int(gui.num_c1_sv.get())
-            num_c2 = int(gui.num_c2_sv.get())
+            gui = self.view.archi.analyze_area.analyze_gui
+            num_c1 = int(gui.num_c1_sv.get()) - 1
+            num_c2 = int(gui.num_c2_sv.get()) - 1
             max_correlTime_ms = float(gui.maxCorrelTime_sv.get())
-            param = [num_c1, num_c2, max_correlTime_ms]
+            start_correlTime_ms = float(gui.startCorrelTime_sv.get())
+            param = [num_c1, num_c2, start_correlTime_ms, max_correlTime_ms]
         elif measurement.type == "lifetime":
             # TODO create Entry
             channel = 0

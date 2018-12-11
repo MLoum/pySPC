@@ -11,7 +11,7 @@ class guiForFitOperation_FCS(guiForFitOperation):
     def changeModel(self, event):
         # Methode virtuelle, voir les classes dérivées.
         nbFitParam = self.nbParamFit
-        if self.comboBoxStringVar.get() == "OneSpecies":
+        if self.comboBoxStringVar.get() == "1 Diff":
             self.listLabelStringVariableFit[0].set("G0")
             self.listLabelStringVariableFit[1].set("tdiff")
             self.listLabelStringVariableFit[2].set("cst")
@@ -57,19 +57,26 @@ class FCS_Analyze_gui():
         e.grid(row=0, column=1)
         self.maxCorrelTime_sv.set('1000')
 
+        label = ttk.Label(self.frame_Correlate, text='Max Correl Time (µs)')
+        label.grid(row=0, column=2)
+        self.startCorrelTime_sv = tk.StringVar()
+        e = ttk.Entry(self.frame_Correlate, textvariable=self.startCorrelTime_sv, justify=tk.CENTER, width=7)
+        e.grid(row=0, column=3)
+        self.startCorrelTime_sv.set('10')
+
 
         label = ttk.Label(self.frame_Correlate, text='channel A')
-        label.grid(row=0, column=2)
+        label.grid(row=0, column=4)
         self.num_c1_sv = tk.StringVar()
         e = ttk.Entry(self.frame_Correlate, textvariable=self.num_c1_sv, justify=tk.CENTER, width=7)
-        e.grid(row=0, column=3)
+        e.grid(row=0, column=5)
         self.num_c1_sv.set('1')
 
         label = ttk.Label(self.frame_Correlate, text='channel B')
-        label.grid(row=0, column=4)
+        label.grid(row=0, column=6)
         self.num_c2_sv = tk.StringVar()
         e = ttk.Entry(self.frame_Correlate, textvariable=self.num_c2_sv, justify=tk.CENTER, width=7)
-        e.grid(row=0, column=5)
+        e.grid(row=0, column=7)
         self.num_c2_sv.set('1')
 
         b = ttk.Button(self.frame_Correlate, text="AutoCorrelation", width=12, command=self.launchAutoCorrelationFCS)
@@ -79,13 +86,13 @@ class FCS_Analyze_gui():
         b.grid(row=1, column=1)
 
         #FIT
-        self.gui_for_fit_operation = guiForFitOperation_FCS(self.frame_fit, self.controller, ('OneSpecies', 'Rotation'),  nbParamFit=8)
+        self.gui_for_fit_operation = guiForFitOperation_FCS(self.frame_fit, self.controller, ('1 Diff', 'Rotation'),  nbParamFit=8)
         self.gui_for_fit_operation.populate()
 
 
     def launchAutoCorrelationFCS(self):
-        self.controller.view.currentOperation = "FCS"
-        self.controller.update_analyze()
+        self.controller.calculate_measurement()
+        self.controller.graph_measurement()
 
     def launchCrossCorrelationFCS(self):
         # TODO askSimpleDialog for Cross

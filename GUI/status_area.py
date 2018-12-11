@@ -291,7 +291,7 @@ class Status_area():
 
         if item_name_exp in self.controller.model.experiments:
             # this is an experiment
-            exp = self.controller.set_current_measurement(item_name_exp)
+            exp = self.controller.set_current_exp(item_name_exp)
             self.controller.update_navigation()
         elif item_name_mes in self.controller.current_exp.measurements:
             # this is a measurement

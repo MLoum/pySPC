@@ -153,8 +153,9 @@ class lifeTimeMeasurements(Measurements):
         shift = int(self.IR_shift/100.0*self.exp_param.nb_of_microtime_channel)
         # self.IR_processed = np.roll(self.IR_raw[idx_begin:idx_end], int(self.IR_shift/100.0*self.exp_param.nb_of_microtime_channel))
         if self.IR_raw is not None:
+            self.IR_processed = self.IR_raw[idx_begin:idx_end]
             # We divide by the sum of the IR so that the convolution doesn't change the amplitude of the signal.
-            self.IR_processed = self.IR_raw[idx_begin:idx_end] / self.IR_raw[idx_begin:idx_end].sum()
+            self.IR_processed /= self.IR_processed.sum()
             if self.model is not None:
                 self.model.IR = self.IR_processed
             self.IR_time_axis_processed = self.IR_time_axis[idx_begin - shift:idx_end - shift]

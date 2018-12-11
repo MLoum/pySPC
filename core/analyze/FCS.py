@@ -53,10 +53,10 @@ class OneSpeDiffusion(Model):
     def guess(self, data, x=None, **kwargs):
         G0, tdiff, cst = 0., 0., 0.
         #if x is not None:
-        G0 = data[0] #beware afterpulsing...
+        G0 = data[0] - 1 #beware afterpulsing...
         cst = np.mean(data[-10:])
         #Searching for position where G0 is divided by 2
-        tdiff = np.argmax(data < (float) (G0) / 2)
+        tdiff = np.argmax(data < (float) (G0)/2 + cst)
 
         pars = self.make_params(G0=G0, tdiff=tdiff, cst=cst)
         return update_param_vals(pars, self.prefix, **kwargs)
