@@ -189,6 +189,14 @@ class Analyze_area():
         elif measurement.type == "lifetime":
             self.analyze_gui = lifeTimeAnalyze_gui(self.frame_operation, self.controller, self.appearence_param, measurement)
             self.analyze_gui.populate()
+            if measurement.IR_raw is not None:
+                self.analyze_gui.isDraw_IR.set(measurement.use_IR)
+                self.analyze_gui.ir_name_sv.set(measurement.IR_name)
+                self.analyze_gui.ir_start_sv.set(str(measurement.IR_start))
+                self.analyze_gui.ir_end_sv.set(str(measurement.IR_end))
+                self.analyze_gui.shiftIR_amount_sv.set(str(measurement.IR_shift))
+                self.analyze_gui.bckg_IR_sv.set(str(measurement.IR_bckg))
+
             self.gui_for_fit_operation = self.analyze_gui.gui_for_fit_operation
         elif measurement.type == "DLS":
             self.gui_for_fit_operation = None
@@ -276,7 +284,7 @@ class Analyze_area():
     #     # self.view.controller.update_analyze()
 
     def change_analyze_source(self, event=None):
-        #TODO FIXME nb of argument
+        # Moved to the controller
         pass
 
     def scale_graph_result_to_x_selec(self):

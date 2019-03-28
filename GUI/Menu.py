@@ -13,9 +13,9 @@ class Menu():
         self.master = master
         self.mainGUI = mainGUI
         self.controller = mainGUI.controller
-        self.createMenu()
+        self.create_menu()
 
-    def createMenu(self):
+    def create_menu(self):
         self.menuSystem = tk.Menu(self.master)
 
         # FILE#############
@@ -44,17 +44,20 @@ class Menu():
 
         #TODO some shortcuts seems to autolaunch at the begining of the soft ???
 
-        self.menuFile.add_command(label='Open', underline=1, accelerator="Ctrl+o", command=self.askOpenSPC_file)
+        self.menuFile.add_command(label='New / Clear', underline=1, accelerator="Ctrl+n", command=self.clear)
+        #self.master.bind_all("<Control-o>", self.askOpenSPC_file)
+
+        self.menuFile.add_command(label='Add Exp', underline=1, accelerator="Ctrl+o", command=self.askOpenSPC_file)
         #self.master.bind_all("<Control-o>", self.askOpenSPC_file)
 
         self.menuFile_generate = tk.Menu(self.menuFile)
 
         self.menuFile.add_cascade(label="Generate", menu=self.menuFile_generate)
-        self.menuFile_generate.add_command(label='Poissonian Noise', command=self.askGeneratePoissonianNoise)
+        self.menuFile_generate.add_command(label='Poissonian Noise', command=self.ask_generate_poissonian_noise)
 
-        self.menuFile.add_command(label='Save State',  underline=1, accelerator="Ctrl+s", command=self.saveState)
+        self.menuFile.add_command(label='Save State', underline=1, accelerator="Ctrl+s", command=self.save_state)
         #self.master.bind_all("<Control-s>", self.saveState)
-        self.menuFile.add_command(label='Load State', underline=1, accelerator="Ctrl+l", command=self.loadState)
+        self.menuFile.add_command(label='Load State', underline=1, accelerator="Ctrl+l", command=self.load_state)
         #self.master.bind_all("<Control-l>", self.loadState)
 
         self.menuFile.add_command(label='Preferences', command=self.openPreferences)
@@ -67,10 +70,20 @@ class Menu():
 
 
     def quit(self):
-        self.mainGUI.on_quit()
+        result = messagebox.askquestion("Quit ?", "Are You Sure ?", icon='warning')
+        if result == 'yes':
+            self.mainGUI.on_quit()
 
 
-    def askGeneratePoissonianNoise(self):
+    def clear(self):
+        result = messagebox.askquestion("Clear experiments", "Are You Sure ?", icon='warning')
+        if result == 'yes':
+            self.controller.clear_exp()
+
+
+
+
+    def ask_generate_poissonian_noise(self):
         d = generatePoissonianDialog(self.master, title="Generate Poissonian Noise")
         if d.result is not None:
             time_s, count_per_secound = d.result
@@ -78,13 +91,13 @@ class Menu():
             self.controller.generate_poisson_noise_file(time_s, count_per_secound)
 
 
-    def saveState(self):
+    def save_state(self):
         filePath = filedialog.asksaveasfile(title="Save State", initialdir=self.mainGUI.saveDir)
         if filePath == None or filePath.name == '':
             return None
         self.controller.save_state(filePath.name)
 
-    def loadState(self):
+    def load_state(self):
         filePath = filedialog.askopenfilename(title="Load State", initialdir=self.mainGUI.saveDir)
         if filePath == None or filePath == '':
             return None

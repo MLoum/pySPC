@@ -4,6 +4,8 @@ from lmfit.models import LinearModel, ExponentialModel
 import matplotlib.pyplot as plt
 
 
+from scipy.special import erfc
+
 from .Measurement import Measurements
 from .histogram import histogram
 
@@ -14,6 +16,42 @@ def update_param_vals(pars, prefix, **kwargs):
         if pname in pars:
             pars[pname].value = val
     return pars
+
+
+class ExpConvGauss(Model):
+    """representing the convolution of a gaussian and an exponential. This function is used to model the IRF.
+
+    Defined as:
+
+    .. math::
+
+        f(x;\mu,\sigma,\lambda) = \frac{\lambda}{2} e^{\frac{\lambda}{2} (2 \mu + \lambda \sigma^2 - 2 x)} \operatorname{erfc} (\frac{\mu + \lambda \sigma^2 - x}{ \sqrt{2} \sigma})
+
+    """
+
+    def __init__(self, independent_vars=['t'], prefix='', nan_policy='propagate',
+                 **kwargs):
+
+        kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
+                       'independent_vars': independent_vars})
+
+        def exgauss(t, mu, sig, tau):
+            lam = 1. / tau
+            return 0.5 * lam * np.exp(0.5 * lam * (2 * mu + lam * (sig ** 2) - 2 * t)) * \
+                   erfc((mu + lam * (sig ** 2) - t) / (np.sqrt(2) * sig))
+
+        super(ExpConvGauss, self).__init__(exgauss, **kwargs)
+
+    def guess(self, data, x=None, **kwargs):
+        pass
+        # return update_param_vals(pars, self.prefix, **kwargs)
+
+    # __init__.__doc__ = COMMON_INIT_DOC
+    # guess.__doc__ = COMMON_GUESS_DOC
+    __init__.__doc__ = "TODO"
+    guess.__doc__ = "TODO"
+
+
 
 class OneExpDecay(Model):
     """A exponential decay with a shift in time, with four Parameters ``t0``, ``amp``, ``tau`` and ``cst``.
@@ -31,6 +69,7 @@ class OneExpDecay(Model):
 
         self.IR = IR
         self.use_IR = use_IR
+        self.x_range = None
 
         kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
                        'independent_vars': independent_vars})
@@ -39,7 +78,8 @@ class OneExpDecay(Model):
             exp_decay = cst + amp * np.exp(-(t - t0) / tau)
             exp_decay[t < t0] = cst
             if self.use_IR:
-                return np.convolve(exp_decay, self.IR)[0:np.size(exp_decay)]
+                conv = np.convolve(exp_decay, self.IR)[0:np.size(exp_decay)]
+                return conv[self.x_range[0]:self.x_range[1]]
             else:
                 return exp_decay
 
@@ -48,16 +88,29 @@ class OneExpDecay(Model):
     def guess(self, data, x=None, **kwargs):
         t0, amp, tau, cst = 0., 0., 0., 0.
         #if x is not None:
-        idx_t0 = np.argmax(data)
-        t0 = x[idx_t0]
+        # cst is the background and is taken, as a first guess, as the minimum of the lifetime curve
+        # We trim the last point because the TAC tipycally has some problem here.
+        cst = np.min(data[np.nonzero(data[:-10])])
         amp = np.max(data)
+
+        if self.use_IR:
+            # Then t0 is the very beginning of the lifetime curve
+            # As a first guess, we take the index of the maximum and we shift it by the onset of IR
+            IR_onset = np.argmax(self.IR)
+            idx_max = np.argmax(data)
+            idx_t0 = idx_max - IR_onset
+        else:
+            # if we don't take into account the IR, t0 is simply the max of the lifetime curve
+            idx_t0 = idx_max = np.argmax(data)
+
+        t0 = x[idx_t0]
+
         #Searching for position where amp is divided by e=2.71
-        subarray = data[idx_t0:]
+        subarray = data[idx_max:]
+        x_subarray = x[idx_max:]
         #tau = np.where(subarray < amp/np.exp(1))[0]
         idx_tau = np.argmax(subarray < (float) (amp) / np.exp(1))
-        tau = x[idx_tau] - t0
-        #TODO check if it is not the case
-        cst = np.min(data[np.nonzero(data)]) #Attention aux canaux à zeros
+        tau = x_subarray[idx_tau] - t0
 
         pars = self.make_params(t0=t0, amp=amp, tau=tau, cst=cst)
         return update_param_vals(pars, self.prefix, **kwargs)
@@ -79,26 +132,47 @@ class TwoExpDecay(Model):
 
     """
 
-    def __init__(self, independent_vars=['t'], prefix='', nan_policy='propagate',
+    def __init__(self, IR=None, use_IR=False, independent_vars=['t'], prefix='', nan_policy='propagate',
                  **kwargs):
+
+        self.IR = IR
+        self.use_IR = use_IR
+
         kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
                        'independent_vars': independent_vars})
 
         def twoExpDecay(t, t0, amp1, tau1, amp2, tau2, cst):
-            if t < t0:
-                return 0
+            two_exp_decay = cst + amp1 * np.exp(-(t - t0) / tau1) + amp2 * np.exp(-(t - t0) / tau2)
+            two_exp_decay[t < t0] = cst
+            if self.use_IR:
+                conv = np.convolve(two_exp_decay, self.IR)[0:np.size(two_exp_decay)]
+                return conv[self.x_range[0]:self.x_range[1]]
             else:
-                return cst + amp1 * np.exp(-(t - t0) / tau1) + amp2 * np.exp(-(t - t0) / tau2)
+                return two_exp_decay
+
 
         super(TwoExpDecay, self).__init__(twoExpDecay, **kwargs)
 
     def guess(self, data, x=None, **kwargs):
         t0, amp1, tau1, amp2, tau2, cst = 0., 0., 0., 0., 0., 0.
-        #if x is not None:
-        idx_t0 = np.argmax(data)
+
+        # cst is the background and is taken, as a first guess, as the minimum of the lifetime curve
+        cst = np.min(data[np.nonzero(data)])
+
+
+        if self.use_IR:
+            # Then t0 is the very beginning of the lifetime curve
+            # As a first guess, we take the index of the maximum and we shift it by the onset of IR
+            IR_onset = np.argmax(self.IR)
+            idx_max = np.argmax(data)
+            idx_t0 = idx_max - IR_onset
+        else:
+            # if we don't take into account the IR, t0 is simply the max of the lifetime curve
+            idx_t0 = np.argmax(data)
+
         t0 = x[idx_t0]
         # TODO
-
+        amp1 = np.max(data)
 
         pars = self.make_params(t0=t0, amp=amp, tau=tau, cst=cst)
         return update_param_vals(pars, self.prefix, **kwargs)
@@ -113,14 +187,15 @@ class lifeTimeMeasurements(Measurements):
 
     def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
         super().__init__(exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment)
-        self.IR_raw, self.IR_processed = None, None
+        self.IR_raw, self.IR_processed, self.IR_name = None, None, None
         self.IR_start, self.IR_end = None, None
+        self.IR_bckg = 0
         self.IR_shift = None
         self.IR_time_axis, self.IR_time_axis_processed = None, None
         self.use_IR = False
 
     def create_histogramm(self, nanotimes):
-        self.data = np.zeros(self.exp_param.nb_of_microtime_channel, dtype=np.uint)
+        # self.data = np.zeros(self.exp_param.nb_of_microtime_channel, dtype=np.uint)
         # self.time_axis = np.arange(self.exp_param.nb_of_microtime_channel) * self.exp_param.mIcrotime_clickEquivalentIn_second*1E9
         self.data = np.bincount(nanotimes)
         self.time_axis = np.arange(0, self.data.size) * self.exp_param.mIcrotime_clickEquivalentIn_second*1E9
@@ -136,6 +211,18 @@ class lifeTimeMeasurements(Measurements):
     def shift_histogramm(self, shift):
         self.data = np.roll(self.data, shift)
 
+    def set_IR(self, name, data, time_axis):
+        """
+        Fill the raw data of the IR, typically from a special IR measurement spc file.
+        :param name: name of the file
+        :param data: microtime Histogramm of the IR (y axis)
+        :param time_axis: microtime axis in ns.
+        :return:
+        """
+        self.IR_name = name
+        self.IR_raw = np.copy(data)
+        self.IR_time_axis = np.copy(time_axis)
+
     def set_model_IR(self):
         self.model.IR = self.IR_processed
 
@@ -148,14 +235,18 @@ class lifeTimeMeasurements(Measurements):
         """
         Shift in nb of microtime channel
         """
-        idx_begin = int( self.IR_start/100.0 *self.exp_param.nb_of_microtime_channel)
+        idx_begin = int(self.IR_start/100.0 * self.exp_param.nb_of_microtime_channel)
         idx_end = int(self.IR_end/100.0 * self.exp_param.nb_of_microtime_channel)
-        shift = int(self.IR_shift/100.0*self.exp_param.nb_of_microtime_channel)
+        shift = int(self.IR_shift/100.0 * self.exp_param.nb_of_microtime_channel)
         # self.IR_processed = np.roll(self.IR_raw[idx_begin:idx_end], int(self.IR_shift/100.0*self.exp_param.nb_of_microtime_channel))
         if self.IR_raw is not None:
-            self.IR_processed = self.IR_raw[idx_begin:idx_end]
+            self.IR_processed = self.IR_raw[idx_begin:idx_end].astype(np.float64)
+            # background removal
+            self.IR_processed -= self.IR_bckg
+            self.IR_processed[self.IR_processed < 0] = 0
+
             # We divide by the sum of the IR so that the convolution doesn't change the amplitude of the signal.
-            self.IR_processed /= self.IR_processed.sum()
+            self.IR_processed /= float(self.IR_processed.sum())
             if self.model is not None:
                 self.model.IR = self.IR_processed
             self.IR_time_axis_processed = self.IR_time_axis[idx_begin - shift:idx_end - shift]
@@ -168,6 +259,61 @@ class lifeTimeMeasurements(Measurements):
         #scale
         self.IR /= self.IR.sum()
 
+    def fit_IR(self, ini_params):
+        self.model_IR = ExpConvGauss()
+        self.params_fit_IR = self.model_IR.make_params(mu=ini_params[0], sig=ini_params[1], tau=ini_params[2])
+        self.fit_IR_results = self.model_IR.fit(self.IR_processed, self.params_fit_IR, t=self.IR_time_axis_processed)
+
+        self.fit_IR_y_axis = self.fit_results.best_fit
+        self.fit_IR_x_axis = self.IR_time_axis_processed
+
+        self.residuals = self.fit_results.residual
+        return self.fit_IR_results
+
+    def fit(self, idx_start=0, idx_end=-1):
+        if self.use_IR:
+            self.find_idx_of_fit_limit(idx_start, idx_end)
+            y = self.data[self.idx_start:self.idx_end]
+            x_eval_range = self.time_axis[self.idx_start:self.idx_end]
+            self.model.x_range = (self.idx_start, self.idx_end)
+            self.fit_results = self.model.fit(y, self.params, t=self.time_axis)
+
+            self.eval_y_axis = self.fit_results.best_fit
+            self.eval_x_axis = x_eval_range
+
+            self.residuals = self.fit_results.residual
+
+            return self.fit_results
+        else:
+            return super().fit(idx_start, idx_end)
+
+    def guess(self, idx_start=0, idx_end=-1):
+        if self.use_IR:
+            self.find_idx_of_fit_limit(idx_start, idx_end)
+
+            # y = self.data[self.idx_start:self.idx_end]
+            # x_eval_range = self.time_axis[self.idx_start:self.idx_end]
+
+            self.params = self.model.guess(self.data, self.time_axis)
+            self.eval(idx_start, idx_end)
+        else:
+            super().guess(idx_start, idx_end)
+
+    def eval(self, idx_start=0, idx_end=-1):
+        if self.use_IR:
+            self.find_idx_of_fit_limit(idx_start, idx_end)
+
+            x_eval_range = self.time_axis[self.idx_start:self.idx_end]
+            y = self.data[self.idx_start:self.idx_end]
+
+            self.model.x_range = (self.idx_start, self.idx_end)
+
+            # self.eval_y_axis = self.model.eval(self.params, t=self.time_axis)
+            self.eval_y_axis = self.model.eval(self.params, t=self.time_axis)
+            self.residuals = self.eval_y_axis - y
+            self.eval_x_axis = x_eval_range
+        else:
+            super().eval(idx_start, idx_end)
 
     def create_canonic_graph(self, is_plot_error_bar=False, is_plot_text=False):
         self.canonic_fig, self.canonic_fig_ax = plt.subplots(2, 1, figsize=(10, 8), sharex=True,
@@ -238,7 +384,7 @@ class lifeTimeMeasurements(Measurements):
             self.params = self.model.make_params(t0=0, amp=1, tau=1, cst=0)
 
         if modelName == "Two Decays":
-            print (modelName)
+            # print (modelName)
             self.modelName = modelName
             self.model = TwoExpDecay()
             self.params = self.model.make_params(t0=0, amp1=1, tau1=1, amp2=1, tau2=1, cst=0)

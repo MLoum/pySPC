@@ -6,6 +6,9 @@ from core import Experiment
 
 from tkinter import filedialog, messagebox, simpledialog
 
+from .Dialog import fitIRFDialog
+
+
 class guiForFitOperation_Lifetime(guiForFitOperation):
 
     def __init__(self, masterFrame, controller, modelNames, nbParamFit):
@@ -33,9 +36,9 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
             self.listLabelStringVariableFit[0].set("t0")
             self.listLabelStringVariableFit[1].set("amp")
             self.listLabelStringVariableFit[2].set("tau")
-            self.listLabelStringVariableFit[3].set("cst")
-            self.listLabelStringVariableFit[4].set("amp2")
-            self.listLabelStringVariableFit[5].set("tau2")
+            self.listLabelStringVariableFit[3].set("amp2")
+            self.listLabelStringVariableFit[4].set("tau2")
+            self.listLabelStringVariableFit[5].set("cst")
 
             for i in range(6):
                 self.listEntryParamFit[i].state(['!disabled'])
@@ -146,8 +149,19 @@ class lifeTimeAnalyze_gui():
         w.grid(row=4, column=1)
         self.shiftIR_amount_sv.set(0)
 
+        label = tk.Label(self.frameMicro_IR, text="Background")
+        label.grid(row=5, column=0)
+        self.bckg_IR_sv = tk.StringVar()
+        w = ttk.Entry(self.frameMicro_IR, textvariable=self.bckg_IR_sv, justify=tk.CENTER, width=15)
+        w.bind('<Return>', self.change_IR)
+        w.grid(row=5, column=1)
+        self.bckg_IR_sv.set(0)
+
         b = ttk.Button(self.frameMicro_IR, text="Auto",  command=self.autoShiftIR)
         b.grid(row=3, column=2)
+
+        b = ttk.Button(self.frameMicro_IR, text="Fit IR",  command=self.fit_IR)
+        b.grid(row=4, column=0)
 
         #FIT
         self.gui_for_fit_operation = guiForFitOperation_Lifetime(self.frameMicro_fit, self.controller, ('One Decay', 'Two Decays', 'Rotation'),  nbParamFit=8)
@@ -157,16 +171,23 @@ class lifeTimeAnalyze_gui():
         file_path = filedialog.askopenfilename(title="Open IR File", initialdir=self.controller.view.saveDir)
         if file_path == None or file_path == '':
             return None
-        ir_exp = Experiment.Experiment(file_path)
+        ir_exp = Experiment.Experiment("file", [file_path])
         measurement_ir = ir_exp.create_measurement(0, 0, -1,"lifetime", "", "")
         ir_exp.calculate_life_time(measurement_ir)
         self.ir_name_sv.set(ir_exp.file_name)
-        self.controller.current_measurement.IR_raw = measurement_ir.data
-        self.controller.current_measurement.IR_time_axis = measurement_ir.time_axis
+        self.controller.current_measurement.set_IR(ir_exp.file_name, measurement_ir.data, measurement_ir.time_axis)
         self.controller.update_analyze()
 
     def is_use_IR(self):
         self.change_IR(None)
+
+
+    def fit_IR(self):
+        d = fitIRFDialog(self.masterFrame, title="Initial fit parameters")
+        if d.result is not None:
+            iniParams = d.result
+            self.controller.fit_IR(iniParams)
+
 
 
     def generateIR_file(self):
@@ -208,6 +229,9 @@ class lifeTimeAnalyze_gui():
 
         self.controller.current_measurement.IR_shift = float(self.shiftIR_amount_sv.get())
         self.controller.current_measurement.set_use_IR(self.isDraw_IR.get())
+
+        self.controller.current_measurement.IR_bckg = int(self.bckg_IR_sv.get())
+
         if self.controller.current_measurement.process_IR() == "OK":
             self.controller.update_analyze()
 

@@ -29,7 +29,7 @@ from . import Architecture
 from .appearanceParameters import appearenceParam
 
 class View():
-    def __init__(self, master = None, controller=None):
+    def __init__(self, master=None, controller=None):
         self.master = master
         self.controller = controller
 
@@ -47,6 +47,8 @@ class View():
         self.ctrl_is_held = False
         self.alt_is_held = False
         self.shift_is_held = False
+
+
 
         # def callback_crtl(event):
         #     self.crtl_isPressed = True
@@ -68,11 +70,19 @@ class View():
 
         #https://stackoverflow.com/questions/27215326/tkinter-keypress-keyrelease-events
         self.initialize()
+
+        self.create_shorcut()
+
         self.saveDir = None
 
         #print master
         # self.onStart()
-
+    def create_shorcut(self):
+        # https://stackoverflow.com/questions/7299955/tkinter-binding-a-function-with-arguments-to-a-widget
+        self.master.bind_all("<Control-o>", lambda event : self.menu.askOpenSPC_file())
+        self.master.bind_all("<Control-l>", lambda event : self.menu.load_state())
+        self.master.bind_all("<Control-s>", lambda event : self.menu.save_state())
+        self.master.bind_all("<Control-q>", lambda event : self.menu.quit())
 
     def onStart(self):
         pass
@@ -129,8 +139,6 @@ class View():
         else:
             return False
 
-
-
     def changeChronoBinSize(self):
         print("Change bin size")
 
@@ -155,7 +163,6 @@ class View():
 
     def zoomOnMainChrono(self, t1_ms, t2_ms):
         self.controller.drawMainChronogram(self.currentChannel, t1_ms, t2_ms, self.timezoom_bin_size_s)
-
 
     def saveState(self, shelf):
         shelf['appearenceParam'] = self.appearenceParam

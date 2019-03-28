@@ -52,7 +52,7 @@ class Controller:
     def open_SPC_File(self, file_path):
         # filePath = self.view.menu.askOpenFile('Choose the SPC file to analyse (.spc, .pt3, .ttt, ...')
         # TODO test extension
-        exp = self.model.add_new_exp(file_path)
+        exp = self.model.add_new_exp("file", [file_path])
         self.current_exp = self.model.experiments[exp.file_name]
         self.current_exp.create_navigation_chronogram(0, 0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
 
@@ -68,19 +68,22 @@ class Controller:
         self.update_all()
 
     def generate_poisson_noise_file(self, time_s, count_per_secound):
-        self.current_exp.new_exp("generate", ["Poisson", time_s, count_per_secound])
+        exp = self.model.add_new_exp("generate", ["Poisson", time_s, count_per_secound])
+        self.current_exp = self.model.experiments[exp.file_name]
+        self.current_exp.create_navigation_chronogram(0, 0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
 
-        # TODO don't duplicate from open SPC.
         # FIXME le channel 0 is hardcoded
-        self.view.currentTimeWindow = [0, self.current_exp.convert_ticks_in_seconds(self.model.current_exp.channels[0].endTick) * 1E6]
+        self.view.currentTimeWindow = [0, self.current_exp.convert_ticks_in_seconds(self.current_exp.data.channels[0].end_tick) * 1E6]
         self.view.is_a_FileLoaded = True
+        self.view.currentChannel = 0
+        self.set_chrono_bin_size_s(0.01)
 
-        self.update_status()
-        self.update_navigation()
+        # Put the file in the browser
+        self.view.archi.status_area.insert_exp(self.current_exp)
+
+        self.update_all()
 
     ############
-
-
 
 
     def get_analysis_start_end_tick(self):
@@ -227,7 +230,8 @@ class Controller:
             measurement = self.current_exp.get_measurement(measurement_name)
         param = None
 
-        start_tick, end_tick = self.get_analysis_start_end_tick()
+        measurement.start_tick, measurement.end_tick = self.get_analysis_start_end_tick()
+
 
         if measurement.type == "FCS":
             gui = self.view.archi.analyze_area.analyze_gui
@@ -268,6 +272,12 @@ class Controller:
 
     def get_experiment(self, exp_name):
         return self.model.get_exp(exp_name)
+
+    def clear_exp(self):
+        self.model = Experiments.Experiments()
+        self.current_exp = None
+        self.current_measurement = None
+        self.view.archi.status_area.clear_treeview()
 
 
     def microtime_filter(self, num_channel, is_keep):
@@ -329,7 +339,7 @@ class Controller:
         if measurement.data is not None:
             if mode == "eval":
                 measurement.set_params(params)
-                measurement.evalParams(idx_start, idx_end)
+                measurement.eval(idx_start, idx_end)
 
             elif mode == "guess":
                 measurement.guess(idx_start, idx_end)
@@ -348,6 +358,12 @@ class Controller:
         channel = self.view.currentChannel
         lf = self.current_exp.results.lifetimes[channel]
         lf.generate_artificial_IR(main_width, secondary_width, secondary_amplitude, time_offset)
+
+    def fit_IR(self, iniParams):
+        fit_IR_results = self.current_measurement.fit_IR(iniParams)
+
+        self.view.archi.analyze_area.resultArea_gui.setTextResult(fit_IR_results.fit_report())
+        self.view.archi.analyze_area.resultArea_gui.graph_results.plot(measurement, is_plot_fit=True)
 
     def export_graph_result(self, mode, file_path):
         self.view.archi.analyze_area.resultArea_gui.graph_results.export(mode, file_path)
@@ -371,6 +387,7 @@ class Controller:
         self.shelf.close()
 
     def load_state(self, load_file_path):
+        self.clear_exp()
         self.shelf = shelve.open(load_file_path)
         # self.current_exp.load_state(self.shelf)
         self.model.load_state(self.shelf)
@@ -380,6 +397,7 @@ class Controller:
         self.current_exp = self.get_experiment(exp_name)
         measurement_name = self.shelf['current_measurement_name']
         self.current_measurement = self.current_exp.get_measurement(measurement_name)
+
 
         self.view.loadState(self.shelf)
 

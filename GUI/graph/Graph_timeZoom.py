@@ -9,6 +9,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import numpy as np
 
+from tkinter import filedialog
 
 from matplotlib.widgets import SpanSelector
 from matplotlib.widgets import Cursor
@@ -33,11 +34,14 @@ class Graph_timeZoom(InteractiveGraph):
         self.figure.tight_layout()
 
         self.threshold = None
+        self.chrono = None
 
         self.createWidgets()
         self.createCallBacks()
 
     def plot(self, chrono):
+        self.chrono = chrono
+
         if self.ax == None:
             self.mainAx = self.figure.add_subplot(111)
             self.subplot3D = None
@@ -88,7 +92,8 @@ class Graph_timeZoom(InteractiveGraph):
                 if self.view.currentTimeWindow[0] < 0:
                     self.view.currentTimeWindow[0] = 0
 
-            self.controller.zoom()
+            #FIXME something is wrong here and make the soft carchshs
+            # self.controller.zoom()
         else:
             #On zoom
             pass
@@ -96,9 +101,22 @@ class Graph_timeZoom(InteractiveGraph):
 
     def button_press_event(self, event):
         #print('you pressed', event.button, event.xdata, event.ydata)
-        if event.button == 1:
-            pass
-            # click gauche
+        if event.button == 2:
+            # pass
+            # # click gauche
+            # if event.key == "shift":
+
+            # if event.dblclick:
+            file_path = filedialog.asksaveasfile(title="Export file name ?",
+                                                 initialdir=self.controller.view.saveDir)
+            if file_path == None or file_path == '':
+                return None
+
+            # Export the graph
+            if self.chrono is not None:
+                data = np.column_stack((self.chrono.time_axis,
+                                        self.chrono.data))
+                np.savetxt(file_path.name, data, header="time chrono")
 
             #Test if filter mode or if the cursord is needed.
             #put horizontal cursor at mouse position

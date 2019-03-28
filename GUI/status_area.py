@@ -274,6 +274,8 @@ class Status_area():
 
         # measurement_name = self.list_measurement.get(num)
 
+    def clear_treeview(self):
+        self.tree_view.delete(*self.tree_view.get_children())
 
 
     def duplicate_measurement(self):

@@ -76,10 +76,9 @@ class Measurements:
 
         self.residuals = self.fit_results.residual
 
-        #self.evalParams(idx_start, idx_end)
         return self.fit_results
 
-    def evalParams(self, idx_start=0, idx_end=-1):
+    def eval(self, idx_start=0, idx_end=-1):
         """
 
         :param idx_start:
@@ -109,7 +108,7 @@ class Measurements:
         x = self.time_axis[self.idx_start:self.idx_end]
 
         self.params = self.model.guess(y, x)
-        self.evalParams(idx_start, idx_end)
+        self.eval(idx_start, idx_end)
 
     def set_params(self, params):
         """

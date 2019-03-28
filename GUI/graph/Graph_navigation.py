@@ -76,6 +76,7 @@ class Graph_navigation(InteractiveGraph):
             xmax, xmin = xmin, xmax
         #print(xmin, xmax)
         self.view.currentTimeWindow = [xmin, xmax]
+        self.controller.update_navigation()
         #self.controller.zoom()
 
     def onSpanSelect(self, xmin, xmax):

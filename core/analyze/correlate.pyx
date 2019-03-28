@@ -22,6 +22,18 @@ DTYPE2 = np.int
 # type with a _t-suffix.
 ctypedef np.int_t DTYPE_t2
 
+DTYPE3 = np.uint
+# "ctypedef" assigns a corresponding compile-time type to DTYPE_t. For
+# every type in the numpy module there's a corresponding compile-time
+# type with a _t-suffix.
+ctypedef np.uint_t DTYPE_t3
+
+DTYPE4 = np.uint32
+# "ctypedef" assigns a corresponding compile-time type to DTYPE_t. For
+# every type in the numpy module there's a corresponding compile-time
+# type with a _t-suffix.
+ctypedef np.uint32_t DTYPE_t4
+
 # @cython.boundscheck(False)
 # @cython.wraparound(False)
 # @cython.nonecheck(False)
@@ -85,6 +97,116 @@ def correlate(np.ndarray[DTYPE_t, ndim=1] timestamps, np.ndarray[DTYPE_t2, ndim=
             G[idx_tau + n] = np.size(np.where( binned_timestamps == n))
 
         idx_tau += nb_of_pt_per_cascade
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+def whal_auto(np.ndarray[DTYPE_t, ndim=1] t_stamp_a, np.ndarray[DTYPE_t4, ndim=1] coeff_a, np.ndarray[DTYPE_t4, ndim=1] G,  np.ndarray[DTYPE_t4, ndim=1] lags, int B=10):
+    """
+    lags in tick
+
+    :param t_stamps_a: make a copy BEFORE !
+    :param lags:
+    :return:
+    """
+
+    cdef int coarsening_counter, idx, idx_dl = 0
+    cdef int idx_G = 0
+    cdef int lag, corrected_lag = 0
+    cdef int is_delay_turn = 0
+
+    # for idx_G, lag in enumerate(lags):
+    for idx_G in range(lags.size):
+        lag = lags[idx_G]
+        if coarsening_counter == B:
+            #coaserning
+            # NB : //= -> integer division
+            t_stamp_a //= 2
+            # find the position of consecutive idx with same timestamp (i.e difference = 0)
+            consecutive_idxs = np.argwhere(np.diff(t_stamp_a) == 0)
+            # Merge weighting (coeff) of same timestamps
+            coeff_a[consecutive_idxs] += coeff_a[consecutive_idxs + 1]
+            # Removing duplicate timestamps
+            t_stamp_a = np.delete(t_stamp_a, consecutive_idxs + 1)
+            coeff_a = np.delete(coeff_a, consecutive_idxs + 1)
+
+            # idx_to_keep = np.nonzero(np.diff(t_stamp_a))
+            # # idx_to_keep = np.invert(consecutive_idxs)
+            # t_stamp_a = t_stamp_a[idx_to_keep]
+            # coeff_a = coeff_a[idx_to_keep]
+
+            coarsening_counter = 0
+        else:
+            coarsening_counter += 1
+
+        # Pair calculation
+
+        # Lag as also to be divided by 2 for each cascade
+        corrected_lag = lag / np.power(2, idx_G//B)
+        t_stamp_a_dl = t_stamp_a + corrected_lag
+
+        # Short numpy implementation that is quite slow because it does'nt take into account the fact that the list are ordered.
+        # correlation_match = np.in1d(t_stamp_a, t_stamp_a_dl, assume_unique=True)
+        # G[idx_G] = np.sum(coeff_a[correlation_match])
+
+        # Numba or Cython implementation
+        idx, idx_dl = 0,0
+        is_delay_turn = False
+        nb_stamp_a_minus_1 = t_stamp_a.size - 1
+        nb_stamp_b_minus_1 = t_stamp_a_dl.size - 1
+        while(idx < nb_stamp_a_minus_1 and idx_dl < nb_stamp_b_minus_1):
+            if is_delay_turn is False:
+                while(t_stamp_a[idx] < t_stamp_a_dl[idx_dl] and idx < nb_stamp_a_minus_1):
+                    idx += 1
+                if t_stamp_a[idx] == t_stamp_a_dl[idx_dl]:
+                    G[idx_G] += coeff_a[idx] * coeff_a[idx]
+                    idx_dl += 1
+
+                is_delay_turn = True
+
+            else:
+                while(t_stamp_a_dl[idx_dl] < t_stamp_a[idx] and idx_dl < nb_stamp_b_minus_1):
+                    idx_dl += 1
+                if t_stamp_a[idx] == t_stamp_a_dl[idx_dl]:
+                    G[idx_G] += coeff_a[idx] * coeff_a[idx]
+                    idx += 1
+
+                is_delay_turn = False
+
+    return G
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+def find_pair_whal_auto(np.ndarray[DTYPE_t, ndim=1] t_stamp_a, np.ndarray[DTYPE_t4, ndim=1] coeff_a, np.ndarray[DTYPE_t, ndim=1] t_stamp_b, np.ndarray[DTYPE_t4, ndim=1] coeff_b):
+
+    cdef int G = 0
+    cdef int idx, idx_dl = 0
+    cdef int nb_stamp_a_minus_1, nb_stamp_b_minus_
+
+
+
+    while(idx < nb_stamp_a_minus_1 and idx_dl < nb_stamp_b_minus_1):
+        if is_delay_turn is False:
+            while(t_stamp_a[idx] < t_stamp_a_dl[idx_dl] and idx < nb_stamp_a_minus_1):
+                idx += 1
+            if t_stamp_a[idx] == t_stamp_a_dl[idx_dl]:
+                G += coeff_a[idx] * coeff_a[idx]
+                idx_dl += 1
+
+            is_delay_turn = True
+
+        else:
+            while(t_stamp_a_dl[idx_dl] < t_stamp_a[idx] and idx_dl < nb_stamp_b_minus_1):
+                idx_dl += 1
+            if t_stamp_a[idx] == t_stamp_a_dl[idx_dl]:
+                G += coeff_a[idx] * coeff_a[idx]
+                idx += 1
+
+            is_delay_turn = False
+
+    return G
 
 
 

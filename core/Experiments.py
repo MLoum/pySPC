@@ -16,9 +16,10 @@ class Experiments(object):
     def __init__(self):
         self.experiments = {}
 
-    def add_new_exp(self, filepath=None):
+    def add_new_exp(self, mode, params):
         #TODO test if creation of exp is successfull
-        exp = Experiment.Experiment(filepath)
+
+        exp = Experiment.Experiment(mode, params)
         self.experiments[exp.file_name] = exp
         return exp
 

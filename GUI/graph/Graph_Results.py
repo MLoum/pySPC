@@ -42,38 +42,12 @@ class Graph_Results(InteractiveGraph):
         self.ctrl_is_held = False
         self.shift_is_held = False
 
-
+        self.measurement = None
 
         self.type = None
 
         self.frame = tk.Frame(self.masterFrame)
         self.frame.pack(side="top", fill="both", expand=True)
-
-
-
-
-        # fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex=True,
-        #                        gridspec_kw={'height_ratios': [3, 1]})
-        # plt.subplots_adjust(hspace=0)
-        # ax[0].semilogx(tau, Gn)
-        # for a in ax:
-        #     a.grid(True);
-        #     a.grid(True, which='minor', lw=0.3)
-        # ax[0].plot(tau, fitres.best_fit)
-        # ax[1].plot(tau, fitres.residual * weights, 'k')
-        # ym = np.abs(fitres.residual * weights).max()
-        # ax[1].set_ylim(-ym, ym)
-        # ax[1].set_xlim(bins[0] * unit, bins[-1] * unit);
-        # tau_diff_us = fitres.values['tau_diff'] * 1e6
-        # msg = ((r'$G(0)-1$ = {A0:.2f}' + '\n' + r'$\tau_D$ = {tau_diff_us:.0f} μs')
-        #        .format(A0=fitres.values['A0'], tau_diff_us=tau_diff_us))
-        # ax[0].text(.75, .9, msg,
-        #            va='top', ha='left', transform=ax[0].transAxes, fontsize=18);
-        # ax[0].set_ylabel('G(τ)')
-        # ax[1].set_ylabel('residuals')
-        # ax[0].set_title('Donor-Acceptor CCF')
-        # ax[1].set_xlabel('Time Lag, τ (s)');
-
 
 
         self.figure = plt.Figure(figsize=figsize, dpi=dpi)
@@ -97,9 +71,6 @@ class Graph_Results(InteractiveGraph):
     def plot(self, measurement, is_plot_fit=False, is_zoom_x_selec=False, is_autoscale=False):
         if measurement is None:
             return
-        if measurement is None:
-            return
-
 
         self.type = measurement.type
         self.measurement = measurement
@@ -176,6 +147,14 @@ class Graph_Results(InteractiveGraph):
                 self.ax.set_xlim(x[x1], x[x2])
                 self.axResidual.set_xlim(x[x1], x[x2])
 
+                self.ax.set_ylim(np.min(self.y_selection_area), np.max(self.y_selection_area))
+                if residuals_y is not None :
+                    self.axResidual.set_ylim(np.min(residuals_y[x1:x2]), np.max(residuals_y[x1:x2]))
+
+            if is_autoscale:
+                self.ax.set_ylim(np.min(y), np.max(y))
+                self.axResidual.set_ylim(np.min(residuals_y), np.max(residuals_y))
+
             plt_function(x[:x1], y[:x1], alpha=self.appearanceParam.alphaNonSelectedGraph)
             plt_function(x[x1:x2], y[x1:x2], alpha=1)
             plt_function(x[x2:], y[x2:], alpha=self.appearanceParam.alphaNonSelectedGraph)
@@ -197,12 +176,16 @@ class Graph_Results(InteractiveGraph):
                 )
             )
 
-
-
         self.figure.canvas.draw()
 
     def replot(self, is_zoom_x_selec=False, is_autoscale=False):
-        self.plot(self.type, self.data, self.is_plot_fit, is_zoom_x_selec, is_autoscale)
+        self.plot(self.measurement, self.is_plot_fit, is_zoom_x_selec, is_autoscale)
+
+    def zoom_to_x_selec(self):
+        self.plot(self.measurement, self.is_plot_fit, is_zoom_x_selec=True, is_autoscale=False)
+
+    def zoom_full(self):
+        self.plot(self.measurement, self.is_plot_fit, is_zoom_x_selec=False, is_autoscale=False)
 
     def export(self, mode, file_path):
 
@@ -210,14 +193,32 @@ class Graph_Results(InteractiveGraph):
             if self.data_fit is None:
                 data = np.column_stack((self.data_x, self.data_y))
             else:
-                data = np.column_stack((self.x_selection_area, self.y_selection_area, self.data_fit, self.data_residual))
-            np.savetxt(file_path.name, data)
+                #FIXME index ?
+
+                export_size = min(self.x_selection_area.size, self.data_fit.size)
+
+                data = np.column_stack((self.x_selection_area[0:export_size], self.y_selection_area[0:export_size], self.data_fit[0:export_size], self.data_residual[0:export_size]))
+            np.savetxt(file_path.name, data, header="x data fit residual")
         elif mode == "script":
             f = open(file_path.name, "w")
             header = "import matplotlib.pyplot as plt" \
                      "import numpy as np"
             f.writelines(header)
+
+            f.writelines("self.figure = plt.Figure(figsize=figsize, dpi=dpi")
+            f.writelines("self.ax = self.figure.add_axes([0.08, 0.3, 0.9, 0.65], xticklabels=[])")
+            f.writelines("self.axResidual = self.figure.add_axes([0.08, 0.1, 0.9, 0.25])")
+
+            # self.ax.tick_params(
+            #     axis='x',  # changes apply to the x-axis
+            #     which='both',  # both major and minor ticks are affected
+            #     bottom=False,  # ticks along the bottom edge are off
+            #     top=False,  # ticks along the top edge are off
+            #     labelbottom=False)  # labels along the bottom edge are off"
+
             f.close()
+        elif mode == "image":
+            self.figure.savefig(file_path)
 
 
 
@@ -240,6 +241,7 @@ class Graph_Results(InteractiveGraph):
         self.plot(self.measurement)
 
 
-    def scrollEvent(self, event):
-        pass
+    def motion_notify_event(self, event):
+        self.view.archi.analyze_area.resultArea_gui.set_xy_cursor_position(event.xdata, event.ydata)
+
 

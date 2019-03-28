@@ -23,7 +23,7 @@ class Experiment(object):
     - save_state/load_state
     """
 
-    def __init__(self, filepath=None):
+    def __init__(self, mode, params):
         self.exp_param = ExpParam.Experiment_param()
         # self.results = Results.Results()
         self.measurements = {}
@@ -39,8 +39,7 @@ class Experiment(object):
 
         self.defaultBinSize_s = 0.01  # default : 10ms
 
-        if filepath is not None :
-            self.new_exp("file", [filepath])
+        self.new_exp(mode, params)
 
 
     # TODO put convert function where it belongs
@@ -182,6 +181,9 @@ class Experiment(object):
     def create_time_zoom_chronogram(self, num_channel, t1_tick, t2_tick, bin_in_tick):
         if self.time_zoom_chronogram is None:
             self.time_zoom_chronogram = self.create_measurement(num_channel, t1_tick, t2_tick, type="chronogram", name="dont_store", comment="", is_store=False)
+        self.time_zoom_chronogram.num_channel = num_channel
+        self.time_zoom_chronogram.start_tick = t1_tick
+        self.time_zoom_chronogram.end_tick = t2_tick
         self.time_zoom_chronogram = self.calculate_chronogram(self.time_zoom_chronogram, bin_in_tick)
 
     def create_mini_PCH(self, num_channel):
@@ -285,6 +287,10 @@ class Experiment(object):
 
         measurement.correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc,
                                                                     max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros)
+
+        # measurement.correlateMonoProc(timeStamps_reduc, timeStamps_reduc,
+        #                                    max_correlation_time_in_tick, start_correlation_time_in_tick, B,
+        #                                    tick_duration_micros)
 
         return measurement
 
