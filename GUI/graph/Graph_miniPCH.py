@@ -57,6 +57,7 @@ class Graph_miniPCH(InteractiveGraph):
             # self.plot(self.pch)
             self.controller.set_macrotime_filter_threshold(event.ydata)
 
+
     def onSpanMove(self, xmin, xmax):
         pass
 

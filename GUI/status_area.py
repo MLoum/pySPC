@@ -119,6 +119,20 @@ class Status_area():
         b.grid(row=0, column=2)
 
 
+        self.frame_tree_view_cmd_burst = tk.LabelFrame(self.frame_cmd, text="Burst Analysis",
+                                                     borderwidth=self.appearence_param.frameLabelBorderWidth)
+        self.frame_tree_view_cmd_burst.grid(row=1, column=2)
+
+        b = ttk.Button(self.frame_tree_view_cmd_burst, text="+", width=10, command=self.add_burst)
+        b.grid(row=0, column=0)
+
+        b = ttk.Button(self.frame_tree_view_cmd_burst, text="-", width=10, command=self.del_burst)
+        b.grid(row=0, column=1)
+
+        b = ttk.Button(self.frame_tree_view_cmd_burst, text="Duplicate", width=10, command=self.duplicate_burst)
+        b.grid(row=0, column=2)
+
+
 
         # self.combobox_file_sv = tk.StringVar()
         # self.combobox_file = ttk.Combobox(self.master_frame, width=80, justify=tk.CENTER, textvariable=self.combobox_file_sv, values='')
@@ -168,6 +182,19 @@ class Status_area():
         pass
 
     def duplicate_exp_fil(self):
+        pass
+
+    def add_burst(self):
+        #TODO name and comment dialog
+        self.controller.launch_burst_analysis_GUI()
+
+    def del_burst(self):
+        pass
+
+    def duplicate_burst(self):
+        pass
+
+    def insert_burst(self, burst):
         pass
 
     def insert_list_of_exp(self, dict_of_exp):

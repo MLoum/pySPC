@@ -159,11 +159,4 @@ class Architecture():
         else:
             self.dock()
             self.isDocked = False
-
-
-
-
-
-
-
 """

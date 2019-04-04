@@ -23,7 +23,7 @@ from core import Results
 from core import Data
 from core import Experiment, Experiments
 
-from GUI import View
+from GUI import View, burst_analysis
 from GUI import guiForFitOperation
 
 import shelve
@@ -44,6 +44,7 @@ class Controller:
 
     def run(self):
         self.root.title("pySPC")
+        self.root.deiconify()
         self.root.deiconify()
         self.root.mainloop()
 
@@ -232,7 +233,6 @@ class Controller:
 
         measurement.start_tick, measurement.end_tick = self.get_analysis_start_end_tick()
 
-
         if measurement.type == "FCS":
             gui = self.view.archi.analyze_area.analyze_gui
             num_c1 = int(gui.num_c1_sv.get()) - 1
@@ -245,6 +245,7 @@ class Controller:
             channel = 0
             self.current_exp.set_measurement_channel(measurement, channel)
             param = None
+
 
         self.view.archi.analyze_area.analyzePgb.start()
         self.model.calculate_measurement(exp_name, measurement.name, param)
@@ -363,10 +364,17 @@ class Controller:
         fit_IR_results = self.current_measurement.fit_IR(iniParams)
 
         self.view.archi.analyze_area.resultArea_gui.setTextResult(fit_IR_results.fit_report())
+        # FIXME
         self.view.archi.analyze_area.resultArea_gui.graph_results.plot(measurement, is_plot_fit=True)
 
     def export_graph_result(self, mode, file_path):
         self.view.archi.analyze_area.resultArea_gui.graph_results.export(mode, file_path)
+
+
+    def launch_burst_analysis_GUI(self, name="", comment=""):
+        burst_measurement = self.create_measurement("burst", name, comment)
+
+        burst_analysis.BurstAnalysis_gui(self.root, self, self.view.appearenceParam, burst_measurement)
 
     def save_state(self, savefile_path):
         if self.current_exp.file_name is None:

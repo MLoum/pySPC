@@ -4,7 +4,7 @@ from core import Results
 import os
 import numpy as np
 
-from core.analyze import lifetime, FCS, DLS, chronogram, PCH
+from core.analyze import lifetime, FCS, DLS, chronogram, PCH, burstDetection
 
 """
 Test Experiment
@@ -144,6 +144,11 @@ class Experiment(object):
             if is_store:
                 self.store_measurement(pch)
             return pch
+        elif type == "burst":
+            burst = burstDetection.DetectBurst(self.exp_param, num_channel, start_tick, end_tick, name, comment)
+            if is_store:
+                self.store_measurement(burst)
+            return burst
 
     def del_measurement(self, name):
         self.measurements.pop(name, None)
