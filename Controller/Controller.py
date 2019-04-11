@@ -139,7 +139,7 @@ class Controller:
 
 
     # def updateNavigation(self, channel, t1_microsec, t2_microsec, binSize_s=0.01):
-    def update_navigation(self, is_full_update=False):
+    def update_navigation(self, is_full_update=False, is_draw_burst=False, bursts=None):
         if self.view.is_a_FileLoaded is False:
             return
 
@@ -154,7 +154,7 @@ class Controller:
         bin_in_tick = self.current_exp.convert_seconds_in_ticks(binSize_s)
 
         # navigation
-        if is_full_update :
+        if is_full_update:
             self.current_exp.create_navigation_chronogram(0, 0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
             self.view.currentTimeWindow = [0, self.current_exp.convert_ticks_in_seconds(
                 self.current_exp.data.channels[0].end_tick) * 1E6]
@@ -163,7 +163,13 @@ class Controller:
         self.current_exp.create_time_zoom_chronogram(channel, t1_tick, t2_tick, bin_in_tick)
         self.view.archi.navigation_area.timeZoom.graph_timeZoom.plot(self.current_exp.time_zoom_chronogram)
 
-        self.view.archi.navigation_area.graph_navigation.plot(self.current_exp.navigation_chronogram,
+        if is_draw_burst:
+            self.view.archi.navigation_area.graph_navigation.bursts = bursts
+            self.view.archi.navigation_area.graph_navigation.plot(self.current_exp.navigation_chronogram,
+                                                              self.view.currentTimeWindow[0],
+                                                              self.view.currentTimeWindow[1], is_draw_burst=True)
+        else:
+            self.view.archi.navigation_area.graph_navigation.plot(self.current_exp.navigation_chronogram,
                                                               self.view.currentTimeWindow[0],
                                                               self.view.currentTimeWindow[1])
 
@@ -302,7 +308,9 @@ class Controller:
 
     def set_macrotime_filter_threshold(self, threshold):
         self.view.archi.navigation_area.timeZoom.graph_timeZoom.threshold = threshold
+        self.view.archi.navigation_area.timeZoom.graph_timeZoom.threshold_flank = None
         self.view.archi.navigation_area.timeZoom.graph_miniPCH.threshold = threshold
+
         self.view.archi.navigation_area.filter_threshold_sv.set(str(threshold))
         self.update_navigation()
 
@@ -375,6 +383,50 @@ class Controller:
         burst_measurement = self.create_measurement("burst", name, comment)
 
         burst_analysis.BurstAnalysis_gui(self.root, self, self.view.appearenceParam, burst_measurement)
+
+
+    def display_burst(self, burst, measurement):
+        # Display the burst in the timezoom windows
+        self.view.timezoom_bin_size_s = self.current_exp.convert_ticks_in_seconds(measurement.bin_in_tick)
+        #in µS
+        # We want to display the burst with its onset and downset. A third of the windows is dedicated for the burst, a third for the onset (i.e the noise before the burst) and 1/3 for the downset
+        burst_start_micro_s = self.current_exp.convert_ticks_in_seconds(burst.tick_start)*1E6
+        burst_end_micro_s = self.current_exp.convert_ticks_in_seconds(burst.tick_end) * 1E6
+        burst_duration_micro = burst_end_micro_s - burst_start_micro_s
+
+        burst_start_micro_s = burst.num_bin_start * self.current_exp.convert_ticks_in_seconds(measurement.bin_in_tick)*1E6
+        burst_end_micro_s = burst.num_bin_end * self.current_exp.convert_ticks_in_seconds(measurement.bin_in_tick)*1E6
+        burst_duration_micro = burst_end_micro_s - burst_start_micro_s
+
+        # Wa want at least 20 (?) bins on screen
+
+        min_nb_of_bin_to_display = 50
+        coeff_visualization = 1
+        if 3*burst.nb_bin < min_nb_of_bin_to_display:
+            coeff_visualization = ((min_nb_of_bin_to_display - burst.nb_bin)/2)/ burst.nb_bin
+
+
+        self.view.currentTimeWindow[0] = max(0, burst_start_micro_s - coeff_visualization*burst_duration_micro)
+        last_tick_micro = self.current_exp.convert_ticks_in_seconds(self.current_exp.data.channels[0].end_tick)*1E6
+        self.view.currentTimeWindow[1] = min(last_tick_micro, burst_end_micro_s + coeff_visualization*burst_duration_micro)
+
+
+
+        self.view.current_time_zoom_window[0] = burst_start_micro_s
+        self.view.current_time_zoom_window[1] = burst_end_micro_s
+
+        self.view.archi.navigation_area.timeZoom.graph_timeZoom.threshold = measurement.burst_threshold
+        self.view.archi.navigation_area.timeZoom.graph_timeZoom.threshold_flank = measurement.flank_threshold
+        self.view.archi.navigation_area.timeZoom.graph_miniPCH.threshold = measurement.burst_threshold
+
+        self.view.archi.navigation_area.filter_threshold_sv.set(str(measurement.threshold))
+
+
+        # Set the ylim to the maximum of the burst.
+
+        self.update_navigation(is_draw_burst=True, bursts=measurement.bursts)
+        self.graph_measurement(burst.measurement)
+        pass
 
     def save_state(self, savefile_path):
         if self.current_exp.file_name is None:

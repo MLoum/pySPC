@@ -26,35 +26,48 @@ class Graph_navigation(InteractiveGraph):
     def __init__(self, master_frame, view, controller, figsize, dpi):
         super().__init__(master_frame, view, controller, figsize, dpi)
         self.ax.axis('off')
+        self.main_chrono = None
+        self.bursts = None
         self.figure.tight_layout()
         self.createCallBacks()
         self.createWidgets()
 
-    def plot(self, mainChrono, tSelec_1=0, tSelec_2=-1):
-
+    def plot(self, main_chrono, tSelec_1=0, tSelec_2=-1, is_draw_burst=None):
+        self.main_chrono = main_chrono
         self.ax.clear()
 
 
         #FIXME test if 1000 bins ?
         # reduce nb of point to 1000 (approximative size in pixel
         min_nb_of_bin = 1000
-        if mainChrono.nb_of_bin  > 1000:
-            skipsize = int(mainChrono.nb_of_bin / 1000)
-            idx = np.arange(0, len(mainChrono.data), skipsize)
-            plot = mainChrono.data[idx]
-            plotX = mainChrono.time_axis[idx]
+        if main_chrono.nb_of_bin  > 1000:
+            skipsize = int(main_chrono.nb_of_bin / 1000)
+            idx = np.arange(0, len(main_chrono.data), skipsize)
+            plot = main_chrono.data[idx]
+            plotX = main_chrono.time_axis[idx]
         else:
-            plot = mainChrono.data
-            plotX = mainChrono.time_axis
+            plot = main_chrono.data
+            plotX = main_chrono.time_axis
 
 
 
         self.ax.plot(plotX, plot)
-        self.ax.set_xlim(mainChrono.time_axis[0], mainChrono.time_axis[-1])
+        self.ax.set_xlim(main_chrono.time_axis[0], main_chrono.time_axis[-1])
+
+        if is_draw_burst and self.bursts is not None:
+            x_lines = []
+            for burst in self.bursts:
+                burst_mean_timestamp = (burst.tick_end + burst.tick_start)/2
+                burst_micros = self.controller.current_exp.convert_ticks_in_seconds(burst_mean_timestamp)*1E6
+                x_lines.append(burst_micros)
+
+            self.ax.vlines(x_lines, np.min(plot), np.max(plot))
+
+
 
         x_start = tSelec_1
         if tSelec_2 == -1:
-            x_end = mainChrono.time_axis.max()
+            x_end = main_chrono.time_axis.max()
         else:
             x_end = tSelec_2
 
@@ -62,7 +75,7 @@ class Graph_navigation(InteractiveGraph):
             patches.Rectangle(
                 (x_start, 0),  # (x,y)
                 x_end-x_start,  # width
-                mainChrono.data.max(),  # height
+                main_chrono.data.max(),  # height
                 alpha=0.2
             )
         )

@@ -100,6 +100,7 @@ class scatteringTests:
 
 
         for i in range(nbStep):
+            print(i)
             distPartDetec = np.sqrt((x_d[i] - Xp) ** 2 + (y_d[i] - Yp) ** 2 + (z_d - Zp) ** 2)
             I_theta[i] = np.abs(np.sum(np.exp(1j * (kx*Xp + ky*Yp + self.k*distPartDetec))))
 
@@ -117,8 +118,8 @@ class scatteringTests:
 
 if __name__ == "__main__":
     #sp = Sample.Sample(nbParticle=10000, dimXYZ_micron=(1000,1000,1000), particleIniConfig="crystal")
-    sp = Sample.Sample(nbParticle=1000000, dimXYZ_micron=(1000, 1000, 1000), particleIniConfig="random")
+    sp = Sample.Sample(nbParticle=30000, dimXYZ_micron=(1000, 1000, 1000), particleIniConfig="random")
     #sp.testBrownianMotionNew(10000)
     scatTest = scatteringTests(sp)
     #scatTest.getIntensityMap()
-    scatTest.testThetaDependency(angIncidence=70)
+    scatTest.testThetaDependency(angIncidence=0)

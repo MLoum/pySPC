@@ -130,7 +130,7 @@ class Experiment(object):
                 self.store_measurement(chrono)
             return chrono
         elif type == "lifetime":
-            lifetime_ =  lifetime.lifeTimeMeasurements(self.exp_param, num_channel, start_tick, end_tick, name, comment)
+            lifetime_ = lifetime.lifeTimeMeasurements(self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(lifetime_)
             return lifetime_
@@ -145,7 +145,7 @@ class Experiment(object):
                 self.store_measurement(pch)
             return pch
         elif type == "burst":
-            burst = burstDetection.DetectBurst(self.exp_param, num_channel, start_tick, end_tick, name, comment)
+            burst = burstDetection.DetectBurst(self.data, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(burst)
             return burst

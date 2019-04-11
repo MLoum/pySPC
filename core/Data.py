@@ -383,3 +383,22 @@ class Data():
             Est-ce faisable, les mircotimes ne sont pas à la suite...
             """
             pass
+
+    def filter_burst(self, burst_detection_measurement, is_keep=True, replacement_mode="nothing"):
+        num_channel = burst_detection_measurement.num_channel
+        list_idx_photon_bursts = []
+        for burst in burst_detection_measurement.bursts:
+            list_idx_photon_bursts.append(np.linspace(burst.num_photon_start, burst.num_photon_stop))
+
+        idx_photons_to_filter = np.concatenate(list_idx_photon_bursts)
+
+        if is_keep:
+            # We have to "invert" the idx_photons_to_filter list
+            all_the_hoton_idx = np.linspace(self.channels[num_channel].photons.size)
+            idx_photons_to_filter = all_the_hoton_idx[np.isin(all_the_hoton_idx, idx_photons_to_filter, assume_unique=True, invert=True)]
+
+        if replacement_mode == "nothing":
+            self.channels[burst_detection_measurement.num_channel].photons = np.delete(self.channels[num_channel].photons,
+                                                           idx_photons_to_filter)
+
+        self.channels[num_channel].update(self.expParam.mAcrotime_clickEquivalentIn_second)
