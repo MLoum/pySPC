@@ -11,7 +11,7 @@ class guiForFitOperation():
     # idx_lim_for_fit_min_sv = tk.StringVar()
     # idx_lim_for_fit_max_sv = tk.StringVar()
 
-    def __init__(self, masterFrame, controller, modelNames, nbParamFit, fitModeName=""):
+    def __init__(self, masterFrame, controller, modelNames, nbParamFit, fitModeName="", is_burst_analysis=False):
         self.masterFrame = masterFrame
         self.modelNames = modelNames
         self.controller = controller
@@ -21,6 +21,7 @@ class guiForFitOperation():
         self.listEntryParamFit = []
         self.listEntryStringVariableFit = []
 
+        self.is_burst_analysis = is_burst_analysis
 
         self.fitModeName = fitModeName
 
@@ -30,12 +31,12 @@ class guiForFitOperation():
         label = ttk.Label(self.masterFrame, text='Model')
         label.grid(row=0, column=0)
 
-        self.comboBoxStringVar = tk.StringVar()
-        cb = ttk.Combobox(self.masterFrame, width=15, justify=tk.CENTER, textvariable=self.comboBoxStringVar,
+        self.cb_model_sv = tk.StringVar()
+        cb = ttk.Combobox(self.masterFrame, width=15, justify=tk.CENTER, textvariable=self.cb_model_sv,
                           values='', state='readonly')
         cb.bind('<<ComboboxSelected>>', self.changeModel)
         cb['values'] = self.modelNames
-        self.comboBoxStringVar.set(self.modelNames[0])
+        self.cb_model_sv.set(self.modelNames[0])
         cb.set(self.modelNames[0])
         cb.grid(row=0, column=1)
 
@@ -131,8 +132,9 @@ class guiForFitOperation():
         else :
             xlimMaxFit = float(self.idx_lim_for_fit_max_sv.get())
 
-        self.controller.guess_eval_fit(mode="eval", model_name=self.comboBoxStringVar.get(),
-                       params=params, idx_start=xlimMinFit, idx_end=xlimMaxFit)
+        self.controller.guess_eval_fit(mode="eval", model_name=self.cb_model_sv.get(),
+                                       params=params, idx_start=xlimMinFit, idx_end=xlimMaxFit,
+                                       is_burst_analysis=self.is_burst_analysis)
 
 
     def iniGuessFit(self):
@@ -146,8 +148,9 @@ class guiForFitOperation():
         else:
             xlimMaxFit = float(self.idx_lim_for_fit_max_sv.get())
 
-        self.controller.guess_eval_fit(mode="guess", model_name=self.comboBoxStringVar.get(),
-                            params=None, idx_start=xlimMinFit, idx_end=xlimMaxFit)
+        self.controller.guess_eval_fit(mode="guess", model_name=self.cb_model_sv.get(),
+                                       params=None, idx_start=xlimMinFit, idx_end=xlimMaxFit,
+                                       is_burst_analysis=self.is_burst_analysis)
 
 
     def fit(self):
@@ -170,11 +173,36 @@ class guiForFitOperation():
         else :
             xlimMaxFit = float(self.idx_lim_for_fit_max_sv.get())
 
-        self.controller.guess_eval_fit(mode="fit", model_name=self.comboBoxStringVar.get(),
-                            params=params, idx_start=xlimMinFit, idx_end=xlimMaxFit)
+        self.controller.guess_eval_fit(mode="fit", model_name=self.cb_model_sv.get(),
+                                       params=params, idx_start=xlimMinFit, idx_end=xlimMaxFit,
+                                       is_burst_analysis=self.is_burst_analysis)
 
     def setParamsFromFit(self, params):
         i = 0
         for paramName, param in params.items():
             self.listEntryStringVariableFit[i].set(str(param.value))
             i += 1
+
+    def get_fit_params(self):
+        model_name = self.cb_model_sv.get()
+
+        params = []
+
+        for sv in self.listEntryStringVariableFit:
+            strValue = sv.get()
+            if strValue == "":
+                params.append(0)
+            else:
+                params.append(float(sv.get()))
+
+        if self.idx_lim_for_fit_min_sv.get() == "":
+            xlim_min_fit = 0
+        else:
+            xlim_min_fit = float(self.idx_lim_for_fit_min_sv.get())
+
+        if self.idx_lim_for_fit_max_sv.get() == "":
+            xlim_max_fit = -1
+        else:
+            xlim_max_fit = float(self.idx_lim_for_fit_max_sv.get())
+
+        return model_name, params, xlim_min_fit, xlim_max_fit

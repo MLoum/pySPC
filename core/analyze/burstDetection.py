@@ -134,11 +134,6 @@ class DetectBurst(Measurements):
                 self.nb_too_short_burst += 1
 
 
-
-
-
-
-
         # idx = 0
         # while idx < idx_candidate_bin.size - 1:
         #     # Every bin indexed by idx_candidate_bin are potentially bursts since they are above the threshold
@@ -203,15 +198,25 @@ class DetectBurst(Measurements):
         self.bursts_intensity_histogram, self.bin_edges_bursts_intensity = np.histogram(self.bursts_intensity, bins="auto")
         self.bursts_CPS_histogram, self.bin_edges_bursts_CPS = np.histogram(self.bursts_CPS/(self.exp_param.mAcrotime_clickEquivalentIn_second*1E6),
                                                                                         bins="auto")
-        self.perform_measurements()
+        # self.perform_measurements()
 
-    def perform_measurements(self, type=None):
-        num = 0
+    def perform_measurements(self, type="lifetime"):
+        if type=="lifetime":
+            num = 0
+            for burst in self.bursts:
+                #TODO IRF
+                burst.measurement = lifeTimeMeasurements(self.exp_param, self.num_channel, burst.tick_start, burst.tick_end, "burst_" + str(num) + "_lifetime")
+                nanotimes = self.data.channels[self.num_channel].photons['nanotimes'][burst.num_photon_start:burst.num_photon_stop]
+                burst.measurement.create_histogramm(nanotimes)
+                num += 1
+
+    def perform_fit_of_measurement(self, model_name=None, fit_params=None, idx_start=0, idx_end=-1):
         for burst in self.bursts:
-            burst.measurement = lifeTimeMeasurements(self.exp_param, self.num_channel, burst.tick_start, burst.tick_end, "burst_" + str(num) + "_lifetime")
-            nanotimes = self.data.channels[self.num_channel].photons['nanotimes'][burst.num_photon_start:burst.num_photon_stop]
-            burst.measurement.create_histogramm(nanotimes)
-            num += 1
+            if model_name is not None:
+                burst.measurement.set_model(model_name)
+                burst.measurement.set_params(fit_params)
+                self.fit_results = burst.measurement.fit(idx_start, idx_end)
+
 
     def cusum_sprt(self, macrotimes, I0, IB):
         """

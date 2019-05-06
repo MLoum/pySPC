@@ -11,7 +11,7 @@ class guiForFitOperation_DLS(guiForFitOperation):
     def changeModel(self, event):
         # Methode virtuelle, voir les classes dérivées.
         nbFitParam = self.nbParamFit
-        if self.comboBoxStringVar.get() == "Cumulant":
+        if self.cb_model_sv.get() == "Cumulant":
             self.listLabelStringVariableFit[0].set("B")
             self.listLabelStringVariableFit[1].set("beta")
             self.listLabelStringVariableFit[2].set("tau")
@@ -29,7 +29,7 @@ class guiForFitOperation_DLS(guiForFitOperation):
 
             self.setFitFormula(r"B + \beta e^{-t/\tau} (1 + \frac{\mu_2}{2!} \frac{t^2}{tau^2} + \frac{\mu_3}{3!} \frac{t^3}{tau^3}+ \frac{\mu_3}{4!} \frac{t^4}{tau^4})^2,  \tau=1/2\Gamma " )
 
-        elif self.comboBoxStringVar.get() == "Inv TL":
+        elif self.cb_model_sv.get() == "Inv TL":
             for i in range(nbFitParam) :
                 self.listLabelStringVariableFit[i].set("")
                 self.listEntryParamFit[i].state(['disabled'])

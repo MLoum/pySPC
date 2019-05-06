@@ -54,12 +54,13 @@ class Status_area():
 
         #https://riptutorial.com/tkinter/example/31885/customize-a-treeview
         self.tree_view = ttk.Treeview(self.frame_tree_view)
-        self.tree_view["columns"] = ("exp name", "meas. name", "type", "nb photon", "CPS", "channel", "comment", "t_start_µs", "t_end_µs")
+        self.tree_view["columns"] = ("exp name", "burst num", "meas. name", "type", "nb photon", "CPS", "channel", "comment", "t_start_µs", "t_end_µs")
         # remove first empty column with the identifier
         # self.tree_view['show'] = 'headings'
         # tree.column("#0", width=270, minwidth=270, stretch=tk.NO) tree.column("one", width=150, minwidth=150, stretch=tk.NO) tree.column("two", width=400, minwidth=200) tree.column("three", width=80, minwidth=50, stretch=tk.NO)
         self.tree_view.column("#0", width=25, stretch=tk.NO)
         self.tree_view.column("exp name", width=300, stretch=tk.YES, anchor=tk.CENTER)
+        self.tree_view.column("burst num", width=75, stretch=tk.YES, anchor=tk.CENTER)
         self.tree_view.column("meas. name", width=300, stretch=tk.YES, anchor=tk.CENTER)
         self.tree_view.column("type", width=75, stretch=tk.YES, anchor=tk.CENTER)
         self.tree_view.column("nb photon", width=75, stretch=tk.YES, anchor=tk.CENTER)
@@ -71,6 +72,7 @@ class Status_area():
 
 
         self.tree_view.heading("exp name", text="Exp name")
+        self.tree_view.heading("burst num", text="burst num")
         self.tree_view.heading("meas. name", text="Meas. name")
         self.tree_view.heading("type", text="Type")
         self.tree_view.heading("nb photon", text="Nb photon")
@@ -222,20 +224,44 @@ class Status_area():
         self.tree_view.focus(iid)
         return iid
 
-    def insert_measurement(self, measurement, parent_exp_iid):
+    def insert_measurement(self, measurement, parent_exp_iid=None):
         """
         Miunaly used for load state
         :param measurement:
         :param parent_exp_iid:
         :return:
         """
-        iid = self.tree_view.insert(parent=parent_exp_iid, index='end',
-                                    values=("", measurement.name, measurement.type, measurement.nb_of_photon, "NA", measurement.num_channel,
-            measurement.comment, measurement.start_tick, measurement.end_tick))
+        if parent_exp_iid is None:
+            parent_exp_iid = self.exp_iid_dict[self.controller.current_exp.file_name]
 
-        self.tree_view.item(parent_exp_iid, open=True)
-        if measurement.name not in self.mes_iid_dict:
-            self.mes_iid_dict[measurement.name] = iid
+        if measurement.type == "burst":
+            new_exp_name = self.controller.current_exp.file_name + "_burst"
+            iid_burst = self.tree_view.insert(parent="", index='end',
+                                        values=("", "", new_exp_name, measurement.type, measurement.nb_of_photon, "NA", measurement.num_channel,
+                measurement.comment, measurement.start_tick, measurement.end_tick))
+            self.tree_view.item(iid_burst, open=True)
+            if measurement.name not in self.mes_iid_dict:
+                self.mes_iid_dict[measurement.name] = iid_burst
+            num = 0
+            for burst in measurement.bursts:
+                burst_name = "b_" + str(num)
+                iid = self.tree_view.insert(parent=iid_burst, index='end',
+                                            values=(
+                                            "", burst_name, "", "", burst.nb_photon, burst.CPS,
+                                            measurement.num_channel,
+                                            "", burst.tick_start, burst.tick_end))
+                self.tree_view.item(parent_exp_iid, open=True)
+                if measurement.name not in self.mes_iid_dict:
+                    self.mes_iid_dict[measurement.name + "_" + burst_name] = iid
+                num += 1
+        else:
+            iid = self.tree_view.insert(parent=parent_exp_iid, index='end',
+                                        values=("", "", measurement.name, measurement.type, measurement.nb_of_photon, "NA", measurement.num_channel,
+                measurement.comment, measurement.start_tick, measurement.end_tick))
+
+            self.tree_view.item(parent_exp_iid, open=True)
+            if measurement.name not in self.mes_iid_dict:
+                self.mes_iid_dict[measurement.name] = iid
         # self.tree_view.focus(iid)
 
         # self.treeview_measurement_select(None)
@@ -243,12 +269,12 @@ class Status_area():
 
     def update_tree_view_line(self, measurement):
         iid = self.mes_iid_dict[measurement.name]
-        self.tree_view.item(iid, values=("", measurement.name, measurement.type, measurement.nb_of_photon, "NA", measurement.num_channel,  measurement.comment, measurement.start_tick, measurement.end_tick))
+        self.tree_view.item(iid, values=("", "", measurement.name, measurement.type, measurement.nb_of_photon, "NA", measurement.num_channel,  measurement.comment, measurement.start_tick, measurement.end_tick))
 
     def update_tree_view(self):
         for mes_name, iid in self.mes_iid_dict.items():
             measurement = self.controller.get_measurement(mes_name)
-            self.tree_view.item(iid, values=(
+            self.tree_view.item(iid, values=("",
             "", measurement.name, measurement.type, measurement.nb_of_photon, "NA", measurement.num_channel,
             measurement.comment, measurement.start_tick, measurement.end_tick))
         for exp_name, iid in self.exp_iid_dict.items():
@@ -258,7 +284,7 @@ class Status_area():
             CPS = int(exp.data.channels[0].CPS)
             t_start_micros = exp.convert_ticks_in_seconds(exp.data.channels[0].start_tick) * 1E6
             t_end_micros = exp.convert_ticks_in_seconds(exp.data.channels[0].end_tick) * 1E6
-            self.tree_view.item(iid, values=(exp.file_name, "", "",  nb_photon, CPS, nb_of_channel,  "", t_start_micros, t_end_micros))
+            self.tree_view.item(iid, values=(exp.file_name, "", "", "",  nb_photon, CPS, nb_of_channel,  "", t_start_micros, t_end_micros))
 
 
     def add_measurement(self):
@@ -271,7 +297,7 @@ class Status_area():
 
                 iid_current_exp = self.exp_iid_dict[self.controller.current_exp.file_name]
 
-                iid = self.tree_view.insert(parent=iid_current_exp, index='end', values=("", mes_name, mes_type, "0", "NA", "NA", mes_comment, "NA", "NA"))
+                iid = self.tree_view.insert(parent=iid_current_exp, index='end', values=("", "", mes_name, mes_type, "0", "NA", "NA", mes_comment, "NA", "NA"))
                 self.tree_view.item(iid_current_exp, open=True)
                 self.tree_view.focus(iid)
                 self.mes_iid_dict[mes_name] = iid
@@ -316,12 +342,20 @@ class Status_area():
         id_selected_item = self.tree_view.focus()
         selected_item = self.tree_view.item(id_selected_item)
         item_name_exp = selected_item["values"][0]
-        item_name_mes = selected_item["values"][1]
+        item_name_mes = selected_item["values"][2]
+        item_name_burst = selected_item["values"][1]
 
         if item_name_exp in self.controller.model.experiments:
             # this is an experiment
             exp = self.controller.set_current_exp(item_name_exp)
             self.controller.update_navigation()
+        elif item_name_burst != "":
+            parent_iid = self.tree_view.parent(id_selected_item)
+            if item_name_mes in self.controller.current_exp.measurements:
+                measurement = self.controller.set_current_measurement(item_name_mes)
+                num_burst = int(item_name_burst[2:])
+                self.controller.display_burst(measurement.bursts[num_burst], measurement)
+
         elif item_name_mes in self.controller.current_exp.measurements:
             # this is a measurement
             measurement = self.controller.set_current_measurement(item_name_mes)

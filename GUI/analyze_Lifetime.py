@@ -11,13 +11,13 @@ from .Dialog import fitIRFDialog
 
 class guiForFitOperation_Lifetime(guiForFitOperation):
 
-    def __init__(self, masterFrame, controller, modelNames, nbParamFit):
-        super().__init__( masterFrame, controller, modelNames, nbParamFit, fitModeName="lifetime")
+    def __init__(self, masterFrame, controller, modelNames, nbParamFit, is_burst_analysis=False):
+        super().__init__( masterFrame, controller, modelNames, nbParamFit, fitModeName="lifetime", is_burst_analysis=is_burst_analysis)
 
     def changeModel(self, event):
         # Methode virtuelle, voir les classes dérivées.
         nbFitParam = self.nbParamFit
-        if self.comboBoxStringVar.get() == "One Decay":
+        if self.cb_model_sv.get() == "One Decay":
             self.listLabelStringVariableFit[0].set("t0")
             self.listLabelStringVariableFit[1].set("amp")
             self.listLabelStringVariableFit[2].set("tau")
@@ -32,7 +32,7 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
 
             self.setFitFormula(r"cst + amp \times e^{-(t+t_0)/\tau}")
 
-        elif self.comboBoxStringVar.get() == "Two Decays":
+        elif self.cb_model_sv.get() == "Two Decays":
             self.listLabelStringVariableFit[0].set("t0")
             self.listLabelStringVariableFit[1].set("amp")
             self.listLabelStringVariableFit[2].set("tau")
@@ -54,12 +54,13 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
                 self.listEntryParamFit[i].state(['disabled'])
 
 class lifeTimeAnalyze_gui():
-    def __init__(self, masterFrame, controller, appearenceParam, measurement):
+    def __init__(self, masterFrame, controller, appearenceParam, measurement, is_burst_analysis=False):
         self.masterFrame = masterFrame
         self.controller = controller
         self.appearenceParam = appearenceParam
         self.measurement = measurement
         self.is_keep_selection_for_filter = True
+        self.is_burst_analysis = is_burst_analysis
         # self.is_graph_x_ns = True
 
     def populate(self):
@@ -164,7 +165,10 @@ class lifeTimeAnalyze_gui():
         b.grid(row=4, column=0)
 
         #FIT
-        self.gui_for_fit_operation = guiForFitOperation_Lifetime(self.frameMicro_fit, self.controller, ('One Decay', 'Two Decays', 'Rotation'),  nbParamFit=8)
+        self.gui_for_fit_operation = guiForFitOperation_Lifetime(self.frameMicro_fit, self.controller,
+                                                                 ('One Decay', 'Two Decays', 'Rotation'),  nbParamFit=8,
+                                                                 is_burst_analysis=self.is_burst_analysis)
+
         self.gui_for_fit_operation.populate()
 
     def openIR_file(self):

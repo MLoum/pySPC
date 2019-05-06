@@ -83,6 +83,10 @@ class Data():
             timestamps, detectors, nanotimes, timestamps_unit, meta = nist_fpga.load_ttt(file_path)
             self.expParam.fill_with_ttt_meta_data(meta)
 
+        elif file_extension == ".ptn":
+
+            pass
+
         # Les photons ne sont pas triès par detecteur, il le sont par ordre d'arrivée
         unique, return_index, unique_inverse, unique_counts = np.unique(detectors, return_index=True,
                                                                         return_inverse=True, return_counts=True)

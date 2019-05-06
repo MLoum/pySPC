@@ -11,7 +11,7 @@ class guiForFitOperation_FCS(guiForFitOperation):
     def changeModel(self, event):
         # Methode virtuelle, voir les classes dérivées.
         nbFitParam = self.nbParamFit
-        if self.comboBoxStringVar.get() == "1 Diff":
+        if self.cb_model_sv.get() == "1 Diff":
             self.listLabelStringVariableFit[0].set("G0")
             self.listLabelStringVariableFit[1].set("tdiff")
             self.listLabelStringVariableFit[2].set("cst")

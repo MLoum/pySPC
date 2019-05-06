@@ -376,16 +376,16 @@ class lifeTimeMeasurements(Measurements):
             self.params['cst'].set(value=params[5], vary=True, min=0, max=None)
 
 
-    def set_model(self, modelName):
+    def set_model(self, model_name):
 
-        if modelName == "One Decay":
-            self.modelName = modelName
+        if model_name == "One Decay":
+            self.modelName = model_name
             self.model = OneExpDecay()
             self.params = self.model.make_params(t0=0, amp=1, tau=1, cst=0)
 
-        if modelName == "Two Decays":
+        if model_name == "Two Decays":
             # print (modelName)
-            self.modelName = modelName
+            self.modelName = model_name
             self.model = TwoExpDecay()
             self.params = self.model.make_params(t0=0, amp1=1, tau1=1, amp2=1, tau2=1, cst=0)
 

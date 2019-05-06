@@ -37,6 +37,7 @@ class Controller:
         self.model = Experiments.Experiments()
         self.current_exp = None
         self.current_measurement = None
+        self.current_burst = None
         self.view = View.View(self.root, self)
 
         self.root.protocol("WM_DELETE_WINDOW",
@@ -221,6 +222,7 @@ class Controller:
             return self.current_exp.get_available_name_for_measurement(type)
 
     def display_measurement(self, measurement_name):
+        name = self.current_exp.file_name + "_burst"
         measurement = self.current_exp.get_measurement(measurement_name)
 
         # Display data
@@ -325,7 +327,7 @@ class Controller:
     def replot_result(self, is_zoom_x_selec=False, is_autoscale=False):
         self.view.archi.analyze_area.resultArea_gui.graph_results.replot(is_zoom_x_selec, is_autoscale)
 
-    def guess_eval_fit(self, mode, model_name, params, idx_start=0, idx_end=-1):
+    def guess_eval_fit(self, mode, model_name, params, idx_start=0, idx_end=-1, is_burst_analysis=False):
         """
         :param mode can be fit, eval or guess
         :param model_name string for the model name
@@ -336,9 +338,17 @@ class Controller:
         """
         data, gui, fit_plot_mode = None, None, None
 
-        measurement = self.current_measurement
+        if is_burst_analysis==False:
+            measurement = self.current_measurement
+            gui = self.view.archi.analyze_area.gui_for_fit_operation
+        else:
+            measurement = self.current_burst.measurement
+            gui = self.view.burst_analysis_gui.analyze_gui.gui_for_fit_operation
 
-        gui = self.view.archi.analyze_area.gui_for_fit_operation
+        if measurement is None:
+            return
+
+
 
         channel = self.view.currentChannel
         # TODO cursor with fit limits.
@@ -382,8 +392,11 @@ class Controller:
     def launch_burst_analysis_GUI(self, name="", comment=""):
         burst_measurement = self.create_measurement("burst", name, comment)
 
-        burst_analysis.BurstAnalysis_gui(self.root, self, self.view.appearenceParam, burst_measurement)
+        self.view.burst_analysis_gui = burst_analysis.BurstAnalysis_gui(self.root, self, self.view.appearenceParam, burst_measurement)
 
+    def validate_burst_selection(self, bursts_measurement):
+        self.add_measurement(bursts_measurement)
+        self.view.archi.status_area.insert_measurement(bursts_measurement)
 
     def display_burst(self, burst, measurement):
         # Display the burst in the timezoom windows
@@ -410,8 +423,6 @@ class Controller:
         last_tick_micro = self.current_exp.convert_ticks_in_seconds(self.current_exp.data.channels[0].end_tick)*1E6
         self.view.currentTimeWindow[1] = min(last_tick_micro, burst_end_micro_s + coeff_visualization*burst_duration_micro)
 
-
-
         self.view.current_time_zoom_window[0] = burst_start_micro_s
         self.view.current_time_zoom_window[1] = burst_end_micro_s
 
@@ -423,10 +434,14 @@ class Controller:
 
 
         # Set the ylim to the maximum of the burst.
-
         self.update_navigation(is_draw_burst=True, bursts=measurement.bursts)
+
+        # Graph the eventual measurement of the burst
         self.graph_measurement(burst.measurement)
         pass
+
+    def launch_burst_measurement(self, burst_measurement, type="lifetime", model_name=None, fit_params=None, idx_start=0, idx_end=-1):
+        burst_measurement.perform_measurements(self, type, model_name, fit_params, idx_start, idx_end)
 
     def save_state(self, savefile_path):
         if self.current_exp.file_name is None:
