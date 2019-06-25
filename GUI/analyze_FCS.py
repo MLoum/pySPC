@@ -5,30 +5,47 @@ from .guiForFitOperation import guiForFitOperation
 
 class guiForFitOperation_FCS(guiForFitOperation):
 
-    def __init__(self, masterFrame, controller, modelNames, nbParamFit):
-        super().__init__( masterFrame, controller, modelNames, nbParamFit, fitModeName="FCS")
+    def __init__(self, master_frame, controller, model_names, nb_param_fit):
+        super().__init__(master_frame, controller, model_names, nb_param_fit, fitModeName="FCS")
 
     def changeModel(self, event):
         # Methode virtuelle, voir les classes dérivées.
-        nbFitParam = self.nbParamFit
+        nbFitParam = self.nb_param_fit
         if self.cb_model_sv.get() == "1 Diff":
-            self.listLabelStringVariableFit[0].set("G0")
-            self.listLabelStringVariableFit[1].set("tdiff")
-            self.listLabelStringVariableFit[2].set("cst")
+            self.list_label_string_variable_fit[0].set("G0")
+            self.list_label_string_variable_fit[1].set("tdiff")
+            self.list_label_string_variable_fit[2].set("r")
+            self.list_label_string_variable_fit[3].set("cst")
 
-            for i in range(3):
-                self.listEntryParamFit[i].state(['!disabled'])
+            for i in range(4):
+                self.list_entry_param_fit[i].state(['!disabled'])
 
-            for i in range(3, nbFitParam) :
-                self.listLabelStringVariableFit[i].set("")
-                self.listEntryParamFit[i].state(['disabled'])
+            for i in range(4, nbFitParam) :
+                self.list_label_string_variable_fit[i].set("")
+                self.list_entry_param_fit[i].state(['disabled'])
 
-            self.setFitFormula(r"G_0 \frac{1}{1+t/tdiff} + cst")
+            self.setFitFormula(r"G_0 \frac{1}{1+t/tdiff}*\frac{1}{\sqrt{1+r*t/tdiff}} + cst")
 
-        else :
+        elif self.cb_model_sv.get() == "2 Diff":
+            self.list_label_string_variable_fit[0].set("G0a")
+            self.list_label_string_variable_fit[1].set("tdiffa")
+            self.list_label_string_variable_fit[2].set("cst")
+            self.list_label_string_variable_fit[3].set("G0b")
+            self.list_label_string_variable_fit[4].set("tdiffb")
+
+            for i in range(5):
+                self.list_entry_param_fit[i].state(['!disabled'])
+
+            for i in range(5, nbFitParam) :
+                self.list_label_string_variable_fit[i].set("")
+                self.list_entry_param_fit[i].state(['disabled'])
+
+            self.setFitFormula(r"G_0a \frac{1}{1+t/tdiffa} + G_0b \frac{1}{1+t/tdiffb} + cst")
+
+        else:
             for i in range(nbFitParam) :
-                self.listLabelStringVariableFit[i].set("")
-                self.listEntryParamFit[i].state(['disabled'])
+                self.list_label_string_variable_fit[i].set("")
+                self.list_entry_param_fit[i].state(['disabled'])
 
 
 
@@ -86,7 +103,7 @@ class FCS_Analyze_gui():
         b.grid(row=1, column=1)
 
         #FIT
-        self.gui_for_fit_operation = guiForFitOperation_FCS(self.frame_fit, self.controller, ('1 Diff', 'Rotation'),  nbParamFit=8)
+        self.gui_for_fit_operation = guiForFitOperation_FCS(self.frame_fit, self.controller, ('1 Diff', 'Rotation'), nb_param_fit=8)
         self.gui_for_fit_operation.populate()
 
 

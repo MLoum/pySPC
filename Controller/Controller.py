@@ -18,6 +18,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 
+
+
 from core import ExpParam
 from core import Results
 from core import Data
@@ -327,7 +329,7 @@ class Controller:
     def replot_result(self, is_zoom_x_selec=False, is_autoscale=False):
         self.view.archi.analyze_area.resultArea_gui.graph_results.replot(is_zoom_x_selec, is_autoscale)
 
-    def guess_eval_fit(self, mode, model_name, params, idx_start=0, idx_end=-1, is_burst_analysis=False):
+    def guess_eval_fit(self, mode, model_name, params, params_min, params_max, params_hold, idx_start=0, idx_end=-1,  is_burst_analysis=False):
         """
         :param mode can be fit, eval or guess
         :param model_name string for the model name
@@ -366,10 +368,15 @@ class Controller:
 
             elif mode == "fit":
                 measurement.set_params(params)
-                fitResults = measurement.fit(idx_start, idx_end)
+                # measurement.set_params_max(params_max)
+                # measurement.set_params_min(params_min)
+                # measurement.set_hold_params(params_hold)
+                fit_report = measurement.fit(idx_start, idx_end)
                 # TODO set option to tell if user want fit results exported to fit params
                 gui.setParamsFromFit(measurement.params)
-                self.view.archi.analyze_area.resultArea_gui.setTextResult(fitResults.fit_report())
+                # self.view.archi.analyze_area.resultArea_gui.setTextResult(fitResults.fit_report())
+                self.view.archi.analyze_area.resultArea_gui.setTextResult(fit_report)
+
 
             self.view.archi.analyze_area.resultArea_gui.graph_results.plot(measurement, is_plot_fit=True)
 
@@ -386,8 +393,10 @@ class Controller:
         self.view.archi.analyze_area.resultArea_gui.graph_results.plot(measurement, is_plot_fit=True)
 
     def export_graph_result(self, mode, file_path):
-        self.view.archi.analyze_area.resultArea_gui.graph_results.export(mode, file_path)
-
+        result = False
+        result = self.view.archi.analyze_area.resultArea_gui.graph_results.export(mode, file_path)
+        if result:
+            self.log_message("Image from graph result saved to " + file_path + "\n")
 
     def launch_burst_analysis_GUI(self, name="", comment=""):
         burst_measurement = self.create_measurement("burst", name, comment)
@@ -449,6 +458,7 @@ class Controller:
             return
         self.shelf = shelve.open(savefile_path, 'n')  # n for new
         self.model.save_state(self.shelf)
+
 
         # save in the controller
         self.shelf['current_exo_name'] = self.current_exp.file_name

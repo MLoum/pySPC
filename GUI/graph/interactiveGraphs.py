@@ -32,13 +32,14 @@ class InteractiveGraph():
 
         self.ctrl_is_held = False
         self.shift_is_held = False
+        self.alt_is_held = False
 
         self.data_x = None
         self.data_y = None
         self.data_fit = None
         self.data_residual = None
 
-        self.frame= tk.Frame(self.masterFrame)
+        self.frame = tk.Frame(self.masterFrame)
         self.frame.pack(side="top", fill="both", expand=True)
 
         self.figure = plt.Figure(figsize=figsize, dpi=dpi)
@@ -78,10 +79,18 @@ class InteractiveGraph():
         print(event.key)
         if event.key == 'ctrl':
             self.ctrl_is_held = True
+        if event.key == 'alt':
+            self.alt_is_held = True
+        if event.key == 'shift':
+            self.shift_is_held = True
 
     def on_key_release(self, event):
         if event.key == 'ctrl':
             self.ctrl_is_held = False
+        if event.key == 'alt':
+            self.alt_is_held = False
+        if event.key == 'shift':
+            self.shift_is_held = False
 
 
 

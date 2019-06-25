@@ -1,10 +1,11 @@
 import numpy as np
-from lmfit import minimize, Parameters, Model
+from lmfit import minimize, Parameters, Model, fit_report
 from lmfit.models import LinearModel, ExponentialModel
 import matplotlib.pyplot as plt
 
 
 from scipy.special import erfc
+from scipy.ndimage.interpolation import shift as shift_scipy
 
 from .Measurement import Measurements
 from .histogram import histogram
@@ -17,6 +18,114 @@ def update_param_vals(pars, prefix, **kwargs):
             pars[pname].value = val
     return pars
 
+
+
+class lifetimeModelClass():
+    def __init__(self, IRF=None):
+        self.IRF = IRF
+        self.x_range = None
+        self.data = None
+        self.non_convoluted_decay = None
+        self.observed_count = 0
+
+        # self.t0 = None
+        self.data_bckgnd = None
+
+    def guess(self):
+        pass
+
+    def eval(self, t, params):
+        pass
+
+class OneExpDecay(lifetimeModelClass):
+    """A normalized exponential decay with a shift in time, with two Parameters ``tau``, ''shift, and a fixed ``bckgnd``.
+
+    Defined as:
+
+    .. math::
+
+        f(t; , tau, shift) = IRF(shift) x exp(-t / tau) + bckgnd
+
+    The area under the decay curves obtained from the observed counts Cexp and from the predicted counts Ĉtheo must be
+    conserved during optimization of the fitting parameters. Hence, the exponential does'nt have a amplitude parameter
+    """
+    def __init__(self, IRF=None):
+        super().__init__(IRF)
+
+    def guess(self):
+        pass
+
+    def eval(self, t,  params):
+        tau = params['tau'].value
+        shift = params['shift'].value
+        self.data_bckgnd = params['bckgnd'].value
+        self.non_convoluted_decay = np.exp(-(t) / tau)
+        # t_0 is in the shift
+
+        if self.IRF is not None:
+            IR = shift_scipy(self.IRF, shift, mode='wrap')
+            # IR = np.roll(self.IR, shift)
+            conv = np.convolve(self.non_convoluted_decay, IR)[0:np.size(self.non_convoluted_decay)]
+            conv /= conv.sum()
+            # return conv[self.x_range[0]:self.x_range[1]] + self.data_bckgnd
+            return self.observed_count*conv + self.data_bckgnd
+        else:
+            self.non_convoluted_decay /= self.non_convoluted_decay.sum()
+            return self.non_convoluted_decay + self.data_bckgnd
+
+    def make_params(self):
+        params = Parameters()
+        params.add(name="tau", value=1, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="shift", value=0, min=-np.inf, max=np.inf, brute_step=0.1)
+        params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
+        return params
+
+class TwoExpDecay(lifetimeModelClass):
+    """A normalized exponential decay with a shift in time, with two Parameters ``tau``, ''shift, and a fixed ``bckgnd``.
+
+    Defined as:
+
+    .. math::
+
+        f(t; , tau1, a1, tau2, shift) = IRF(shift) x (a1 . exp(-t / tau1) + (1-a1) . exp(-t / tau2) ) + bckgnd
+
+    The area under the decay curves obtained from the observed counts Cexp and from the predicted counts Ĉtheo must be
+    conserved during optimization of the fitting parameters. Hence, the exponential does'nt have a amplitude parameter
+    """
+    def __init__(self, IRF=None):
+        super().__init__(IRF)
+
+    def guess(self):
+        pass
+
+    def eval(self, t,  params):
+        tau1 = params['tau1'].value
+        a1 = params['a1'].value
+        tau2 = params['tau2'].value
+        shift = params['shift'].value
+        self.data_bckgnd = params['bckgnd'].value
+        self.non_convoluted_decay = a1*np.exp(-(t) / tau1) + (1-a1)*np.exp(-(t) / tau2)
+        # t_0 is in the shift
+
+        if self.IRF is not None:
+            IR = shift_scipy(self.IRF, shift, mode='wrap')
+            # IR = np.roll(self.IR, shift)
+            conv = np.convolve(self.non_convoluted_decay, IR)[0:np.size(self.non_convoluted_decay)]
+            conv /= conv.sum()
+            # return conv[self.x_range[0]:self.x_range[1]] + self.data_bckgnd
+            return self.observed_count*conv + self.data_bckgnd
+        else:
+            self.non_convoluted_decay /= self.non_convoluted_decay.sum()
+            return self.non_convoluted_decay + self.data_bckgnd
+
+    def make_params(self):
+        params = Parameters()
+        params.add(name="tau1", value=1, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="a1", value=1, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="tau2", value=1, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="shift", value=0, min=-np.inf, max=np.inf, brute_step=0.1)
+        params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
+        return params
 
 class ExpConvGauss(Model):
     """representing the convolution of a gaussian and an exponential. This function is used to model the IRF.
@@ -53,135 +162,6 @@ class ExpConvGauss(Model):
 
 
 
-class OneExpDecay(Model):
-    """A exponential decay with a shift in time, with four Parameters ``t0``, ``amp``, ``tau`` and ``cst``.
-
-    Defined as:
-
-    .. math::
-
-        f(t; , t0, amp, tau, cst) = cst + amp * exp(-(t - t0) / tau)
-
-    """
-
-    def __init__(self, IR=None, use_IR=False, independent_vars=['t'], prefix='', nan_policy='propagate',
-                 **kwargs):
-
-        self.IR = IR
-        self.use_IR = use_IR
-        self.x_range = None
-
-        kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
-                       'independent_vars': independent_vars})
-
-        def oneExpDecay(t, t0, amp, tau, cst):
-            exp_decay = cst + amp * np.exp(-(t - t0) / tau)
-            exp_decay[t < t0] = cst
-            if self.use_IR:
-                conv = np.convolve(exp_decay, self.IR)[0:np.size(exp_decay)]
-                return conv[self.x_range[0]:self.x_range[1]]
-            else:
-                return exp_decay
-
-        super(OneExpDecay, self).__init__(oneExpDecay, **kwargs)
-
-    def guess(self, data, x=None, **kwargs):
-        t0, amp, tau, cst = 0., 0., 0., 0.
-        #if x is not None:
-        # cst is the background and is taken, as a first guess, as the minimum of the lifetime curve
-        # We trim the last point because the TAC tipycally has some problem here.
-        cst = np.min(data[np.nonzero(data[:-10])])
-        amp = np.max(data)
-
-        if self.use_IR:
-            # Then t0 is the very beginning of the lifetime curve
-            # As a first guess, we take the index of the maximum and we shift it by the onset of IR
-            IR_onset = np.argmax(self.IR)
-            idx_max = np.argmax(data)
-            idx_t0 = idx_max - IR_onset
-        else:
-            # if we don't take into account the IR, t0 is simply the max of the lifetime curve
-            idx_t0 = idx_max = np.argmax(data)
-
-        t0 = x[idx_t0]
-
-        #Searching for position where amp is divided by e=2.71
-        subarray = data[idx_max:]
-        x_subarray = x[idx_max:]
-        #tau = np.where(subarray < amp/np.exp(1))[0]
-        idx_tau = np.argmax(subarray < (float) (amp) / np.exp(1))
-        tau = x_subarray[idx_tau] - t0
-
-        pars = self.make_params(t0=t0, amp=amp, tau=tau, cst=cst)
-        return update_param_vals(pars, self.prefix, **kwargs)
-
-    # __init__.__doc__ = COMMON_INIT_DOC
-    # guess.__doc__ = COMMON_GUESS_DOC
-    __init__.__doc__ = "TODO"
-    guess.__doc__ = "TODO"
-
-
-class TwoExpDecay(Model):
-    """Two exponential decays with a shift in time, with four Parameters ``t0``, ``amp1``, ``tau1``, ''amp2'', ''tau5'' and ``cst``.
-
-    Defined as:
-
-    .. math::
-
-        f(t; , t0, amp, tau, cst) = cst + amp1 * exp(-(t - t0) / tau1) + amp2 * exp(-(t - t0) / tau2)
-
-    """
-
-    def __init__(self, IR=None, use_IR=False, independent_vars=['t'], prefix='', nan_policy='propagate',
-                 **kwargs):
-
-        self.IR = IR
-        self.use_IR = use_IR
-
-        kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
-                       'independent_vars': independent_vars})
-
-        def twoExpDecay(t, t0, amp1, tau1, amp2, tau2, cst):
-            two_exp_decay = cst + amp1 * np.exp(-(t - t0) / tau1) + amp2 * np.exp(-(t - t0) / tau2)
-            two_exp_decay[t < t0] = cst
-            if self.use_IR:
-                conv = np.convolve(two_exp_decay, self.IR)[0:np.size(two_exp_decay)]
-                return conv[self.x_range[0]:self.x_range[1]]
-            else:
-                return two_exp_decay
-
-
-        super(TwoExpDecay, self).__init__(twoExpDecay, **kwargs)
-
-    def guess(self, data, x=None, **kwargs):
-        t0, amp1, tau1, amp2, tau2, cst = 0., 0., 0., 0., 0., 0.
-
-        # cst is the background and is taken, as a first guess, as the minimum of the lifetime curve
-        cst = np.min(data[np.nonzero(data)])
-
-
-        if self.use_IR:
-            # Then t0 is the very beginning of the lifetime curve
-            # As a first guess, we take the index of the maximum and we shift it by the onset of IR
-            IR_onset = np.argmax(self.IR)
-            idx_max = np.argmax(data)
-            idx_t0 = idx_max - IR_onset
-        else:
-            # if we don't take into account the IR, t0 is simply the max of the lifetime curve
-            idx_t0 = np.argmax(data)
-
-        t0 = x[idx_t0]
-        # TODO
-        amp1 = np.max(data)
-
-        pars = self.make_params(t0=t0, amp=amp, tau=tau, cst=cst)
-        return update_param_vals(pars, self.prefix, **kwargs)
-
-    # __init__.__doc__ = COMMON_INIT_DOC
-    # guess.__doc__ = COMMON_GUESS_DOC
-    __init__.__doc__ = "TODO"
-    guess.__doc__ = "TODO"
-
 #TODO creer une classe mère pour les analyses.
 class lifeTimeMeasurements(Measurements):
 
@@ -200,6 +180,9 @@ class lifeTimeMeasurements(Measurements):
         self.data = np.bincount(nanotimes)
         self.time_axis = np.arange(0, self.data.size) * self.exp_param.mIcrotime_clickEquivalentIn_second*1E9
         self.trim_life_time_curve()
+        if self.model is not None:
+            self.model.total_count = self.data.sum()
+
 
     def trim_life_time_curve(self):
         nonzero = np.nonzero(self.data)
@@ -223,8 +206,8 @@ class lifeTimeMeasurements(Measurements):
         self.IR_raw = np.copy(data)
         self.IR_time_axis = np.copy(time_axis)
 
-    def set_model_IR(self):
-        self.model.IR = self.IR_processed
+    def set_model_IRF(self):
+        self.model.IRF = self.IR_processed
 
     def set_use_IR(self, use_IR=False):
         self.use_IR = use_IR
@@ -248,13 +231,14 @@ class lifeTimeMeasurements(Measurements):
             # We divide by the sum of the IR so that the convolution doesn't change the amplitude of the signal.
             self.IR_processed /= float(self.IR_processed.sum())
             if self.model is not None:
-                self.model.IR = self.IR_processed
+                self.model.IRF = self.IR_processed
             self.IR_time_axis_processed = self.IR_time_axis[idx_begin - shift:idx_end - shift]
             return "OK"
         else:
             return "No IR was loaded"
 
     def generate_artificial_IR(self, mainWidth, secondaryWidth, secondaryAmplitude, timeOffset):
+        # FIXME
         self.IR = (1-secondaryWidth) * np.exp( - (self.eval_x_axis - timeOffset)**2/mainWidth) + secondaryAmplitude * np.exp( - (self.eval_x_axis - timeOffset)**2/secondaryWidth)
         #scale
         self.IR /= self.IR.sum()
@@ -271,23 +255,101 @@ class lifeTimeMeasurements(Measurements):
         return self.fit_IR_results
 
     def fit(self, idx_start=0, idx_end=-1):
+        # ATTENTION au -1 -> cela créé une case de moins dans le tableau.
+        if self.model is not None:
+            self.model.data = self.data
+
         if self.use_IR:
             self.find_idx_of_fit_limit(idx_start, idx_end)
             y = self.data[self.idx_start:self.idx_end]
             x_eval_range = self.time_axis[self.idx_start:self.idx_end]
             self.model.x_range = (self.idx_start, self.idx_end)
-            self.fit_results = self.model.fit(y, self.params, t=self.time_axis)
 
-            self.eval_y_axis = self.fit_results.best_fit
+            self.model.observed_count = (self.data - self.params['bckgnd'].value).sum()
+            #TODO minimize MLC
+
+            def residuals(params, x, y, weights):
+                """
+                Returns the array of residuals for the current parameters.
+                """
+                # tau = params['tau'].value
+                # baseline = params['baseline'].value
+                # offset = params['offset'].value
+                # ampl = params['ampl'].value
+                ymodel = self.model.eval(x, params)
+                return (y[self.idx_start:self.idx_end] - ymodel[self.idx_start:self.idx_end]) * weights[self.idx_start:self.idx_end]
+
+            def loglike(params, x, ydata):
+                # tau, baseline, offset, ampl = params
+                ymodel = self.model.eval(x, params)
+                return (ymodel - ydata * np.log(ymodel)).sum()
+
+            def maximum_likelihood_method(params, x, ydata):
+                ymodel = self.model.eval(x, params)
+                # likelyhood = 2 * (ydata*np.log(ydata/ymodel)).sum()
+                likelyhood = -(2 * ydata * np.log(ymodel)).sum()
+                return likelyhood
+
+            def callback_iteration(params, iter, resid, *args, **kws):
+                """
+                Function to be called at each fit iteration. This function should have the signature
+                iter_cb(params, iter, resid, *args, **kws), where params will have the current parameter values,
+                iter the iteration number, resid the current residual array, and *args and **kws as passed
+                to the objective function.
+                :param params:
+                :param iter:
+                :param resid:
+                :param args:
+                :param kws:
+                :return:
+                """
+                # TODO draw and report progress
+                pass
+
+            minimization = "chi-square"
+            minimization = "maximum likelihood"
+            weights = 1 / np.sqrt(self.data)
+            # weights[y == 0] = 1. / np.sqrt(baseline_true)
+            weights[self.data == 0] = 0
+            if minimization == "chi-square":
+                self.fit_results = minimize(residuals, self.params, args=(self.time_axis, self.data, weights), method='nelder', iter_cb=callback_iteration)
+
+                self.fit_results = minimize(residuals, self.fit_results.params, args=(self.time_axis, self.data, weights),
+                                            method='leastsq', iter_cb=callback_iteration)
+            elif minimization == "maximum likelihood":
+                self.fit_results = minimize(maximum_likelihood_method, self.params, args=(self.time_axis, self.data), method='nelder', iter_cb=callback_iteration)
+
+                # self.fit_results = minimize(maximum_likelihood_method, self.fit_results.params, args=(self.time_axis, self.data),
+                #                             method='leastsq', iter_cb=callback_iteration)
+
+
+            # Neald
+
+
+            #first approach with Nelder
+            # self.fit_results = self.model.fit(y, self.params, t=self.time_axis, method='Nelder', weights=weights, iter_cb=None)
+            #
+            # self.fit_results = self.model.fit(y, self.params, t=self.time_axis, method='leastsq', weights=weights,
+            #                                   iter_cb=None)
+
+            #FIXME do eval_y_axis and eval_x_axis still in use ?
+            self.eval_y_axis = self.model.eval(self.time_axis, self.fit_results.params)
             self.eval_x_axis = x_eval_range
 
-            self.residuals = self.fit_results.residual
+            self.residuals = self.data[self.idx_start:self.idx_end] - self.eval_y_axis[self.idx_start:self.idx_end]
+            self.fit_x = self.time_axis
+            self.residual_x = self.time_axis[self.idx_start:self.idx_end]
 
-            return self.fit_results
+
+
+            return fit_report(self.fit_results)
         else:
             return super().fit(idx_start, idx_end)
 
     def guess(self, idx_start=0, idx_end=-1):
+        if self.model is not None:
+            self.model.data = self.data
+
         if self.use_IR:
             self.find_idx_of_fit_limit(idx_start, idx_end)
 
@@ -300,18 +362,37 @@ class lifeTimeMeasurements(Measurements):
             super().guess(idx_start, idx_end)
 
     def eval(self, idx_start=0, idx_end=-1):
+        if self.model is not None:
+            self.model.data = self.data
+
         if self.use_IR:
             self.find_idx_of_fit_limit(idx_start, idx_end)
-
-            x_eval_range = self.time_axis[self.idx_start:self.idx_end]
             y = self.data[self.idx_start:self.idx_end]
-
+            x_eval_range = self.time_axis[self.idx_start:self.idx_end]
             self.model.x_range = (self.idx_start, self.idx_end)
 
+            self.model.observed_count = (self.data - self.params['bckgnd'].value).sum()
+
             # self.eval_y_axis = self.model.eval(self.params, t=self.time_axis)
-            self.eval_y_axis = self.model.eval(self.params, t=self.time_axis)
-            self.residuals = self.eval_y_axis - y
-            self.eval_x_axis = x_eval_range
+            # self.residuals = self.eval_y_axis - y
+
+            ymodel = self.model.eval(self.time_axis, self.params)
+
+            # self.find_idx_of_fit_limit(idx_start, idx_end)
+            #
+            # x_eval_range = self.time_axis[self.idx_start:self.idx_end]
+            # y = self.data[self.idx_start:self.idx_end]
+            #
+            # self.model.x_range = (self.idx_start, self.idx_end)
+            #
+            # self.eval_y_axis = self.model.eval(self.params, t=self.time_axis)
+            self.eval_y_axis = ymodel
+            self.residuals = self.eval_y_axis[self.idx_start:self.idx_end] - self.data[self.idx_start:self.idx_end]
+            self.eval_x_axis = self.time_axis
+
+            self.fit_x = self.time_axis
+            self.residual_x = self.time_axis[self.idx_start:self.idx_end]
+
         else:
             super().eval(idx_start, idx_end)
 
@@ -367,27 +448,45 @@ class lifeTimeMeasurements(Measurements):
             self.params['tau'].set(value=params[2], vary=True, min=0, max=None)
             self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
 
-        if self.modelName == "Two Decays":
-            self.params['t0'].set(value=params[0],  vary=True, min=0, max=None)
-            self.params['amp1'].set(value=params[1], vary=True, min=0, max=None)
-            self.params['tau1'].set(value=params[2], vary=True, min=0, max=None)
-            self.params['amp2'].set(value=params[3], vary=True, min=0, max=None)
-            self.params['tau2'].set(value=params[4], vary=True, min=0, max=None)
-            self.params['cst'].set(value=params[5], vary=True, min=0, max=None)
+        elif self.modelName == "One Decay IRF":
+            self.params['tau'].set(value=params[0])
+            self.params['shift'].set(value=params[1])
+            self.params['bckgnd'].set(value=params[2])
+            # self.model.bckgnd = params[2]
 
+        elif self.modelName == "One Decay Normalized":
+            self.params['t0'].set(value=params[0],  vary=True, min=0, max=None)
+            self.params['tau'].set(value=params[1], vary=True, min=0, max=None)
+            self.params['cst'].set(value=params[2], vary=True, min=0, max=None)
+
+        elif self.modelName == "Two Decays IRF":
+            self.params['tau1'].set(value=params[0])
+            self.params['a1'].set(value=params[1])
+            self.params['tau2'].set(value=params[2])
+            self.params['shift'].set(value=params[3])
+            self.params['bckgnd'].set(value=params[4])
 
     def set_model(self, model_name):
-
-        if model_name == "One Decay":
+        if model_name == "One Decay IRF":
             self.modelName = model_name
-            self.model = OneExpDecay()
-            self.params = self.model.make_params(t0=0, amp=1, tau=1, cst=0)
+            self.model = OneExpDecay(self.IR_processed)
+            self.params = self.model.make_params()
 
-        if model_name == "Two Decays":
+        elif model_name == "One Decay Tail":
+            self.modelName = model_name
+            # self.model = OneExpDecay()
+            # self.params = self.model.make_params(t0=0, amp=1, tau=1, cst=0)
+
+        elif model_name == "Two Decays IRF":
+            self.modelName = model_name
+            self.model = TwoExpDecay(self.IR_processed)
+            self.params = self.model.make_params()
+
+        elif model_name == "Two Decays Tail":
             # print (modelName)
             self.modelName = model_name
             self.model = TwoExpDecay()
-            self.params = self.model.make_params(t0=0, amp1=1, tau1=1, amp2=1, tau2=1, cst=0)
+
 
         self.model.use_IR = self.use_IR
         self.model.IR = self.IR_processed

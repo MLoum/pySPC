@@ -30,13 +30,13 @@ def update_param_vals(pars, prefix, **kwargs):
 from core.analyze.Measurement import Measurements
 
 class OneSpeDiffusion(Model):
-    """A exponential decay with a shift in time, with four Parameters ``t0``, ``amp``, ``tau`` and ``cst``.
+    """A correlation curve for a diffusion inside a gaussiean MDF, with four Parameters ``G0``, ``tdiff``, ``r`` and ``cst``.
 
     Defined as:
 
     .. math::
 
-        f(t; , G0, tdiff, cst) = cst + G0/(1+t/tdiff)
+        f(t; , G0, tdiff, cst) = cst + G0/(1+t/tdiff)*1/sqrt(1+r*t/tdiff)
 
     """
 
@@ -45,20 +45,22 @@ class OneSpeDiffusion(Model):
         kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
                        'independent_vars': independent_vars})
 
-        def oneSpeDiffusion(t, G0, tdiff, cst):
-            return cst + G0/(1+t/tdiff)
+        def oneSpeDiffusion(t, G0, tdiff, r, cst):
+            return cst + G0/(1+t/tdiff)*1/np.sqrt(1+r*t/tdiff)
 
         super(OneSpeDiffusion, self).__init__(oneSpeDiffusion, **kwargs)
 
     def guess(self, data, x=None, **kwargs):
-        G0, tdiff, cst = 0., 0., 0.
+        G0, tdiff, r, cst = 0., 0., 0., 0.
         #if x is not None:
         G0 = data[0] - 1 #beware afterpulsing...
         cst = np.mean(data[-10:])
         #Searching for position where G0 is divided by 2
         tdiff = np.argmax(data < (float) (G0)/2 + cst)
+        # FIXME
+        r = 1
 
-        pars = self.make_params(G0=G0, tdiff=tdiff, cst=cst)
+        pars = self.make_params(G0=G0, tdiff=tdiff, r=r, cst=cst)
         return update_param_vals(pars, self.prefix, **kwargs)
 
     # __init__.__doc__ = COMMON_INIT_DOC
@@ -66,47 +68,53 @@ class OneSpeDiffusion(Model):
     __init__.__doc__ = "TODO"
     guess.__doc__ = "TODO"
 
-# class TwoSpeDiffusion(Model):
-#     """A exponential decay with a shift in time, with four Parameters ``t0``, ``amp``, ``tau`` and ``cst``.
-#
-#     Defined as:
-#
-#     .. math::
-#
-#         f(t; , G0, tdiff, cst) = cst + G0/(1+t/tdiff)
-#
-#     """
-#
-#     def __init__(self, independent_vars=['t'], prefix='', nan_policy='raise',
-#                  **kwargs):
-#         kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
-#                        'independent_vars': independent_vars})
-#
-#         def twoSpeDiffusion(t, G0a, tdiffa, G0b, tdiffb, cst):
-#             return cst + G0a/(1+t/tdiffa) + G0b/(1+t/tdiffb)
-#
-#         super(TwoSpeDiffusion, self).__init__(twoSpeDiffusion, **kwargs)
-#
-#     def guess(self, data, x=None, **kwargs):
-#         G0a, tdiffa, G0b, tdiffb, cst = 0., 0., 0.
-#         #if x is not None:
-#         G0a = data[0] - 1 #beware afterpulsing...
-#         cst = np.mean(data[-10:])
-#         #Searching for position where G0 is divided by 2
-#         tdiffa = np.argmax(data < (float) (G0)/2 + cst)
-#
-#         pars = self.make_params(G0a=G0a, tdiffa=tdiffa, G0a=G0b, tdiffa=tdiffb, cst=cst)
-#         return update_param_vals(pars, self.prefix, **kwargs)
-#
-#     # __init__.__doc__ = COMMON_INIT_DOC
-#     # guess.__doc__ = COMMON_GUESS_DOC
-#     __init__.__doc__ = "TODO"
-#     guess.__doc__ = "TODO"
+class TwoSpeDiffusion(Model):
+    """A exponential decay with a shift in time, with four Parameters ``t0``, ``amp``, ``tau`` and ``cst``.
+
+    Defined as:
+
+    .. math::
+
+        f(t; , G0, tdiff, cst) = cst + G0a/(1+t/tdiffa) + G0b/(1+t/tdiffb)
+
+    """
+
+    def __init__(self, independent_vars=['t'], prefix='', nan_policy='raise',
+                 **kwargs):
+        kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
+                       'independent_vars': independent_vars})
+
+        def twoSpeDiffusion(t, G0a, tdiffa, cst, G0b, tdiffb):
+            return cst + G0a/(1+t/tdiffa) + G0b/(1+t/tdiffb)
+
+        super(TwoSpeDiffusion, self).__init__(twoSpeDiffusion, **kwargs)
+
+    def guess(self, data, x=None, **kwargs):
+        # FIXME
+        G0a, tdiffa, G0b, tdiffb, cst = 0., 0., 0.
+        #if x is not None:
+        G0a = data[0] - 1 #beware afterpulsing...
+        cst = np.mean(data[-10:])
+        #Searching for position where G0 is divided by 2
+        tdiffa = np.argmax(data < (float) (G0a)/2 + cst)
+
+        pars = self.make_params(G0a=G0a, tdiffa=tdiffa, cst=cst, G0b=G0a, tdiffb=tdiffa)
+        return update_param_vals(pars, self.prefix, **kwargs)
+
+    # __init__.__doc__ = COMMON_INIT_DOC
+    # guess.__doc__ = COMMON_GUESS_DOC
+    __init__.__doc__ = "TODO"
+    guess.__doc__ = "TODO"
 
 
 class CorrelationMeasurement(Measurements):
     def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="correlation", name="", comment=""):
         super().__init__(exp_param, num_channel, start_tick, end_tick, type, name, comment)
+        self.num_c1 = 0
+        self.num_c2 = 0
+        self.start_cor_time_micros = 10
+        self.max_cor_time_ms = 1000
+        self.precision = 10
 
     def correlateMonoProc(self, timestamps_1, timestamps_2, max_correlation_time_in_tick, start_correlation_time_in_tick=2, nb_of_point_per_cascade_aka_B=10, tick_duration_micros=1):
         #FIXME
@@ -121,7 +129,7 @@ class CorrelationMeasurement(Measurements):
         # self.data = np.zeros(self.nbOfCorrelationPoint, dtype=np.int)
 
         # correlate(timestamps, self.data, self.timeAxis, self.numLastPhoton)
-        # self.data = pcorrelate(t=timestamps1, u=timestamps2, bins=self.timeAxis, normalize=True)
+
 
         coeff = np.ones(timestamps_1.size, dtype=np.uint32)
         # timestamps_1_cpy = np.copy(timestamps_1)
@@ -130,8 +138,17 @@ class CorrelationMeasurement(Measurements):
 
         # self.data = ucorrelate_coeff(t_stamps_a=timestamps_1, coeff=coeff, max_lag=max_correlation_time_in_tick)
         # G = whal_auto(timestamps_1_cpy, coeff, self.time_axis, G, B=10)
-        G = self.correlate_whal(timestamps_1, coeff, timestamps_2, coeff, self.time_axis, B=10)
-        self.data = pnormalize(G, timestamps_1, timestamps_1, self.time_axis)
+
+        # Lawrence algo
+        self.data = pcorrelate(t=timestamps_1, u=timestamps_2, bins=self.time_axis, normalize=True)
+
+        # Whal algo
+        # G = self.correlate_whal(timestamps_1, coeff, timestamps_2, coeff, self.time_axis, B=10)
+        # self.data = G
+        # self.normalize_correlation()
+
+
+        # self.data = pnormalize(G, timestamps_1, timestamps_1, self.time_axis)
         # plt.semilogx(self.data)
         # plt.show()
         # self.data = self.unifom_lag_to_binned_lag(self.data)
@@ -141,6 +158,7 @@ class CorrelationMeasurement(Measurements):
 
         self.scale_time_axis()
         self.time_axis = self.time_axis[:-1]
+
 
 
     def correlate_whal(self, t_stamp_a, coeff_a, t_stamp_b, coeff_b, lags, B=10):
@@ -163,6 +181,7 @@ class CorrelationMeasurement(Measurements):
             t_stamp_b = np.copy(t_stamp_b)
 
 
+        coaserning_value = 1
         coarsening_counter = 0
         def coarsen_timeStamp(t_stamps, coeffs):
             # NB : //= -> integer division
@@ -176,6 +195,7 @@ class CorrelationMeasurement(Measurements):
             t_stamp_a = np.delete(t_stamps, consecutive_idxs + 1)
             coeff_a = np.delete(coeffs, consecutive_idxs + 1)
 
+
             # idx_to_keep = np.nonzero(np.diff(t_stamp_a))
             # # idx_to_keep = np.invert(consecutive_idxs)
             # t_stamp_a = t_stamp_a[idx_to_keep]
@@ -184,6 +204,7 @@ class CorrelationMeasurement(Measurements):
         for idx_G, lag in enumerate(lags):
             if coarsening_counter == B:
                 coarsen_timeStamp(t_stamp_a, coeff_a)
+                coaserning_value *= 2
                 if not is_auto_cor:
                     coarsen_timeStamp(t_stamp_b, coeff_b)
                 else:
@@ -198,7 +219,7 @@ class CorrelationMeasurement(Measurements):
 
 
             # Lag as also to be divided by 2 for each cascade
-            corrected_lag = lag / np.power(2, idx_G//B)
+            corrected_lag = int(lag / np.power(2, idx_G//B))
 
             # Short numpy implementation that is quite slow bevause it does'nt take into account the fact that the list are ordered.
             # correlation_match = np.in1d(t_stamp_a, t_stamp_a_dl, assume_unique=True)
@@ -206,6 +227,7 @@ class CorrelationMeasurement(Measurements):
 
             # Numba or Cython implementation
             G[idx_G] = find_pair_Whal(t_stamp_a, coeff_a, t_stamp_b, coeff_b, corrected_lag)
+            G[idx_G] /= coaserning_value
 
         return G
 
@@ -293,7 +315,7 @@ class CorrelationMeasurement(Measurements):
 
         # self.normalize_correlation()
         self.scale_time_axis()
-        self.time_axis = self.time_axis[:-1]
+        # self.time_axis = self.time_axis[:-1]
 
 
     def normalize_correlation(self):
@@ -344,7 +366,7 @@ class CorrelationMeasurement(Measurements):
             self.model = OneSpeDiffusion()
             self.params = self.model.make_params(G0=1.5, tdiff=500, cst=1)
 
-    def create_canonic_graph(self, is_plot_error_bar=False, is_plot_text=True):
+    def create_canonic_graph(self, is_plot_error_bar=False, is_plot_text=True, save_file_name=""):
         self.canonic_fig, self.canonic_fig_ax = plt.subplots(2, 1, figsize=(10, 8), sharex=True,
                                gridspec_kw={'height_ratios': [3, 1]})
         plt.subplots_adjust(hspace=0)
@@ -391,6 +413,9 @@ class CorrelationMeasurement(Measurements):
         ax[1].tick_params(axis='x', which='major', labelsize=20)
         ax[1].tick_params(axis='x', which='minor', labelsize=8)
 
+        if save_file_name != "":
+            plt.savefig(save_file_name, dpi=300)
+
         return self.canonic_fig
 
 
@@ -424,7 +449,8 @@ class FCSMeasurements(CorrelationMeasurement):
         if self.modelName == "1 Diff":
             self.params['G0'].set(value=params[0],  vary=True, min=0, max=None)
             self.params['tdiff'].set(value=params[1], vary=True, min=0, max=None)
-            self.params['cst'].set(value=params[2], vary=True, min=0, max=None)
+            self.params['r'].set(value=params[2], vary=True, min=0, max=None)
+            self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
         # if self.modelName == "2 Diff":
         #     self.params['G0a'].set(value=params[0],  vary=True, min=0, max=None)
         #     self.params['tdiffa'].set(value=params[1], vary=True, min=0, max=None)
@@ -437,11 +463,11 @@ class FCSMeasurements(CorrelationMeasurement):
         if modelName == "1 Diff":
             self.modelName = modelName
             self.model = OneSpeDiffusion()
-            self.params = self.model.make_params(G0=1.5, tdiff=500, cst=1)
-        # if modelName == "2 Diff":
-        #     self.modelName = modelName
-        #     self.model = OneSpeDiffusion()
-        #     self.params = self.model.make_params(G0=1.5, tdiff=500, cst=1)
+            self.params = self.model.make_params(G0=1.5, tdiff=500, r=10, cst=1)
+        if modelName == "2 Diff":
+            self.modelName = modelName
+            self.model = TwoSpeDiffusion()
+            self.params = self.model.make_params(G0a=1.5, tdiffa=500, cst=1, G0b=1.5, tdiffb=500)
 
 
 

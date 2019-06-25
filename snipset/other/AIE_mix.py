@@ -95,7 +95,7 @@ if is_plot:
     plt.plot(raw_data[0][:idx_600], (raw_data[3][:idx_600] - raw_data[3][idx_600])/raw_data[3][:idx_600].max(), label=label_Nitro, linestyle="dotted")
     plt.ylabel("Relative Absorbance (u.a)")
     plt.xlabel("Wavelength")
-    plt.title("Absorption spectra in DMSO (concentration = )")
+    plt.title("Absorption spectra in DMSO (concentration = 1E-5 M)")
     plt.vlines(405,0,0.9, alpha=0.5)
     plt.legend()
     plt.savefig("Abs_spectra_dmso.png", dpi=300)
@@ -109,6 +109,10 @@ wl = raw_data[0]
 dmso_Fluor = raw_data[1]
 dmso_CN = raw_data[2]
 dmso_NO2 = raw_data[3]
+
+
+print(np.array2string(wl, separator =","))
+
 
 spec_fluor_dmso = Spectrum(wl, dmso_Fluor/dmso_Fluor.max(), label=label_Fluor)
 spec_CN_dmso = Spectrum(wl, dmso_CN/dmso_CN.max(), label=label_CN)
@@ -128,6 +132,8 @@ if is_plot:
 aggregate_Fluor = raw_data[4]
 aggregate_CN = raw_data[5]
 aggregate_NO2 = raw_data[6]
+
+print(np.array2string(aggregate_Fluor, separator =","))
 
 spec_fluor_aggregate = Spectrum(wl, aggregate_Fluor, label=label_Fluor)
 spec_CN_aggregate = Spectrum(wl, aggregate_CN, label=label_CN)
@@ -218,6 +224,28 @@ if is_plot:
     plt.show()
 
 
+if is_plot:
+    plt.plot(wl, aggregate_NO2/aggregate_NO2.max(), label="NO2", linestyle="dashed")
+    plt.plot(wl, CN_NO2_mix_of_dyes / CN_NO2_mix_of_dyes.max(), label="CN - NO2")
+    plt.plot(wl, F_NO2_mix_of_dyes / F_NO2_mix_of_dyes.max(), label="F - NO2")
+    plt.plot(wl, F_CN_NO2_mix_of_dyes/F_CN_NO2_mix_of_dyes.max(), label="F_CN_NO2 m_dyes")
+    plt.ylabel("Relative intensity (u.a)")
+    plt.xlabel("Wavelength")
+    plt.title("Comparison mix of dyes and NO2, in H2O")
+    plt.legend()
+    plt.savefig("Emission_aggregates_mix_dyes_vs_NO2.png", dpi=300)
+    plt.show()
+
+if is_plot:
+    plt.plot(wl, F_NO2_mix_of_aggregates/F_NO2_mix_of_aggregates.max(), label="F_NO2 m_agg")
+    plt.plot(wl, F_NO2_mix_of_dyes/F_NO2_mix_of_dyes.max(), label="F_NO2 m_dyes", linestyle="dashed")
+    plt.ylabel("Relative intensity (u.a)")
+    plt.xlabel("Wavelength")
+    plt.title("Emission spectra of aggregates, F-NO2 in H2O")
+    plt.legend()
+    plt.savefig("F_NO2_article.png", dpi=400)
+    plt.show()
+
 
 
 def sum_spectra(pars, x, data=None, S1=None, S2=None):
@@ -281,16 +309,16 @@ out = minimize(sum_spectra, fit_params, args=(wl,), kws={'data': F_NO2_mix_of_ag
 A = out.params['A']
 B = out.params['B']
 
-plt.plot(wl, F_NO2_mix_of_aggregates/F_NO2_mix_of_aggregates.max(), label='exp')
+plt.plot(wl, F_NO2_mix_of_aggregates/F_NO2_mix_of_aggregates.max(), label='experimental')
 # plt.plot(wl, A*aggregate_Fluor/aggregate_Fluor.max() + B*aggregate_CN/aggregate_CN.max(), label="sum " + str(A) + "% CN + " + str(B) + "% F")
 plt.plot(wl, A*aggregate_Fluor/aggregate_Fluor.max() + B*aggregate_NO2/aggregate_NO2.max(), label="sum")
-plt.plot(wl, A*aggregate_Fluor/aggregate_Fluor.max(), 'k--', label="F")
-plt.plot(wl, B*aggregate_NO2/aggregate_NO2.max(), 'b--', label="CN")
+plt.plot(wl, A*aggregate_Fluor/aggregate_Fluor.max(), 'k--', label="F", alpha=0.4)
+plt.plot(wl, B*aggregate_NO2/aggregate_NO2.max(), 'b--', label="NO2", alpha=0.4)
 plt.legend()
 plt.ylabel("Relative intensity (u.a)")
 plt.xlabel("Wavelength")
 plt.title("F_NO2 mix of aggregates as the sum of F and NO2 spectra")
-plt.savefig("F_NO2_mix_aggregate_as_sum.png", dpi=300)
+plt.savefig("F_NO2_mix_aggregate_as_sum_article.png", dpi=400)
 plt.show()
 
 

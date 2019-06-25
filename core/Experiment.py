@@ -290,17 +290,16 @@ class Experiment(object):
         B = 10
         # TODO store in measurement all the aqvuisiiton parameters
 
-        measurement.correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc,
-                                                                    max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros)
+        # measurement.correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc,
+        #                                                             max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros)
 
-        # measurement.correlateMonoProc(timeStamps_reduc, timeStamps_reduc,
-        #                                    max_correlation_time_in_tick, start_correlation_time_in_tick, B,
-        #                                    tick_duration_micros)
+        measurement.correlateMonoProc(timeStamps_reduc, timeStamps_reduc,
+                                           max_correlation_time_in_tick, start_correlation_time_in_tick, B,
+                                           tick_duration_micros)
 
         return measurement
 
-    def DLS(self, num_channel_1, num_channel_2, start_tick, end_tick, max_correlation_time_ms=100, start_time_mu_s=1,
-            precision=10):
+    def calculate_DLS(self, measurement):
         """
         Dynamic Light Scattering
 
@@ -315,27 +314,50 @@ class Experiment(object):
         :param precision:
         :return:
         """
-        numChannel = num_channel_1
 
-        timeStamps = self.data.channels[numChannel].photons['timestamps']
-        nanotimes = self.data.channels[numChannel].photons['nanotimes']
+        # TODO cross correlation
+
+        self.num_c1 = None
+        self.num_c2 = None
+        self.start_cor_time_micros = None
+        self.max_cor_time_ms = None
+        self.precision = None
+
+        num_channel = measurement.num_c1
+        start_tick = measurement.start_tick
+        end_tick = measurement.end_tick
+
+        if start_tick == 0:
+            start_tick = self.data.channels[num_c1].start_tick
+
+        if end_tick == -1:
+            end_tick = self.data.channels[num_c1].end_tick
+
+        timeStamps = self.data.channels[num_channel].photons['timestamps']
         idxStart, idxEnd = np.searchsorted(timeStamps, (start_tick, end_tick))
         timeStamps_reduc = timeStamps[idxStart:idxEnd]
 
-        if self.results.DLS_Measurements[numChannel] == None:
-            self.results.DLS_Measurements[numChannel] = DLS.DLS_Measurements()
+        max_correlation_time_in_tick = int(
+            measurement.max_cor_time_ms / 1E3 / self.exp_param.mAcrotime_clickEquivalentIn_second)
 
-        max_correlation_time_tick = int(
-            max_correlation_time_ms / 1000.0 / self.exp_param.mAcrotime_clickEquivalentIn_second)
+        start_correlation_time_in_tick = int(
+            measurement.start_cor_time_micros / 1E6 / self.exp_param.mAcrotime_clickEquivalentIn_second)
 
-        start_time_tick = int(start_time_mu_s / 1E6 / self.exp_param.mAcrotime_clickEquivalentIn_second)
+        # self.results.FCS_Measurements[num_channel].correlateMonoProc(timeStamps_reduc, timeStamps_reduc,
+        #                                                             max_correlation_time_in_tick, start_correlation_time_in_tick)
+        tick_duration_micros = self.exp_param.mAcrotime_clickEquivalentIn_second*1E6
 
-        self.results.DLS_Measurements[numChannel].correlateMonoProc(timeStamps_reduc,
-                                                                    timeStamps_reduc, max_correlation_time_tick,
-                                                                    start_correlation_time_in_tick=start_time_tick,
-                                                                    nbOfPointPerCascade_aka_B=int(precision),
-                                                                    tick_duration_micros=
-                                                                    self.exp_param.mAcrotime_clickEquivalentIn_second * 1E6)
+        B = measurement.precision
+        # TODO store in measurement all the aqvuisiiton parameters
+
+        # measurement.correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc,
+        #                                                             max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros)
+
+        measurement.correlateMonoProc(timeStamps_reduc, timeStamps_reduc,
+                                           max_correlation_time_in_tick, start_correlation_time_in_tick, B,
+                                           tick_duration_micros)
+
+        return measurement
 
     def get_info(self):
         print(self.file_name)

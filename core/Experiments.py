@@ -33,7 +33,8 @@ class Experiments(object):
             return None
 
     def save_state(self, shelf):
-        # shelf = shelve.open(savefilePath, 'n') #n for new
+        # self.shelf = shelve.open(savefile_path, 'n') #n for new
+        # self.shelf['experiments'] = self.experiments
         shelf['experiments'] = self.experiments
 
         # shelf.close()
@@ -55,3 +56,6 @@ class Experiments(object):
                     exp.calculate_FCS(measurement, num_c1, num_c2, start_cor_time_micros, max_cor_time_ms)
                 elif type_ == "lifetime":
                     exp.calculate_life_time(measurement)
+                elif type_ == "DLS":
+                    exp.calculate_DLS(measurement)
+

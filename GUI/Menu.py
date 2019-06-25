@@ -113,7 +113,7 @@ class Menu():
             return None
         else:
             extension = os.path.splitext(filePath)[1]
-            if extension not in (".spc", ".pt3", ".ttt"):
+            if extension not in (".spc", ".pt3", ".ttt", ".ptn"):
                 messagebox.showwarning("Open file", "The file has not the correct .spc, .pt3, .ttt, extension. Aborting")
                 return None
             else:

@@ -40,7 +40,7 @@ data_txt = []
 # data_SPE.append(["230419_F_CN_crystal2.spe", "230419_F_CN_crystal2"])
 # data_SPE.append(["230419_F_NO2_crystal2.spe", "230419_F_NO2_crystal2"])
 
-data_txt.append(["230419_F_NO2_crystal2.spe", "230419_F_NO2_crystal2"])
+# data_txt.append(["230419_F_NO2_crystal2.spe", "230419_F_NO2_crystal2"])
 
 class Spectrum:
     def __init__(self, file_name, type="spe", label=None):

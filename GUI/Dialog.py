@@ -32,6 +32,63 @@ class generatePoissonianDialog(simpledialog.Dialog):
         second = float(self.e2.get())
         self.result =  first, second
 
+class exploreChiSqaureDialog(simpledialog.Dialog):
+
+    def body(self, master):
+        self.master_frame = master.master_frame
+        self.list_label_string_variable_fit = master.list_label_string_variable_fit
+        self.list_label_string_variable_fit.append("None")
+
+        ttk.Label(self.master_frame, text='var').grid(row=0, column=0)
+        ttk.Label(self.master_frame, text='limit min').grid(row=0, column=1)
+        ttk.Label(self.master_frame, text='limit max').grid(row=0, column=2)
+
+        self.cb_explore_chi_var1_sv = tk.StringVar()
+        cb = ttk.Combobox(self.master_frame, width=15, justify=tk.CENTER, textvariable=self.cb_explore_chi_var1_sv,
+                          values='', state='readonly')
+        cb['values'] = self.list_label_string_variable_fit
+        self.cb_explore_chi_var1_sv.set(self.list_label_string_variable_fit[0])
+        cb.set(self.list_label_string_variable_fit[0])
+        cb.grid(row=1, column=0)
+
+        self.cb_explore_chi_var2_sv = tk.StringVar()
+        cb = ttk.Combobox(self.master_frame, width=15, justify=tk.CENTER, textvariable=self.cb_explore_chi_var2_sv,
+                          values='', state='readonly')
+        cb['values'] = self.list_label_string_variable_fit
+        self.cb_explore_chi_var2_sv.set(self.list_label_string_variable_fit[1])
+        cb.set(self.list_label_string_variable_fit[1])
+        cb.grid(row=2, column=0)
+
+        self.e_lim_min_var1 = ttk.Entry(master)
+        self.e_lim_max_var1 = ttk.Entry(master)
+        self.e_lim_min_var2 = ttk.Entry(master)
+        self.e_lim_max_var2 = ttk.Entry(master)
+
+        self.e_lim_min_var1.grid(row=1, column=1)
+        self.e_lim_max_var1.grid(row=1, column=2)
+        self.e_lim_min_var2.grid(row=2, column=1)
+        self.e_lim_max_var2.grid(row=1, column=2)
+
+
+        #default value
+        # self.e1.insert(tk.END, '100.0')
+        # self.e2.insert(tk.END, '100.0')
+        # self.e3.insert(tk.END, '100.0')
+
+
+
+        self.result = None
+        return self.e_lim_min_var1 # initial focus
+
+    def apply(self):
+        first = float(self.e_lim_min_var1.get())
+        second = float(self.e_lim_max_var1.get())
+        third = float(self.e_lim_min_var2.get())
+        fourth = float(self.e_lim_max_var2.get())
+        fifth = self.cb_explore_chi_var1_sv.get()
+        sixth = self.cb_explore_chi_var2_sv.get()
+        self.result = first, second, third, fourth, fifth, sixth
+
 class fitIRFDialog(simpledialog.Dialog):
 
     def body(self, master):

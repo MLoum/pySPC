@@ -39,6 +39,9 @@ class Measurements:
         self.data = None
         self.error_bar = None
 
+        self.fit_x = None
+        self.residual_x = None
+
         # in tick
 
 
@@ -56,8 +59,13 @@ class Measurements:
         """
         if idx_start != 0:
             self.idx_start = np.searchsorted(self.time_axis, idx_start)
+        else:
+            self.idx_start = 0
         if idx_end != -1:
             self.idx_end = np.searchsorted(self.time_axis, idx_end)
+        else:
+            self.idx_end = len(self.time_axis)
+
 
     def fit(self, idx_start=0, idx_end=-1):
         """
@@ -72,11 +80,12 @@ class Measurements:
         self.fit_results = self.model.fit(y, self.params, t=x)
 
         self.eval_y_axis = self.fit_results.best_fit
-        self.eval_x_axis = x
+        self.eval_x_axis = self.fit_x = x
 
         self.residuals = self.fit_results.residual
+        self.residual_x = x
 
-        return self.fit_results
+        return self.fit_results.fit_report()
 
     def eval(self, idx_start=0, idx_end=-1):
         """
@@ -92,7 +101,8 @@ class Measurements:
 
         self.eval_y_axis = self.model.eval(self.params, t=x)
         self.residuals = self.eval_y_axis - y
-        self.eval_x_axis = x
+        self.residual_x = x
+        self.eval_x_axis = self.fit_x = x
 
     def guess(self, idx_start=0, idx_end=-1):
         """
@@ -118,6 +128,19 @@ class Measurements:
         :return:
         """
         pass
+
+    def set_hold_params(self, params_hold):
+        for i, key in enumerate(self.params):
+            self.params[key].set(max=params_hold[i])
+
+    def set_params_min(self, params_min):
+        for i, key in enumerate(self.params):
+            self.params[key].set(min=params_min[i])
+
+    def set_params_max(self, params_max):
+        for i, key in enumerate(self.params):
+            self.params[key].set(max=params_max[i])
+
 
     def set_model(self, model_name):
         """

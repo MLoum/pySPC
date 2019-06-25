@@ -125,6 +125,13 @@ class View():
             self.archi.analyze_area.master_frame.focus_set()
         if event.char == "r":
             self.archi.log_area.master_frame.focus_set()
+        if event.keysym == "Control_L":
+            self.ctrl_is_held = True
+            # print("Control_L")
+        if event.keysym == "Shift_L":
+            self.shift_is_held = True
+        if event.keysym == "Alt_L":
+            self.alt_is_held = True
 
 
     def validateEntryNumeric(self, action, index, value_if_allowed,

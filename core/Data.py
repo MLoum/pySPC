@@ -6,6 +6,7 @@ from core import Results
 from core.importFormat import pqreader
 from core.importFormat import bhreader
 from core.importFormat import nist_fpga
+from core.importFormat import SimulatedData
 # from .analyze import bin
 
 
@@ -65,8 +66,8 @@ class Data():
         :return:
         """
         if (os.path.isfile(file_path)) is False:
-            print("File not existing")
-            return "File not existing"
+            print("File does not exist")
+            return "File does not exist"
 
 
         filename, file_extension = os.path.splitext(file_path)
@@ -84,7 +85,8 @@ class Data():
             self.expParam.fill_with_ttt_meta_data(meta)
 
         elif file_extension == ".ptn":
-
+            timestamps, detectors, nanotimes, timestamps_unit, meta = SimulatedData.load_ptn(file_path)
+            self.expParam.fill_with_ttt_meta_data(meta)
             pass
 
         # Les photons ne sont pas triès par detecteur, il le sont par ordre d'arrivée
