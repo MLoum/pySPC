@@ -9,7 +9,7 @@ from .correlate import whal_auto
 
 from threading import Thread
 
-from core.analyze.pycorrelate import pcorrelate, make_loglags, ucorrelate_coeff, pnormalize, find_pair_Whal
+from core.analyze.pycorrelate import pcorrelate, make_loglags, ucorrelate_coeff, pnormalize, find_pair_Whal, pnormalize_coeff
 
 import numba
 
@@ -140,11 +140,11 @@ class CorrelationMeasurement(Measurements):
         # G = whal_auto(timestamps_1_cpy, coeff, self.time_axis, G, B=10)
 
         # Lawrence algo
-        self.data = pcorrelate(t=timestamps_1, u=timestamps_2, bins=self.time_axis, normalize=True)
+        # self.data = pcorrelate(t=timestamps_1, u=timestamps_2, bins=self.time_axis, normalize=True)
 
         # Whal algo
-        # G = self.correlate_whal(timestamps_1, coeff, timestamps_2, coeff, self.time_axis, B=10)
-        # self.data = G
+        G = self.correlate_whal(timestamps_1, coeff, timestamps_2, coeff, self.time_axis, B=10)
+        self.data = G
         # self.normalize_correlation()
 
 
@@ -157,20 +157,22 @@ class CorrelationMeasurement(Measurements):
         # self.pcorrelate_me(timestamps1, self.timeAxis, self.data)
 
         self.scale_time_axis()
-        self.time_axis = self.time_axis[:-1]
+        # self.time_axis = self.time_axis[:-1]
 
 
 
-    def correlate_whal(self, t_stamp_a, coeff_a, t_stamp_b, coeff_b, lags, B=10):
+    def correlate_whal(self, t_stamp_a, coeff_a, t_stamp_b, coeff_b, lags, B=10, is_normalize=True):
         """
         lags in tick
         :param t_stamps_a:
         :param lags:
         :return:
         """
+        duration = t_stamp_a[-1] - t_stamp_a[0]
+
         G = np.zeros(lags.size)
         if id(t_stamp_a) == id(t_stamp_b):
-            is_auto_cor= True
+            is_auto_cor = True
         else:
             is_auto_cor = False
 
@@ -210,24 +212,36 @@ class CorrelationMeasurement(Measurements):
                 else:
                     t_stamp_b = t_stamp_a
 
-
-                coarsening_counter = 0
+                coarsening_counter = 1
             else:
                 coarsening_counter += 1
 
-            # Pair calculation
-
-
             # Lag as also to be divided by 2 for each cascade
             corrected_lag = int(lag / np.power(2, idx_G//B))
+            corrected_lag = int(lag / coaserning_value)
 
             # Short numpy implementation that is quite slow bevause it does'nt take into account the fact that the list are ordered.
             # correlation_match = np.in1d(t_stamp_a, t_stamp_a_dl, assume_unique=True)
             # G[idx_G] = np.sum(coeff_a[correlation_match])
 
+            # Pair calculation
             # Numba or Cython implementation
             G[idx_G] = find_pair_Whal(t_stamp_a, coeff_a, t_stamp_b, coeff_b, corrected_lag)
             G[idx_G] /= coaserning_value
+
+        # G /= np.diff(lags)
+        if is_normalize:
+
+            # G = pnormalize_coeff()
+            nb_photon = t_stamp_a.size
+            G *= (duration - lags) / (nb_photon ** 2)
+            # for idx_G, lag in enumerate(lags):
+            #     G[idx_G] *= (duration - lag) / (nb_photon**2)
+            # for i, tau in enumerate(bins[1:]):
+            #     Gn[i] *= ((duration - tau) /
+            #               (float((t - t[0] >= tau).sum()) *
+            #                float((u - u[0] <= (u.max() - u[0] - tau)).sum())))
+
 
         return G
 

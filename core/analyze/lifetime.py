@@ -261,7 +261,7 @@ class lifeTimeMeasurements(Measurements):
 
         if self.use_IR:
             self.find_idx_of_fit_limit(idx_start, idx_end)
-            y = self.data[self.idx_start:self.idx_end]
+            y_eval_range  = self.data[self.idx_start:self.idx_end]
             x_eval_range = self.time_axis[self.idx_start:self.idx_end]
             self.model.x_range = (self.idx_start, self.idx_end)
 
@@ -285,9 +285,11 @@ class lifeTimeMeasurements(Measurements):
                 return (ymodel - ydata * np.log(ymodel)).sum()
 
             def maximum_likelihood_method(params, x, ydata):
+                # NB : we all the data on the time_axis in order to calculate the Convolution by the IRF.
+                # But the likelihood has to be calculated only on the selection
                 ymodel = self.model.eval(x, params)
                 # likelyhood = 2 * (ydata*np.log(ydata/ymodel)).sum()
-                likelyhood = -(2 * ydata * np.log(ymodel)).sum()
+                likelyhood = -(2 * ydata[self.idx_start:self.idx_end] * np.log(ymodel[self.idx_start:self.idx_end])).sum()
                 return likelyhood
 
             def callback_iteration(params, iter, resid, *args, **kws):
@@ -306,8 +308,9 @@ class lifeTimeMeasurements(Measurements):
                 # TODO draw and report progress
                 pass
 
+            # TODO choose minimization technique
             minimization = "chi-square"
-            minimization = "maximum likelihood"
+            # minimization = "maximum likelihood"
             weights = 1 / np.sqrt(self.data)
             # weights[y == 0] = 1. / np.sqrt(baseline_true)
             weights[self.data == 0] = 0
@@ -317,6 +320,7 @@ class lifeTimeMeasurements(Measurements):
                 self.fit_results = minimize(residuals, self.fit_results.params, args=(self.time_axis, self.data, weights),
                                             method='leastsq', iter_cb=callback_iteration)
             elif minimization == "maximum likelihood":
+                # self.fit_results = minimize(maximum_likelihood_method, self.params, args=(self.time_axis, self.data), method='nelder', iter_cb=callback_iteration)
                 self.fit_results = minimize(maximum_likelihood_method, self.params, args=(self.time_axis, self.data), method='nelder', iter_cb=callback_iteration)
 
                 # self.fit_results = minimize(maximum_likelihood_method, self.fit_results.params, args=(self.time_axis, self.data),

@@ -35,6 +35,7 @@ def find_pair_Whal(t_stamp_a, coeff_a, t_stamp_b, coeff_b, lag):
             is_delay_turn = False
     return G
 
+
 # @numba.jit(nopython=True)
 def whal_auto(t_stamp_a, coeff_a, lags, B=10):
     """
