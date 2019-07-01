@@ -140,11 +140,11 @@ class CorrelationMeasurement(Measurements):
         # G = whal_auto(timestamps_1_cpy, coeff, self.time_axis, G, B=10)
 
         # Lawrence algo
-        # self.data = pcorrelate(t=timestamps_1, u=timestamps_2, bins=self.time_axis, normalize=True)
+        self.data = pcorrelate(t=timestamps_1, u=timestamps_2, bins=self.time_axis, normalize=True)
 
         # Whal algo
-        G = self.correlate_whal(timestamps_1, coeff, timestamps_2, coeff, self.time_axis, B=10)
-        self.data = G
+        # G = self.correlate_whal(timestamps_1, coeff, timestamps_2, coeff, self.time_axis, B=10)
+        # self.data = G
         # self.normalize_correlation()
 
 
@@ -157,7 +157,7 @@ class CorrelationMeasurement(Measurements):
         # self.pcorrelate_me(timestamps1, self.timeAxis, self.data)
 
         self.scale_time_axis()
-        # self.time_axis = self.time_axis[:-1]
+        self.time_axis = self.time_axis[:-1]
 
 
 
