@@ -35,9 +35,79 @@ def find_pair_Whal(t_stamp_a, coeff_a, t_stamp_b, coeff_b, lag):
             is_delay_turn = False
     return G
 
+@numba.jit(nopython=True)
+def coarsen_timestamp(t_stamp, coeff):
+    # t_stamp //= 2 # Does not work yet with numba
+    # t_stamp = np.ceil(np.array(0.5 * t_stamp))
+    idx_ts = 0
+    while idx_ts < t_stamp.size:
+        t_stamp[idx_ts] = int(t_stamp[idx_ts]/2)
+        idx_ts += 1
+
+
+    coarse_ts = np.zeros(t_stamp.size)
+    coarse_coeff = np.zeros(t_stamp.size)
+    idx_coars = 0
+    idx_ts = 0
+    last_ts = 0
+    while idx_ts < t_stamp.size:
+        coarse_ts[idx_coars] = t_stamp[idx_ts]
+        coarse_coeff[idx_coars] = coeff[idx_ts]
+        last_ts = t_stamp[idx_ts]
+        idx_ts += 1
+        if idx_ts < t_stamp.size:
+            if t_stamp[idx_ts] == last_ts:
+                # Add/merge the coeff of entries with the same timestamp
+                while idx_ts < t_stamp.size and t_stamp[idx_ts] == last_ts:
+                    coarse_coeff[idx_coars] += coeff[idx_ts]
+                    idx_ts += 1
+        idx_coars += 1
+
+    return coarse_ts, coarse_coeff
 
 # @numba.jit(nopython=True)
-def whal_auto(t_stamp_a, coeff_a, lags, B=10):
+def pnormalize_coeff_whal(G, t, u, bins):
+    r"""Normalize point-process cross-correlation function.
+    This normalization is usually employed for fluorescence correlation
+    spectroscopy (FCS) analysis.
+    The normalization is performed according to
+    `(Laurence 2006) <https://doi.org/10.1364/OL.31.000829>`__.
+    Basically, the input argument `G` is multiplied by:
+    .. math::
+        \frac{T-\tau}{n(\{i \ni t_i \le T - \tau\})n(\{j \ni u_j \ge \tau\})}
+    where `n({})` is the operator counting the elements in a set, *t* and *u*
+    are the input arrays of the correlation, *τ* is the time lag and *T*
+    is the measurement duration.
+    Arguments:
+        G (array): raw cross-correlation to be normalized.
+        t (array): first input array of "points" used to compute `G`.
+        u (array): second input array of "points" used to compute `G`.
+        bins (array): array of bins used to compute `G`. Needs to have the
+            same units as input arguments `t` and `u`.
+    Returns:
+        Array of normalized values for the cross-correlation function,
+        same size as the input argument `G`.
+    """
+    u_duration = u.max() - u[0]
+    duration = max((t.max(), u.max())) - min((t.min(), u.min()))
+    Gn = G.copy()
+    # for i, tau in enumerate(bins[1:]):
+    #     Gn[i] *= ((duration - tau) /
+    #               (float((t >= tau).sum()) *
+    #                float((u <= (u.max() - tau)).sum())))
+    for i, tau in enumerate(bins):
+        T = duration - tau
+        N1 = float((t - t[0] >= tau).sum())
+        N2 = float((u - u[0] <= (u_duration - tau)).sum())
+        if N1 == 0:
+            N1 = 1
+        if N2 == 0:
+            N2 = 1
+        Gn[i] *= T / (N1 * N2)
+    return Gn
+
+# @numba.jit(nopython=True)
+def correlate_whal(t_stamp_a_true, coeff_a, t_stamp_b_true, coeff_b, lags, B=10, is_normalize=True, is_auto_cor=True):
     """
     lags in tick
     :param t_stamps_a:
@@ -45,119 +115,53 @@ def whal_auto(t_stamp_a, coeff_a, lags, B=10):
     :return:
     """
     G = np.zeros(lags.size)
-    t_stamp_a = np.copy(t_stamp_a)
-    coeff_a = np.copy(coeff_a)
 
+
+    t_stamp_a = np.copy(t_stamp_a_true)
+    if is_auto_cor:
+        t_stamp_b = t_stamp_a
+    else:
+        t_stamp_b = np.copy(t_stamp_b_true)
+
+    coaserning_value = 1
     coarsening_counter = 0
+
     for idx_G, lag in enumerate(lags):
         if coarsening_counter == B:
-            #coaserning
-            # NB : //= -> integer division
-            # for idx in range(t_stamp_a.size):
-            #     t_stamp_a[idx] = t_stamp_a[idx]//2
-            t_stamp_a //= 2
-            # find the position of consecutive idx with same timestamp (i.e difference = 0)
-            consecutive_idxs = np.argwhere(np.diff(t_stamp_a) == 0)
-            # Merge weighting (coeff) of same timestamps
-            coeff_a[consecutive_idxs] += coeff_a[consecutive_idxs + 1]
-            # Removing duplicate timestamps
+            # Coarsening the timestamps
+            t_stamp_a, coeff_a = coarsen_timestamp(t_stamp_a, coeff_a)
 
-            t_stamp_a = np.delete(t_stamp_a, consecutive_idxs + 1)
-            coeff_a = np.delete(coeff_a, consecutive_idxs + 1)
+            coaserning_value *= 2
+            if not is_auto_cor:
+                t_stamp_b, coeff_b = coarsen_timestamp(t_stamp_b, coeff_b)
+            else:
+                t_stamp_b = t_stamp_a
+                coeff_b = coeff_a
 
-            # idx_to_keep = np.nonzero(np.diff(t_stamp_a))
-            # # idx_to_keep = np.invert(consecutive_idxs)
-            # t_stamp_a = t_stamp_a[idx_to_keep]
-            # coeff_a = coeff_a[idx_to_keep]
-
-            coarsening_counter = 0
+            coarsening_counter = 1
         else:
             coarsening_counter += 1
-
-        # Pair calculation
-
-
 
         # Lag as also to be divided by 2 for each cascade
-        corrected_lag = lag / np.power(2, idx_G//B)
-        t_stamp_a_dl = t_stamp_a + corrected_lag
-
+        # corrected_lag = int(lag / np.power(2, idx_G // B))
+        corrected_lag = int(lag / coaserning_value)
 
         # Short numpy implementation that is quite slow bevause it does'nt take into account the fact that the list are ordered.
-        correlation_match = np.in1d(t_stamp_a, t_stamp_a_dl, assume_unique=True)
-        G[idx_G] = np.sum(coeff_a[correlation_match])
-
-        # Numba or Cython implementation
-        idx, idx_dl = 0,0
-        is_delay_turn = False
-        nb_stamp_a_minus_1 = t_stamp_a.size - 1
-        nb_stamp_b_minus_1 = t_stamp_a_dl.size - 1
-        while(idx < nb_stamp_a_minus_1 and idx_dl < nb_stamp_b_minus_1):
-            if is_delay_turn is False:
-                while(t_stamp_a[idx] < t_stamp_a_dl[idx_dl] and idx < nb_stamp_a_minus_1):
-                    idx += 1
-                if t_stamp_a[idx] == t_stamp_a_dl[idx_dl]:
-                    G[idx_G] += coeff_a[idx] * coeff_a[idx]
-                    idx_dl += 1
-
-                is_delay_turn = True
-
-            else:
-                while(t_stamp_a_dl[idx_dl] < t_stamp_a[idx] and idx_dl < nb_stamp_b_minus_1):
-                    idx_dl += 1
-                if t_stamp_a[idx] == t_stamp_a_dl[idx_dl]:
-                    G[idx_G] += coeff_a[idx] * coeff_a[idx]
-                    idx += 1
-
-                is_delay_turn = False
-
-    return G
-
-@numba.jit(nopython=True)
-def whal(t_stamp_a, coeff_a, t_stamp_b, coeff_b, lags, B=10):
-    """
-    lags in tick
-    :param t_stamps_a:
-    :param lags:
-    :return:
-    """
-    G = np.zeros(lags.size)
-    t_stamp_a = np.copy(t_stamp_a)
-    t_stamp_b = np.copy(t_stamp_b)
-
-    coarsening_counter = 0
-    for lag in lags:
-        if coarsening_counter%B == 0:
-            #coaserning
-            t_stamp_a /= 2
-            # find the position of consecutive idx with same timestamp (i.e difference = 0)
-            consecutive_idxs = np.argwhere(np.diff(t_stamp_a) == 0)
-            # Merge weighting (coeff) of same timestamps
-            coeff_a[consecutive_idxs] += coeff_a[consecutive_idxs + 1]
-            # Removing duplicate timestamps
-            idx_to_keep = np.nonzero(np.diff(t_stamp_a))
-            t_stamp_a = t_stamp_a[idx_to_keep]
-            coeff_a = coeff_a[idx_to_keep]
-
-            t_stamp_b /= 2
-            # find the position of consecutive idx with same timestamp (i.e difference = 0)
-            consecutive_idxs = np.argwhere(np.diff(t_stamp_b) == 0)
-            # Merge weighting (coeff) of same timestamps
-            coeff_b[consecutive_idxs] += coeff_b[consecutive_idxs + 1]
-            # Removing duplicate timestamps
-            idx_to_keep = np.nonzero(np.diff(t_stamp_b))
-            t_stamp_b = t_stamp_b[idx_to_keep]
-            coeff_b = coeff_b[idx_to_keep]
-
-            coarsening_counter = 0
-        else:
-            coarsening_counter += 1
+        # correlation_match = np.in1d(t_stamp_a, t_stamp_a_dl, assume_unique=True)
+        # G[idx_G] = np.sum(coeff_a[correlation_match])
 
         # Pair calculation
-        correlation_match = np.in1d(t_stamp_a, t_stamp_b + lag)
-        G[lag] = np.sum(coeff_a[correlation_match])
+        # Numba or Cython implementation
+        G[idx_G] = find_pair_Whal(t_stamp_a, coeff_a, t_stamp_b, coeff_b, corrected_lag)
+        G[idx_G] /= coaserning_value
+
+    if is_normalize:
+        G = pnormalize_coeff_whal(G, t_stamp_a_true, t_stamp_b_true, lags)
 
     return G
+
+
+
 
 @numba.jit(nopython=True)
 def pnormalize(G, t, u, bins):
@@ -260,7 +264,7 @@ def pcorrelate(t, u, bins, normalize=False):
         G = pnormalize(G, t, u, bins)
     return G
 
-@numba.jit(nopython=True)
+# @numba.jit(nopython=True)
 def pnormalize_coeff(G, t, u, bins):
     r"""Normalize point-process cross-correlation function.
     This normalization is usually employed for fluorescence correlation
@@ -294,6 +298,9 @@ def pnormalize_coeff(G, t, u, bins):
                   (float((t - t[0] >= tau).sum()) *
                    float((u - u[0] <= (u.max() - u[0] - tau)).sum())))
     return Gn
+
+
+
 
 @numba.jit(nopython=True)
 def pcorrelate_coeff(t, u, bins, coeff, normalize=False):

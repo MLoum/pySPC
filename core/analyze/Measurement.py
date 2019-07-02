@@ -13,7 +13,7 @@ def update_param_vals(pars, prefix, **kwargs):
 
 
 class Measurements:
-    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="", name="", comment=""):
+    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="", name="", comment="", logger=None):
         self.exp_param = exp_param
 
         self.type = type
@@ -42,7 +42,7 @@ class Measurements:
         self.fit_x = None
         self.residual_x = None
 
-        # in tick
+        self.logger = logger
 
 
         self.canonic_fig, self.canonic_fig_ax = None, None
@@ -77,7 +77,8 @@ class Measurements:
         self.find_idx_of_fit_limit(idx_start, idx_end)
         y = self.data[self.idx_start:self.idx_end]
         x = self.time_axis[self.idx_start:self.idx_end]
-        self.fit_results = self.model.fit(y, self.params, t=x)
+        error_bar = self.error_bar[self.idx_start:self.idx_end]
+        self.fit_results = self.model.fit(y, self.params, t=x, weights=error_bar)
 
         self.eval_y_axis = self.fit_results.best_fit
         self.eval_x_axis = self.fit_x = x
@@ -166,5 +167,10 @@ class Measurements:
         :return:
         """
         return "TODO !"
+
+    def log(self, msg, level="info"):
+        if self.logger is not None:
+            if level=="info":
+                self.logger.info(msg)
 
 

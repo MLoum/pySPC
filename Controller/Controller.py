@@ -193,7 +193,7 @@ class Controller:
     def create_measurement(self, type, name, comment):
         start_tick, end_tick = self.get_analysis_start_end_tick()
         num_channel = self.view.currentChannel
-        return self.current_exp.create_measurement(num_channel, start_tick, end_tick, type, name, comment)
+        return self.current_exp.create_measurement(num_channel, start_tick, end_tick, type, name, comment, is_store=True, logger=self.view.logger)
 
     def get_measurement(self, measurement_name):
         return self.current_exp.get_measurement(measurement_name)
@@ -257,10 +257,17 @@ class Controller:
             param = None
 
 
+
+        self.view.archi.log_area.master_frame.focus_set()
+        self.view.archi.log_area.logger.info("starting measurement calculation\n")
         self.view.archi.analyze_area.analyzePgb.start()
+
         self.model.calculate_measurement(exp_name, measurement.name, param)
         self.view.archi.analyze_area.analyzePgb.stop()
         self.view.archi.status_area.update_tree_view_line(measurement)
+        self.view.archi.log_area.logger.info("calculaation complete\n")
+        self.view.archi.analyze_area.master_frame.focus_set()
+
 
     def graph_measurement(self, measurement="current"):
         # t1_tick, t2_tick = self.get_analysis_start_end_tick()

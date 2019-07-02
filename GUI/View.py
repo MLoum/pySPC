@@ -25,6 +25,8 @@ from . import Menu
 
 from . import Architecture
 
+import logging
+
 
 from .appearanceParameters import appearenceParam
 
@@ -34,6 +36,8 @@ class View():
         self.controller = controller
 
         self.appearenceParam = appearenceParam()
+
+        self.logger = None
 
         self.currentTimeWindow = [0,0] #µs
         self.current_time_zoom_window = [0, 0]  # µs

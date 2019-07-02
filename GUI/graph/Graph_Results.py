@@ -80,7 +80,7 @@ class Graph_Results:
         self.createCallBacks()
         self.createWidgets()
 
-    def plot(self, measurement, is_plot_fit=False, is_zoom_x_selec=False, is_autoscale=False):
+    def plot(self, measurement, is_plot_fit=False, is_zoom_x_selec=False, is_autoscale=False, is_plot_error_bar=False):
         if measurement is None:
             return
 
@@ -94,6 +94,7 @@ class Graph_Results:
 
         self.data_y = y = measurement.data
         self.data_x = x = measurement.time_axis
+        self.error_bar = error_bar = measurement.error_bar
         self.data_fit = fit_y = measurement.eval_y_axis
         self.fit_x = fit_x = measurement.fit_x
         self.residual_x = residual_x = measurement.residual_x
@@ -111,6 +112,7 @@ class Graph_Results:
 
         plt_function = self.ax[0].plot
         plt_residual_fct = self.ax[1].plot
+        plt_error_bar_fct = self.ax[0].plot
 
         self.ax[0].set_xlim(x[0], x[-1])
         self.ax[1].set_xlim(x[0], x[-1])
@@ -147,6 +149,7 @@ class Graph_Results:
 
             plt_function = self.ax[0].semilogx
             plt_residual_fct = self.ax[1].semilogx
+            plt_error_bar_fct = self.ax[0].semilogx
 
         elif self.type == "DLS":
             self.ax[0].set_xlabel("time lag µs")
@@ -156,6 +159,7 @@ class Graph_Results:
 
             plt_function = self.ax[0].semilogx
             plt_residual_fct = self.ax[1].semilogx
+            plt_error_bar_fct = self.ax[0].semilogx
 
         plt.subplots_adjust(hspace=0)
 
@@ -201,6 +205,12 @@ class Graph_Results:
             if is_plot_fit:
                 plt_function(fit_x, fit_y, self.appearanceParam.line_type_fit)
                 plt_residual_fct(residual_x, residuals_y, self.appearanceParam.line_type_residual)
+
+        is_plot_error_bar = True
+        if is_plot_error_bar and error_bar is not None:
+            plt_error_bar_fct(x, y + error_bar, alpha=self.appearanceParam.alpha_error_bar)
+            plt_error_bar_fct(x, y - error_bar, alpha=self.appearanceParam.alpha_error_bar)
+
 
         # selection patch
         if self.x_selec_min is not None :

@@ -21,6 +21,7 @@ class appearenceParam():
 
         # Graph result
         self.graph_result_shift_amount = 0.07
+        self.alpha_error_bar = 0.2
 
 
     def saveToIniFile(self):

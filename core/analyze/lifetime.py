@@ -165,8 +165,8 @@ class ExpConvGauss(Model):
 #TODO creer une classe mère pour les analyses.
 class lifeTimeMeasurements(Measurements):
 
-    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
-        super().__init__(exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment)
+    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment="", logger=None):
+        super().__init__(exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment, logger)
         self.IR_raw, self.IR_processed, self.IR_name = None, None, None
         self.IR_start, self.IR_end = None, None
         self.IR_bckg = 0
