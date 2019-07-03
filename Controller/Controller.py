@@ -244,12 +244,14 @@ class Controller:
         measurement.start_tick, measurement.end_tick = self.get_analysis_start_end_tick()
 
         if measurement.type == "FCS":
+            is_multi_proc = self.view.archi.analyze_area.analyze_gui.is_multiproc_iv.get()
+            algo = self.view.archi.analyze_area.analyze_gui.algo_combo_box_sv.get()
             gui = self.view.archi.analyze_area.analyze_gui
             num_c1 = int(gui.num_c1_sv.get()) - 1
             num_c2 = int(gui.num_c2_sv.get()) - 1
             max_correlTime_ms = float(gui.maxCorrelTime_sv.get())
             start_correlTime_ms = float(gui.startCorrelTime_sv.get())
-            param = [num_c1, num_c2, start_correlTime_ms, max_correlTime_ms]
+            param = [num_c1, num_c2, start_correlTime_ms, max_correlTime_ms, is_multi_proc, algo]
         elif measurement.type == "lifetime":
             # TODO create Entry
             channel = 0
@@ -263,6 +265,7 @@ class Controller:
         self.view.archi.analyze_area.analyzePgb.start()
 
         self.model.calculate_measurement(exp_name, measurement.name, param)
+
         self.view.archi.analyze_area.analyzePgb.stop()
         self.view.archi.status_area.update_tree_view_line(measurement)
         self.view.archi.log_area.logger.info("calculaation complete\n")
@@ -357,8 +360,6 @@ class Controller:
         if measurement is None:
             return
 
-
-
         channel = self.view.currentChannel
         # TODO cursor with fit limits.
 
@@ -375,9 +376,9 @@ class Controller:
 
             elif mode == "fit":
                 measurement.set_params(params)
-                # measurement.set_params_max(params_max)
-                # measurement.set_params_min(params_min)
-                # measurement.set_hold_params(params_hold)
+                measurement.set_params_max(params_max)
+                measurement.set_params_min(params_min)
+                measurement.set_hold_params(params_hold)
                 fit_report = measurement.fit(idx_start, idx_end)
                 # TODO set option to tell if user want fit results exported to fit params
                 gui.setParamsFromFit(measurement.params)

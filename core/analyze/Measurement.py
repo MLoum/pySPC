@@ -132,7 +132,7 @@ class Measurements:
 
     def set_hold_params(self, params_hold):
         for i, key in enumerate(self.params):
-            self.params[key].set(max=params_hold[i])
+            self.params[key].set(vary=params_hold[i])
 
     def set_params_min(self, params_min):
         for i, key in enumerate(self.params):

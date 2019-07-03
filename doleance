@@ -1,18 +1,22 @@
-Ecran d'attente
+Ecran d'attente -> ~OK
+
 Restore IR parameter in state file.
 
 Test Lifetime
 
-Export Graphe
+Export Graphe en script python
 
-Script des actions.
+Script des actions -> cf controlleur.
 
+Améliorer l'alog de FCS Whal pour le passer en tout numba
+Identifer dans le time zoom des zones de temps de vie et de corrélation.
+
+Burst
+-----
 Algo burst ac des Flanks
 
 Liste des Bursts
 
-Mettre des markers sur la timeline à la position des bursts.
-
-psot Filtres des bursts dans un grand tableau (ligne grisée) (comme une liste de preset).
+Filtres des bursts dans un grand tableau (ligne grisée) (comme une liste de preset).
 
 Tracer des histos sur les données des bursts.

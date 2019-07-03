@@ -5,8 +5,9 @@ sampled in time) **or** on point-processes (e.g. timestamps of events).
 
 import numpy as np
 import numba
+import datetime
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, nogil=True)
 def find_pair_Whal(t_stamp_a, coeff_a, t_stamp_b, coeff_b, lag):
     G = 0
     idx, idx_dl = 0, 0
@@ -35,7 +36,7 @@ def find_pair_Whal(t_stamp_a, coeff_a, t_stamp_b, coeff_b, lag):
             is_delay_turn = False
     return G
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, nogil=True)
 def coarsen_timestamp(t_stamp, coeff):
     # t_stamp //= 2 # Does not work yet with numba
     # t_stamp = np.ceil(np.array(0.5 * t_stamp))
@@ -65,7 +66,7 @@ def coarsen_timestamp(t_stamp, coeff):
 
     return coarse_ts, coarse_coeff
 
-# @numba.jit(nopython=True)
+@numba.jit(nopython=True, nogil=True)
 def pnormalize_coeff_whal(G, t, u, bins):
     r"""Normalize point-process cross-correlation function.
     This normalization is usually employed for fluorescence correlation
@@ -106,6 +107,175 @@ def pnormalize_coeff_whal(G, t, u, bins):
         Gn[i] *= T / (N1 * N2)
     return Gn
 
+@numba.jit(nopython=True, nogil=True)
+def correlate_whal_full_numba(t_stamp_a_true, coeff_a, t_stamp_b_true, coeff_b, lags, B=10, is_normalize=True, is_auto_cor=True):
+    """
+    lags in tick
+    :param t_stamps_a:
+    :param lags:
+    :return:
+    """
+    G = np.zeros(lags.size)
+
+    # print(datetime.datetime.now(), " Start with :", t_stamp_a_true[0])
+    t_stamp_a = np.copy(t_stamp_a_true)
+    if is_auto_cor:
+        t_stamp_b = t_stamp_a
+    else:
+        t_stamp_b = np.copy(t_stamp_b_true)
+
+    coaserning_value = 1
+    coarsening_counter = 0
+    idx_end_ts_a = t_stamp_a.size - 1
+    idx_end_ts_b = t_stamp_b.size - 1
+
+    for idx_G, lag in enumerate(lags):
+        if coarsening_counter == B:
+            # Coarsening the timestamps
+            # t_stamp_a, coeff_a = coarsen_timestamp(t_stamp_a, coeff_a)
+
+            idx_ts = 0
+            while idx_ts < idx_end_ts_a:
+                t_stamp_a[idx_ts] = int(t_stamp_a[idx_ts] / 2)
+                idx_ts += 1
+
+            # coarse_ts = np.zeros(t_stamp.size)
+            # coarse_coeff = np.zeros(t_stamp.size)
+            idx_coars = 0
+            idx_ts = 0
+            last_ts = 0
+            while idx_ts < idx_end_ts_a:
+                t_stamp_a[idx_coars] = t_stamp_a[idx_ts]
+                coeff_a[idx_coars] = coeff_a[idx_ts]
+                last_ts = t_stamp_a[idx_ts]
+                idx_ts += 1
+                if idx_ts < idx_end_ts_a:
+                    if t_stamp_a[idx_ts] == last_ts:
+                        # Add/merge the coeff of entries with the same timestamp
+                        while idx_ts < idx_end_ts_a and t_stamp_a[idx_ts] == last_ts:
+                            coeff_a[idx_coars] += coeff_a[idx_ts]
+                            idx_ts += 1
+                idx_coars += 1
+
+            idx_end_ts_a = idx_ts
+
+            if not is_auto_cor:
+                # Coarsening the timestamps
+                # t_stamp_b, coeff_b = coarsen_timestamp(t_stamp_b, coeff_b)
+
+                idx_ts = 0
+                while idx_ts < idx_end_ts_b:
+                    t_stamp_b[idx_ts] = int(t_stamp_b[idx_ts] / 2)
+                    idx_ts += 1
+
+                # coarse_ts = np.zeros(t_stamp.size)
+                # coarse_coeff = np.zeros(t_stamp.size)
+                idx_coars = 0
+                idx_ts = 0
+                last_ts = 0
+                while idx_ts < idx_end_ts_b:
+                    t_stamp_b[idx_coars] = t_stamp_b[idx_ts]
+                    coeff_b[idx_coars] = coeff_b[idx_ts]
+                    last_ts = t_stamp_b[idx_ts]
+                    idx_ts += 1
+                    if idx_ts < idx_end_ts_b:
+                        if t_stamp_b[idx_ts] == last_ts:
+                            # Add/merge the coeff of entries with the same timestamp
+                            while idx_ts < idx_end_ts_b and t_stamp_b[idx_ts] == last_ts:
+                                coeff_b[idx_coars] += coeff_b[idx_ts]
+                                idx_ts += 1
+                    idx_coars += 1
+
+                idx_end_ts_b = idx_ts
+
+            coaserning_value *= 2
+
+            coarsening_counter = 1
+        else:
+            coarsening_counter += 1
+
+        # Lag as also to be divided by 2 for each cascade
+        # corrected_lag = int(lag / np.power(2, idx_G // B))
+        corrected_lag = int(lag / coaserning_value)
+
+        # Short numpy implementation that is quite slow bevause it does'nt take into account the fact that the list are ordered.
+        # correlation_match = np.in1d(t_stamp_a, t_stamp_a_dl, assume_unique=True)
+        # G[idx_G] = np.sum(coeff_a[correlation_match])
+
+        # Pair calculation
+        # G[idx_G] = find_pair_Whal(t_stamp_a, coeff_a, t_stamp_b, coeff_b, corrected_lag)
+
+        # TODO faster with divide and conquer ?
+        """
+          while(i <arrLen-1 and j< arrLen-1):
+       
+        if(arr1[i] < arr2[j]):
+          i+=1;
+        elif(arr2[j] < arr1[i]):
+          j+=1;
+        elif (arr1[i] == arr2[j]):
+        
+          arr1bool[i] = 1;
+          arr2bool[j] = 1;
+          i+=1;
+          
+        if(t_stamp_a[idx] < t_stamp_b_dl[idx_dl]):
+          idx+=1;
+        elif(t_stamp_b_dl[idx_dl] < t_stamp_a[idx]):
+          idx_dl+=1;
+        elif (t_stamp_a[idx] == t_stamp_b_dl[idx_dl]):
+            G[idx_G] += coeff_a[idx] * coeff_b[idx_dl]
+            idx += 1       
+        """
+        idx, idx_dl = 0, 0
+        is_delay_turn = False
+        t_stamp_b_dl = t_stamp_b + lag
+        #FIXME + or -1 ?
+        nb_stamp_a_minus_1 = idx_end_ts_a
+        nb_stamp_b_minus_1 = idx_end_ts_b
+
+        while (idx < nb_stamp_a_minus_1 and idx_dl < nb_stamp_b_minus_1):
+            if is_delay_turn is False:
+                while (t_stamp_a[idx] < t_stamp_b_dl[idx_dl] and idx < nb_stamp_a_minus_1):
+                    idx += 1
+                if t_stamp_a[idx] == t_stamp_b_dl[idx_dl]:
+                    G[idx_G] += coeff_a[idx] * coeff_b[idx_dl]
+                    idx_dl += 1
+
+                is_delay_turn = True
+
+            else:
+                while (t_stamp_b_dl[idx_dl] < t_stamp_a[idx] and idx_dl < nb_stamp_b_minus_1):
+                    idx_dl += 1
+                if t_stamp_a[idx] == t_stamp_b_dl[idx_dl]:
+                    G[idx_G] += coeff_a[idx] * coeff_b[idx_dl]
+                    idx += 1
+
+                is_delay_turn = False
+
+        G[idx_G] /= coaserning_value
+
+    if is_normalize:
+        # G = pnormalize_coeff_whal(G, t_stamp_a_true, t_stamp_b_true, lags)
+        u = t_stamp_a_true
+        t = t_stamp_b_true
+        u_duration = u.max() - u[0]
+        duration = max((t.max(), u.max())) - min((t.min(), u.min()))
+        for i, tau in enumerate(lags):
+            T = duration - tau
+            N1 = float((t - t[0] >= tau).sum())
+            N2 = float((u - u[0] <= (u_duration - tau)).sum())
+            if N1 == 0:
+                N1 = 1
+            if N2 == 0:
+                N2 = 1
+            G[i] *= T / (N1 * N2)
+
+    # print(datetime.datetime.now(), " End with :", t_stamp_a_true[0])
+
+    return G
+
+
 # @numba.jit(nopython=True)
 def correlate_whal(t_stamp_a_true, coeff_a, t_stamp_b_true, coeff_b, lags, B=10, is_normalize=True, is_auto_cor=True):
     """
@@ -116,7 +286,7 @@ def correlate_whal(t_stamp_a_true, coeff_a, t_stamp_b_true, coeff_b, lags, B=10,
     """
     G = np.zeros(lags.size)
 
-
+    print(datetime.datetime.now(), " Start with :", t_stamp_a_true[0])
     t_stamp_a = np.copy(t_stamp_a_true)
     if is_auto_cor:
         t_stamp_b = t_stamp_a
@@ -158,12 +328,13 @@ def correlate_whal(t_stamp_a_true, coeff_a, t_stamp_b_true, coeff_b, lags, B=10,
     if is_normalize:
         G = pnormalize_coeff_whal(G, t_stamp_a_true, t_stamp_b_true, lags)
 
+    print(datetime.datetime.now(), " End with :", t_stamp_a_true[0])
+
     return G
 
 
 
-
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, nogil=True)
 def pnormalize(G, t, u, bins):
     r"""Normalize point-process cross-correlation function.
     This normalization is usually employed for fluorescence correlation

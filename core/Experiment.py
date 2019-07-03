@@ -250,7 +250,7 @@ class Experiment(object):
             self.measurements[measurement.name] = measurement
 
 
-    def calculate_FCS(self, measurement, num_c1=0, num_c2=0, start_cor_time_micros = 0.5, max_cor_time_ms=100, mono_proc=False):
+    def calculate_FCS(self, measurement, num_c1=0, num_c2=0, start_cor_time_micros = 0.5, max_cor_time_ms=100, is_multi_proc=False, algo="Whal"):
         """
         Fluctuation Correlation Spectroscopy
 
@@ -294,15 +294,13 @@ class Experiment(object):
         coeff_1 = np.ones(timeStamps_reduc.size, dtype=np.uint32)
         coeff_2 = np.ones(timeStamps_reduc.size, dtype=np.uint32)
 
-        mono_proc = False
-        algo = "Laurence"
-        if mono_proc:
+        if is_multi_proc:
+            measurement.correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc, coeff_1, coeff_2,
+                                                                    max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros, algo=algo)
+        else:
             measurement.correlateMonoProc(timeStamps_reduc,  timeStamps_reduc, coeff_1, coeff_2,
                                                max_correlation_time_in_tick, start_correlation_time_in_tick, B,
                                                tick_duration_micros, algo=algo)
-        else:
-            measurement.correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc, coeff_1, coeff_2,
-                                                                    max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros, algo=algo)
 
         return measurement
 

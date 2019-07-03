@@ -74,7 +74,7 @@ class guiForFitOperation():
         self.formulaFrame = tk.Frame(master=self.cmd_frame)
         self.formulaFrame.grid(row=3, column=0, columnspan=3)
 
-        self.figTex = plt.Figure(figsize=(13, 1), dpi=30, frameon=False)
+        self.figTex = plt.Figure(figsize=(13, 1.5), dpi=30, frameon=False)
         self.axTex = self.figTex.add_axes([0, 0, 1, 1])
 
         self.axTex.axis('off')
@@ -249,7 +249,7 @@ class guiForFitOperation():
             if strValue == "":
                 # FIXME np.inf cause problems
                 # params_min.append(-np.inf)
-                params_max.append(-1E12)
+                params_min.append(-1E12)
             else:
                 params_min.append(float(sv.get()))
 
@@ -265,9 +265,9 @@ class guiForFitOperation():
         for iv in self.list_checkbox_int_variable_is_fixed:
             int_value = iv.get()
             if int_value == 0:
-                params_hold.append(False)
-            else:
                 params_hold.append(True)
+            else:
+                params_hold.append(False)
 
         if self.idx_lim_for_fit_min_sv.get() == "":
             xlim_min_fit = 0

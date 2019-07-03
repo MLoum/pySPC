@@ -75,7 +75,7 @@ class TwoSpeDiffusion(Model):
 
     .. math::
 
-        f(t; , G0, tdiff, cst) = cst + G0a/(1+t/tdiffa) + G0b/(1+t/tdiffb)
+        f(t; , G0, tdiff, cst) = cst + G0a/(1+t/tdiffa)*1/sqrt(1+r*t/tdiffa) + G0b/(1+t/tdiffb)*1/sqrt(1+r*t/tdiffb)
 
     """
 
@@ -84,8 +84,8 @@ class TwoSpeDiffusion(Model):
         kwargs.update({'prefix': prefix, 'nan_policy': nan_policy,
                        'independent_vars': independent_vars})
 
-        def twoSpeDiffusion(t, G0a, tdiffa, cst, G0b, tdiffb):
-            return cst + G0a/(1+t/tdiffa) + G0b/(1+t/tdiffb)
+        def twoSpeDiffusion(t, G0a, tdiffa, r, cst, G0b, tdiffb):
+            return cst + G0a/(1+t/tdiffa)*1/np.sqrt(1+r*t/tdiffa) + G0b/(1+t/tdiffb)*1/np.sqrt(1+r*t/tdiffb)
 
         super(TwoSpeDiffusion, self).__init__(twoSpeDiffusion, **kwargs)
 
@@ -348,16 +348,23 @@ class CorrelationMeasurement(Measurements):
         p = mp.Pool(nb_of_workers)
         self.log("Calculating Correlation \n")
         if algo == "Laurence":
-            Gs = [p.apply(pcorrelate, args=(chunks_of_timestamps_1[i], chunks_of_timestamps_2[i], self.time_axis, True)) for i in range(nb_of_chunk-1)]
+            # Gs = [p.apply(pcorrelate, args=(chunks_of_timestamps_1[i], chunks_of_timestamps_2[i], self.time_axis, True)) for i in range(nb_of_chunk-1)]
+            results = [p.apply_async(pcorrelate, args=(chunks_of_timestamps_1[i], chunks_of_timestamps_2[i], self.time_axis, True)) for i in range(nb_of_chunk-1)]
+            Gs = [p.get() for p in results]
         elif algo == "Whal":
-            Gs = [p.apply(correlate_whal,
+            # Gs = [p.apply(correlate_whal,
+            #               args=(chunks_of_timestamps_1[i], chunks_of_coeff_1[i], chunks_of_timestamps_2[i], chunks_of_coeff_2[i], self.time_axis, 10, True, True)) for i
+            #       in range(nb_of_chunk - 1)]
+            results = [p.apply_async(correlate_whal,
                           args=(chunks_of_timestamps_1[i], chunks_of_coeff_1[i], chunks_of_timestamps_2[i], chunks_of_coeff_2[i], self.time_axis, 10, True, True)) for i
                   in range(nb_of_chunk - 1)]
+            Gs = [p.get() for p in results]
+
         elif algo == "F2Cor":
             pass
         elif algo == "lin":
             pass
-        Gs = np.vstack(Gs)
+        self.Gs = np.vstack(Gs)
 
         self.data = np.mean(Gs, axis=0)
         self.error_bar = np.std(Gs, axis=0)
@@ -510,23 +517,23 @@ class FCSMeasurements(CorrelationMeasurement):
             self.params['tdiff'].set(value=params[1], vary=True, min=0, max=None)
             self.params['r'].set(value=params[2], vary=True, min=0, max=None)
             self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
-        # if self.modelName == "2 Diff":
-        #     self.params['G0a'].set(value=params[0],  vary=True, min=0, max=None)
-        #     self.params['tdiffa'].set(value=params[1], vary=True, min=0, max=None)
-        #     self.params['G0b'].set(value=params[0],  vary=True, min=0, max=None)
-        #     self.params['tdiffb'].set(value=params[1], vary=True, min=0, max=None)
-        #     self.params['cst'].set(value=params[2], vary=True, min=0, max=None)
+        if self.modelName == "2 Diff":
+            self.params['G0a'].set(value=params[0],  vary=True, min=0, max=None)
+            self.params['tdiffa'].set(value=params[1], vary=True, min=0, max=None)
+            self.params['G0b'].set(value=params[0],  vary=True, min=0, max=None)
+            self.params['tdiffb'].set(value=params[1], vary=True, min=0, max=None)
+            self.params['cst'].set(value=params[2], vary=True, min=0, max=None)
 
     def set_model(self, modelName):
         #il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *
         if modelName == "1 Diff":
             self.modelName = modelName
             self.model = OneSpeDiffusion()
-            self.params = self.model.make_params(G0=1.5, tdiff=500, r=10, cst=1)
+            self.params = self.model.make_params(G0=1.5, tdiff=500, r=1.2, cst=1)
         if modelName == "2 Diff":
             self.modelName = modelName
             self.model = TwoSpeDiffusion()
-            self.params = self.model.make_params(G0a=1.5, tdiffa=500, cst=1, G0b=1.5, tdiffb=500)
+            self.params = self.model.make_params(G0a=1.5, tdiffa=500, r=1.2, cst=1, G0b=1.5, tdiffb=500)
 
 
 

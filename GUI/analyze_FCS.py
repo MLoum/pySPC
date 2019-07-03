@@ -16,31 +16,18 @@ class guiForFitOperation_FCS(guiForFitOperation):
             self.list_label_string_variable_fit[1].set("tdiff")
             self.list_label_string_variable_fit[2].set("r")
             self.list_label_string_variable_fit[3].set("cst")
-
-            for i in range(4):
-                self.list_entry_param_fit[i].state(['!disabled'])
-
-            for i in range(4, nbFitParam) :
-                self.list_label_string_variable_fit[i].set("")
-                self.list_entry_param_fit[i].state(['disabled'])
-
+            self.enable_disable_ui(4)
             self.setFitFormula(r"G_0 \frac{1}{1+t/tdiff}*\frac{1}{\sqrt{1+r*t/tdiff}} + cst")
 
         elif self.cb_model_sv.get() == "2 Diff":
             self.list_label_string_variable_fit[0].set("G0a")
             self.list_label_string_variable_fit[1].set("tdiffa")
-            self.list_label_string_variable_fit[2].set("cst")
-            self.list_label_string_variable_fit[3].set("G0b")
-            self.list_label_string_variable_fit[4].set("tdiffb")
-
-            for i in range(5):
-                self.list_entry_param_fit[i].state(['!disabled'])
-
-            for i in range(5, nbFitParam) :
-                self.list_label_string_variable_fit[i].set("")
-                self.list_entry_param_fit[i].state(['disabled'])
-
-            self.setFitFormula(r"G_0a \frac{1}{1+t/tdiffa} + G_0b \frac{1}{1+t/tdiffb} + cst")
+            self.list_label_string_variable_fit[2].set("r")
+            self.list_label_string_variable_fit[3].set("cst")
+            self.list_label_string_variable_fit[4].set("G0b")
+            self.list_label_string_variable_fit[5].set("tdiffb")
+            self.enable_disable_ui(6)
+            self.setFitFormula(r"G_0a \frac{1}{1+t/tdiffa}*\frac{1}{\sqrt{1+r*t/tdiff}} + G_0b \frac{1}{1+t/tdiffb}*\frac{1}{\sqrt{1+r*t/tdiff}} + cst")
 
         else:
             for i in range(nbFitParam) :
@@ -96,14 +83,35 @@ class FCS_Analyze_gui():
         e.grid(row=0, column=7)
         self.num_c2_sv.set('1')
 
+        ttk.Label(self.frame_Correlate, text='Algo').grid(row=0, column=8)
+
+        self.algo_combo_box_sv = tk.StringVar()
+        cb = ttk.Combobox(self.frame_Correlate, width=25, justify=tk.CENTER, textvariable=self.algo_combo_box_sv, values='')
+        # cb.bind('<<ComboboxSelected>>', self.change_algo)
+        cb['values'] = ('Whal', 'Laurence', 'F2Cor')
+        self.algo_combo_box_sv.set('Whal')
+        cb.grid(row=0, column=9)
+
+
         b = ttk.Button(self.frame_Correlate, text="AutoCorrelation", width=12, command=self.launchAutoCorrelationFCS)
         b.grid(row=1, column=0)
 
         b = ttk.Button(self.frame_Correlate, text="CrossCorrelation", width=12, command=self.launchCrossCorrelationFCS)
         b.grid(row=1, column=1)
 
+        self.is_multiproc_iv = tk.IntVar()
+        self.is_multiproc_check_box = ttk.Checkbutton(self.frame_Correlate, text="Multi Proc", variable=self.is_multiproc_iv)
+        self.is_multiproc_check_box.grid(row=2, column=0)
+        self.is_multiproc_iv.set(1)
+
+        self.is_show_all_curve = tk.IntVar()
+        self.is_show_all_curve_check_box = ttk.Checkbutton(self.frame_Correlate, text="Show all curves", variable=self.is_show_all_curve, command=self.show_all_curve)
+        self.is_show_all_curve_check_box.grid(row=2, column=1)
+
+
+
         #FIT
-        self.gui_for_fit_operation = guiForFitOperation_FCS(self.frame_fit, self.controller, ('1 Diff', 'Rotation'), nb_param_fit=8)
+        self.gui_for_fit_operation = guiForFitOperation_FCS(self.frame_fit, self.controller, ('1 Diff',  '2 Diff', 'Rotation'), nb_param_fit=8)
         self.gui_for_fit_operation.populate()
 
 
@@ -116,4 +124,6 @@ class FCS_Analyze_gui():
         pass
         #self.controller.correlateFCS()
 
+    def show_all_curve(self):
+        pass
 

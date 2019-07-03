@@ -25,6 +25,8 @@ class Graph_timeZoom(InteractiveGraph):
 
         On aussi sur la droite un Photon Counting Histogramm qui est bien pratique pour fixer des seuils
         de filtrage.
+
+        Il y a aussi une zone permettant d'identifier certaine partie de la courbe de temps de vie ou de corrélation.
         :return:
     """
 
@@ -36,6 +38,7 @@ class Graph_timeZoom(InteractiveGraph):
         self.threshold = None
         self.threshold_flank = None
         self.chrono = None
+
 
         self.createWidgets()
         self.createCallBacks()

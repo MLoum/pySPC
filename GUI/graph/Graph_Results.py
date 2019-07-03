@@ -6,7 +6,8 @@ from tkinter import filedialog
 #from pylab import *
 import matplotlib.pyplot as plt
 from IPython import embed
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+# NavigationToolbar2TkAgg
 #matplotlib.use("TkAgg")
 import matplotlib.patches as patches
 import matplotlib.gridspec as gridspec
@@ -75,7 +76,10 @@ class Graph_Results:
         plt.subplots_adjust(hspace=0)
         self.figure.set_tight_layout(True)
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.frame)
-        self.canvas.get_tk_widget().pack(side='top', fill='both', expand=1)
+        # self.canvas.get_tk_widget().pack(side='top', fill='both', expand=1)
+
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.frame)
+        self.canvas._tkcanvas.pack(side='top', fill='both', expand=1)
 
         self.createCallBacks()
         self.createWidgets()
