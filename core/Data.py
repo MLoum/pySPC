@@ -87,7 +87,7 @@ class Data():
         elif file_extension == ".ptn":
             timestamps, detectors, nanotimes, timestamps_unit, meta = SimulatedData.load_ptn(file_path)
             self.expParam.fill_with_ttt_meta_data(meta)
-            pass
+
 
         # Les photons ne sont pas triès par detecteur, il le sont par ordre d'arrivée
         unique, return_index, unique_inverse, unique_counts = np.unique(detectors, return_index=True,
@@ -245,6 +245,7 @@ class Data():
             -(np.log(1.0 - np.random.random(nb_of_tick_to_generate)) / mean_rate_in_tick).astype(np.uint64))
         last_sample = np.searchsorted(arrival_times, t_end_click)
         return arrival_times[:last_sample]
+
 
     def filter_bin_and_threshold(self, num_channel, threshold, bin_in_tick, is_keep=True, replacement_mode="nothing"):
         """

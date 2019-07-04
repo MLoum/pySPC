@@ -99,25 +99,23 @@ class lifeTimeAnalyze_gui():
 
 
         #Graph
+        ttk.Button(self.frameMicro_graph, text="Graph", width=6, command=self.launch_micro_time_histo).grid(row=0, column=0)
 
-        b = ttk.Button(self.frameMicro_graph, text="Graph", width=6, command=self.launch_micro_time_histo)
-        b.grid(row=0, column=0)
 
         self.is_semi_log = tk.IntVar()
-        ttk.Checkbutton(self.frameMicro_graph, text="SemiLog ?", variable=self.is_semi_log).grid(row=0, column=1)
+        ttk.Checkbutton(self.frameMicro_graph, text="SemiLog ?", variable=self.is_semi_log, command=self.update_analyze).grid(row=0, column=1)
 
         # self.toggle_button_graph = ttk.Button(self.frameMicro_graph, text="ns", width=15, command=self.toggle_graph_x)
         # self.toggle_button_graph.grid(row=0, column=0)
 
-        label = ttk.Label(self.frameMicro_graph, text='channel :')
-        label.grid(row=1, column=0)
+        ttk.Label(self.frameMicro_graph, text='channel :').grid(row=1, column=0)
         self.num_channel_sv = tk.StringVar()
         e = ttk.Entry(self.frameMicro_graph, textvariable=self.num_channel_sv, justify=tk.CENTER, width=7)
         e.grid(row=1, column=1)
         self.num_channel_sv.set('0')
 
         self.is_overlay_on_time_zoom = tk.IntVar()
-        ttk.Checkbutton(self.frameMicro_graph, text="Overlay on time zoom", variable=self.is_overlay_on_time_zoom, command=self.is_draw_overlay).grid(row=2, column=0, columnspan=2)
+        ttk.Checkbutton(self.frameMicro_graph, text="Overlay on time zoom", variable=self.is_overlay_on_time_zoom, command=self.update_navigation).grid(row=2, column=0, columnspan=2)
 
         #Filter
         self.toggle_button = ttk.Button(self.frameMicro_filter, text="Keep selection", width=15, command=self.toggle_filter_mode)
@@ -125,24 +123,32 @@ class lifeTimeAnalyze_gui():
 
         ttk.Button(self.frameMicro_filter, text="Filter", width=6, command=self.microtime_filter).grid(row=1, column=0)
 
-
-
         #IR
+        tk.Label(self.frameMicro_IR, text="Name :").grid(row=0, column=0)
+
+        self.cb_IRF_sv = tk.StringVar()
+        self.cb_IRF = ttk.Combobox(self.frameMicro_IR, width=20, justify=tk.CENTER, textvariable=self.cb_IRF_sv,
+                          values='', state='readonly')
+        self.cb_IRF.bind('<<ComboboxSelected>>', self.select_IR)
+        irf_name_list = self.controller.model.get_irf_name_list()
+        irf_name_list.insert(0, "None")
+        self.cb_IRF['values'] = irf_name_list
+        self.cb_IRF_sv.set(irf_name_list[0])
+        self.cb_IRF.set(irf_name_list[0])
+        self.cb_IRF.grid(row=0, column=1)
+
+
+        ttk.Button(self.frameMicro_IR, text="Add new IRF",  command=self.openIR_file).grid(row=0, column=2)
+        ttk.Button(self.frameMicro_IR, text="Generate",  command=self.generateIR_file).grid(row=0, column=3)
+
         self.isDraw_IR = tk.IntVar()
-        self.is_draw_IR_check_box = ttk.Checkbutton(self.frameMicro_IR, text="Use IR ?", variable=self.isDraw_IR, command=self.is_use_IR)
-        self.is_draw_IR_check_box.grid(row=0, column=0)
+        ttk.Checkbutton(self.frameMicro_IR, text="Use IR ?", variable=self.isDraw_IR, command=self.is_use_IR).grid(row=1, column=0)
 
-        ttk.Button(self.frameMicro_IR, text="Open file",  command=self.openIR_file).grid(row=0, column=1)
+        # tk.Label(self.frameMicro_IR, text="IR Name :").grid(row=1, column=0)
 
-
-        ttk.Button(self.frameMicro_IR, text="Generate",  command=self.generateIR_file).grid(row=0, column=2)
-
-
-        tk.Label(self.frameMicro_IR, text="IR Name :").grid(row=1, column=0)
-
-        self.ir_name_sv = tk.StringVar()
-        ttk.Entry(self.frameMicro_IR, textvariable=self.ir_name_sv, justify=tk.CENTER, width=50).grid(row=1, column=1, columnspan=2)
-        self.ir_name_sv.set("None loaded yet")
+        # self.ir_name_sv = tk.StringVar()
+        # ttk.Entry(self.frameMicro_IR, textvariable=self.ir_name_sv, justify=tk.CENTER, width=50).grid(row=1, column=1, columnspan=2)
+        # self.ir_name_sv.set("None loaded yet")
 
         tk.Label(self.frameMicro_IR, text="Beginning % :").grid(row=2, column=0)
 
@@ -160,12 +166,12 @@ class lifeTimeAnalyze_gui():
         self.ir_end_sv.set(100)
         w.grid(row=3, column=1)
 
-        tk.Label(self.frameMicro_IR, text="Shift (µchannel) :").grid(row=4, column=0)
-        self.shiftIR_amount_sv = tk.StringVar()
-        w = ttk.Entry(self.frameMicro_IR, textvariable=self.shiftIR_amount_sv, justify=tk.CENTER, width=15)
-        w.bind('<Return>', self.change_IR)
-        w.grid(row=4, column=1)
-        self.shiftIR_amount_sv.set(0)
+        # tk.Label(self.frameMicro_IR, text="Shift (µchannel) :").grid(row=4, column=0)
+        # self.shiftIR_amount_sv = tk.StringVar()
+        # w = ttk.Entry(self.frameMicro_IR, textvariable=self.shiftIR_amount_sv, justify=tk.CENTER, width=15)
+        # w.bind('<Return>', self.change_IR)
+        # w.grid(row=4, column=1)
+        # self.shiftIR_amount_sv.set(0)
 
         tk.Label(self.frameMicro_IR, text="Background").grid(row=5, column=0)
         self.bckg_IR_sv = tk.StringVar()
@@ -174,7 +180,7 @@ class lifeTimeAnalyze_gui():
         w.grid(row=5, column=1)
         self.bckg_IR_sv.set(0)
 
-        ttk.Button(self.frameMicro_IR, text="Auto",  command=self.autoShiftIR).grid(row=3, column=2)
+        ttk.Button(self.frameMicro_IR, text="Auto",  command=self.auto_bckgnd).grid(row=3, column=2)
 
         # b = ttk.Button(self.frameMicro_IR, text="Fit IR",  command=self.fit_IR).grid(row=4, column=0)
 
@@ -196,12 +202,18 @@ class lifeTimeAnalyze_gui():
         file_path = filedialog.askopenfilename(title="Open IR File", initialdir=self.controller.view.saveDir)
         if file_path == None or file_path == '':
             return None
-        ir_exp = Experiment.Experiment("file", [file_path])
-        measurement_ir = ir_exp.create_measurement(0, 0, -1,"lifetime", "", "")
-        ir_exp.calculate_life_time(measurement_ir)
-        self.ir_name_sv.set(ir_exp.file_name)
-        self.controller.current_measurement.set_IR(ir_exp.file_name, measurement_ir.data, measurement_ir.time_axis)
+        file_name = self.controller.open_and_set_IRF_file(file_path)
+
+        if file_name not in self.cb_IRF['values']:
+            self.cb_IRF['values'] += (file_name,)
+            self.cb_IRF.set(file_name)
+            self.select_IR(None)
+
         self.controller.update_analyze()
+
+    def select_IR(self, event):
+        if self.cb_IRF.get() != "None":
+            self.controller.set_IRF(self.cb_IRF.get())
 
     def is_use_IR(self):
         self.change_IR(None)
@@ -209,8 +221,11 @@ class lifeTimeAnalyze_gui():
     def select_bckgnd_w_cursor(self):
         pass
 
-    def is_draw_overlay(self):
+    def update_navigation(self):
         self.controller.update_navigation()
+
+    def update_analyze(self):
+        self.controller.update_analyze()
 
     def fit_IR(self):
         d = fitIRFDialog(self.masterFrame, title="Initial fit parameters")
@@ -218,28 +233,28 @@ class lifeTimeAnalyze_gui():
             iniParams = d.result
             self.controller.fit_IR(iniParams)
 
-
-
     def generateIR_file(self):
-        #TODO Custom Dialog !
-        answer = simpledialog.askfloat("Main IR width in picoSeconds", initialvalue=50.0, minvalue = 1.0)
-        if answer != None:
-            mainWidth = answer
-            answer2 = simpledialog.askfloat("Secondary IR width in picoSeconds", initialvalue=100.0, minvalue=1.0)
-            if answer2 != None:
-                secondaryWidth = answer2
-                answer3 = simpledialog.askfloat("Secondary IR relative intensity (between 0 and 1", initialvalue=0.05, minvalue=1.0, maxvalue=1.0)
-                if answer3 != None:
-                    secondaryAmplitude = answer3
-                    answer4 = simpledialog.askfloat("Secondary IR relative intensity (between 0 and 1",
-                                                    initialvalue=0.05, minvalue=1.0, maxvalue=1.0)
-                    if answer4 != None:
-                        timeOffset = answer4
-                        self.controller.generate_artificial_IR(mainWidth, secondaryWidth, secondaryAmplitude, timeOffset)
-                        self.ir_name_sv.set("artificial " + str(mainWidth) + " " +  str(secondaryWidth))
+        pass
+        # #TODO Custom Dialog !
+        # answer = simpledialog.askfloat("Main IR width in picoSeconds", initialvalue=50.0, minvalue = 1.0)
+        # if answer != None:
+        #     mainWidth = answer
+        #     answer2 = simpledialog.askfloat("Secondary IR width in picoSeconds", initialvalue=100.0, minvalue=1.0)
+        #     if answer2 != None:
+        #         secondaryWidth = answer2
+        #         answer3 = simpledialog.askfloat("Secondary IR relative intensity (between 0 and 1", initialvalue=0.05, minvalue=1.0, maxvalue=1.0)
+        #         if answer3 != None:
+        #             secondaryAmplitude = answer3
+        #             answer4 = simpledialog.askfloat("Secondary IR relative intensity (between 0 and 1",
+        #                                             initialvalue=0.05, minvalue=1.0, maxvalue=1.0)
+        #             if answer4 != None:
+        #                 timeOffset = answer4
+        #                 self.controller.generate_artificial_IR(mainWidth, secondaryWidth, secondaryAmplitude, timeOffset)
+        #                 self.ir_name_sv.set("artificial " + str(mainWidth) + " " +  str(secondaryWidth))
 
 
-    def autoShiftIR(self):
+
+    def auto_bckgnd(self):
         pass
 
     def change_IR(self, e):
@@ -248,21 +263,21 @@ class lifeTimeAnalyze_gui():
             start = 0
         elif start > 100:
             start = 100
-        self.controller.current_measurement.IR_start = start
+        self.controller.current_measurement.IRF.start = start
 
         end = float(self.ir_end_sv.get())
         if end < 0:
             end = 0
         elif end > 100:
             end = 100
-        self.controller.current_measurement.IR_end = end
+        self.controller.current_measurement.IRF.end = end
 
-        self.controller.current_measurement.IR_shift = float(self.shiftIR_amount_sv.get())
+        # self.controller.current_measurement.IR_shift = float(self.shiftIR_amount_sv.get())
         self.controller.current_measurement.set_use_IR(self.isDraw_IR.get())
 
-        self.controller.current_measurement.IR_bckg = int(self.bckg_IR_sv.get())
+        self.controller.current_measurement.IRF.bckgnd = int(self.bckg_IR_sv.get())
 
-        if self.controller.current_measurement.process_IR() == "OK":
+        if self.controller.current_measurement.IRF.process() == "OK":
             self.controller.update_analyze()
 
     def launch_micro_time_histo(self):

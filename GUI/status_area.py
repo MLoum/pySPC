@@ -13,40 +13,6 @@ class Status_area():
         self.mes_iid_dict = {}
 
     def populate(self):
-        # self.frameTimeStatus = tk.LabelFrame(self.masterFrame, text="Status", borderwidth=self.appearenceParam.frameLabelBorderWidth)
-        # self.frameTimeStatus.pack(side="top", fill="both", expand=True)
-
-        # self.frameFileBasicInfo = tk.Label(self.masterFrame)
-        # self.frameFileBasicInfo.pack(side=tk.LEFT)
-        #
-        #
-        # label = ttk.Label(self.frameFileBasicInfo, text='Channel :')
-        # label.grid(column=0, row=0)
-        # self.channelNumber = tk.StringVar()
-        # self.channelNumber.set('1')
-        # self.spinBoxMaxOrder = tk.Spinbox(self.frameFileBasicInfo, width=8, textvariable=self.channelNumber,
-        #                                   justify=tk.CENTER, from_=1, to=2)
-        # self.spinBoxMaxOrder.grid(column=1, row=0)
-        #
-        # self.labeFileName = tk.StringVar()
-        # l = ttk.Label(self.frameFileBasicInfo, width=60, textvariable=self.labeFileName)
-        # l.grid(column=2, row=0, columnspan=2)
-        #
-        # label = ttk.Label(self.frameFileBasicInfo, text='nbOfPhoton :')
-        # label.grid(column=0, row=1)
-        #
-        # self.nbOfPhoton_sv = tk.StringVar()
-        # self.labelNbOfPhoton = ttk.Label(self.frameFileBasicInfo, textvariable=self.nbOfPhoton_sv)
-        # self.labelNbOfPhoton.grid(column=1, row=1)
-        #
-        #
-        # label = ttk.Label(self.frameFileBasicInfo, text='CPS :')
-        # label.grid(column=2, row=1)
-        #
-        # self.CPS_sv = tk.StringVar()
-        # self.labelCPS = ttk.Label(self.frameFileBasicInfo, textvariable=self.CPS_sv)
-        # self.labelCPS.grid(column=3, row=1)
-
         # TreeView
 
         self.frame_tree_view = tk.LabelFrame(self.master_frame, text="File and measurement browser", borderwidth=self.appearence_param.frameLabelBorderWidth)
@@ -98,87 +64,39 @@ class Status_area():
                       borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_tree_view_cmd_exp.grid(row=1, column=0)
 
-        b = ttk.Button(self.frame_tree_view_cmd_exp, text="+", width=10, command=self.add_exp_file)
-        b.grid(row=0, column=0)
+        ttk.Button(self.frame_tree_view_cmd_exp, text="+", width=10, command=self.add_exp_file).grid(row=0, column=0)
+        ttk.Button(self.frame_tree_view_cmd_exp, text="-", width=10, command=self.del_exp_file).grid(row=0, column=1)
+        ttk.Button(self.frame_tree_view_cmd_exp, text="Duplicate", width=10, command=self.duplicate_exp_fil).grid(row=0, column=2)
 
-        b = ttk.Button(self.frame_tree_view_cmd_exp, text="-", width=10, command=self.del_exp_file)
-        b.grid(row=0, column=1)
-
-        b = ttk.Button(self.frame_tree_view_cmd_exp, text="Duplicate", width=10, command=self.duplicate_exp_fil)
-        b.grid(row=0, column=2)
 
         self.frame_tree_view_cmd_mes = tk.LabelFrame(self.frame_cmd, text="Measurement",
                       borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_tree_view_cmd_mes.grid(row=1, column=1)
 
-        b = ttk.Button(self.frame_tree_view_cmd_mes, text="+", width=10, command=self.add_measurement)
-        b.grid(row=0, column=0)
+        ttk.Button(self.frame_tree_view_cmd_mes, text="+", width=10, command=self.add_measurement).grid(row=0, column=0)
 
-        b = ttk.Button(self.frame_tree_view_cmd_mes, text="-", width=10, command=self.del_measurement)
-        b.grid(row=0, column=1)
 
-        b = ttk.Button(self.frame_tree_view_cmd_mes, text="Duplicate", width=10, command=self.duplicate_measurement)
-        b.grid(row=0, column=2)
+        ttk.Button(self.frame_tree_view_cmd_mes, text="-", width=10, command=self.del_measurement).grid(row=0, column=1)
+
+
+        ttk.Button(self.frame_tree_view_cmd_mes, text="Duplicate", width=10, command=self.duplicate_measurement).grid(row=0, column=2)
+
 
 
         self.frame_tree_view_cmd_burst = tk.LabelFrame(self.frame_cmd, text="Burst Analysis",
                                                      borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_tree_view_cmd_burst.grid(row=1, column=2)
 
-        b = ttk.Button(self.frame_tree_view_cmd_burst, text="+", width=10, command=self.add_burst)
-        b.grid(row=0, column=0)
-
-        b = ttk.Button(self.frame_tree_view_cmd_burst, text="-", width=10, command=self.del_burst)
-        b.grid(row=0, column=1)
-
-        b = ttk.Button(self.frame_tree_view_cmd_burst, text="Duplicate", width=10, command=self.duplicate_burst)
-        b.grid(row=0, column=2)
+        ttk.Button(self.frame_tree_view_cmd_burst, text="+", width=10, command=self.add_burst).grid(row=0, column=0)
+        ttk.Button(self.frame_tree_view_cmd_burst, text="-", width=10, command=self.del_burst).grid(row=0, column=1)
+        ttk.Button(self.frame_tree_view_cmd_burst, text="Duplicate", width=10, command=self.duplicate_burst).grid(row=0, column=2)
 
 
-
-        # self.combobox_file_sv = tk.StringVar()
-        # self.combobox_file = ttk.Combobox(self.master_frame, width=80, justify=tk.CENTER, textvariable=self.combobox_file_sv, values='')
-        # self.combobox_file.pack(side="top", fill="both", expand=True)
-        #
-        # self.combobox_file.bind('<<ComboboxSelected>>', self.on_file_selected_via_combobox)
-
-
-
-        # label = ttk.Label(self.master_frame, text='Channel :')
-        # label.pack(side=tk.LEFT, padx=2, pady=2)
-        # self.channelNumber = tk.StringVar()
-        # self.channelNumber.set('1')
-        # self.spinBoxMaxOrder = tk.Spinbox(self.master_frame, width=8, textvariable=self.channelNumber,
-        #                                   justify=tk.CENTER, from_=1, to=2)
-        # self.spinBoxMaxOrder.pack(side=tk.LEFT, padx=2, pady=2)
-        #
-        # self.labeFileName = tk.StringVar()
-        # l = ttk.Label(self.master_frame, width=60, textvariable=self.labeFileName)
-        # l.pack(side=tk.LEFT, padx=2, pady=2)
-        #
-        # label = ttk.Label(self.master_frame, text='nbOfPhoton :')
-        # label.pack(side=tk.LEFT, padx=2, pady=2)
-
-        # self.nbOfPhoton_sv = tk.StringVar()
-        # self.labelNbOfPhoton = ttk.Label(self.master_frame, textvariable=self.nbOfPhoton_sv)
-        # self.labelNbOfPhoton.pack(side=tk.LEFT, padx=2, pady=2)
-
-
-        # label = ttk.Label(self.master_frame, text='CPS :')
-        # label.pack(side=tk.LEFT, padx=2, pady=2)
-        #
-        # self.CPS_sv = tk.StringVar()
-        # self.labelCPS = ttk.Label(self.master_frame, textvariable=self.CPS_sv)
-        # self.labelCPS.pack(side=tk.LEFT, padx=2, pady=2)
-        #
-        # b = ttk.Button(self.master_frame, text="?", width=2, command=self.ask_file_info)
-        # b.pack(side=tk.RIGHT, padx=2, pady=2)
-        #
-        # b = ttk.Button(self.master_frame, text="IPython", width=2, command=self.launch_Ipython)
-        # b.pack(side=tk.RIGHT, padx=2, pady=2)
 
     def add_exp_file(self):
         self.controller.view.menu.askOpenSPC_file()
+
+        # self.controller.update_all()
 
     def del_exp_file(self):
         pass
@@ -222,6 +140,7 @@ class Status_area():
         if exp.file_name not in self.exp_iid_dict:
             self.exp_iid_dict[exp.file_name] = iid
         self.tree_view.focus(iid)
+        self.treeview_measurement_select(None)
         return iid
 
     def insert_measurement(self, measurement, parent_exp_iid=None):
@@ -274,9 +193,10 @@ class Status_area():
     def update_tree_view(self):
         for mes_name, iid in self.mes_iid_dict.items():
             measurement = self.controller.get_measurement(mes_name)
-            self.tree_view.item(iid, values=("",
-            "", measurement.name, measurement.type, measurement.nb_of_photon, "NA", measurement.num_channel,
-            measurement.comment, measurement.start_tick, measurement.end_tick))
+            if measurement is not None:
+                self.tree_view.item(iid, values=("",
+                "", measurement.name, measurement.type, measurement.nb_of_photon, "NA", measurement.num_channel,
+                measurement.comment, measurement.start_tick, measurement.end_tick))
         for exp_name, iid in self.exp_iid_dict.items():
             exp = self.controller.get_experiment(exp_name)
             nb_photon = exp.data.channels[0].nb_of_tick
@@ -301,7 +221,7 @@ class Status_area():
                 self.tree_view.item(iid_current_exp, open=True)
                 self.tree_view.focus(iid)
                 self.mes_iid_dict[mes_name] = iid
-                # self.treeview_measurement_select(None)
+                self.treeview_measurement_select(None)
         else:
             self.controller.log_message("No experiment loaded")
 
@@ -332,10 +252,11 @@ class Status_area():
 
 
     def duplicate_measurement(self):
+        pass
         # list_selection = self.list_measurement.curselection()
         # num = int(list_selection[0])
         # measurement_name = self.list_measurement.get(num)
-        self.controller.duplicate_measurement(measurement_name)
+        # self.controller.duplicate_measurement(measurement_name)
         # self.list_measurement.insert(tk.END, measurement_name + "_b")
 
     def treeview_measurement_select(self, event):
@@ -348,7 +269,17 @@ class Status_area():
         if item_name_exp in self.controller.model.experiments:
             # this is an experiment
             exp = self.controller.set_current_exp(item_name_exp)
-            self.controller.update_navigation()
+            if item_name_mes == "":
+                # the user has selected a root exp without measurement
+                # self.controller.set_current_measurement(None)
+                self.controller.view.archi.analyze_area.display_measurement(None)
+                # self.controller.update_all(is_full_update=True)
+                return
+        elif item_name_mes in self.controller.current_exp.measurements:
+            # this is a measurement
+            measurement = self.controller.set_current_measurement(item_name_mes)
+            self.controller.view.archi.analyze_area.display_measurement(measurement)
+            self.controller.display_measurement(measurement.name)
         elif item_name_burst != "":
             parent_iid = self.tree_view.parent(id_selected_item)
             if item_name_mes in self.controller.current_exp.measurements:
@@ -361,10 +292,6 @@ class Status_area():
             measurement = self.controller.set_current_measurement(item_name_mes)
             self.controller.view.archi.analyze_area.display_measurement(measurement)
             self.controller.display_measurement(measurement.name)
-
-
-    def launch_Ipython(self):
-        embed()
 
 
 #https://stackoverflow.com/questions/673174/file-dialogs-of-tkinter-in-python-3

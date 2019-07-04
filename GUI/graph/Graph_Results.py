@@ -85,7 +85,11 @@ class Graph_Results:
         self.createWidgets()
 
     def plot(self, measurement, is_plot_fit=False, is_zoom_x_selec=False, is_autoscale=False, is_plot_error_bar=False):
+        self.ax[0].clear()
+        self.ax[1].clear()
+
         if measurement is None:
+            self.figure.canvas.draw()
             return
 
         self.type = measurement.type
@@ -93,8 +97,6 @@ class Graph_Results:
         self.is_plot_fit = is_plot_fit
         # self.ax.clear()
         # self.axResidual.clear()
-        self.ax[0].clear()
-        self.ax[1].clear()
 
         self.data_y = y = measurement.data
         self.data_x = x = measurement.time_axis
@@ -136,8 +138,8 @@ class Graph_Results:
             plt_residual_fct = self.ax[1].plot
 
             if measurement.use_IR:
-                rescale_factor = measurement.data.max() / measurement.IR_processed.max()
-                self.ax[0].plot(measurement.IR_time_axis_processed, measurement.IR_processed*rescale_factor, "b--")
+                rescale_factor = measurement.data.max() / measurement.IRF.processed_data.max()
+                self.ax[0].plot(measurement.IRF.time_axis_processed, measurement.IRF.processed_data*rescale_factor, "b--")
                 if measurement.model is not None:
                     pass
                     # if measurement.model.non_convoluted_decay is not None:

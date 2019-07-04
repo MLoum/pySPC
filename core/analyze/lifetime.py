@@ -63,7 +63,7 @@ class OneExpDecay(lifetimeModelClass):
         # t_0 is in the shift
 
         if self.IRF is not None:
-            IR = shift_scipy(self.IRF, shift, mode='wrap')
+            IR = shift_scipy(self.IRF.processed_data, shift, mode='wrap')
             # IR = np.roll(self.IR, shift)
             conv = np.convolve(self.non_convoluted_decay, IR)[0:np.size(self.non_convoluted_decay)]
             conv /= conv.sum()
@@ -104,11 +104,11 @@ class TwoExpDecay(lifetimeModelClass):
         tau2 = params['tau2'].value
         shift = params['shift'].value
         self.data_bckgnd = params['bckgnd'].value
-        self.non_convoluted_decay = a1*np.exp(-(t) / tau1) + (1-a1)*np.exp(-(t) / tau2)
+        self.non_convoluted_decay = a1*np.exp(-t/tau1) + (1-a1)*np.exp(-t/tau2)
         # t_0 is in the shift
 
         if self.IRF is not None:
-            IR = shift_scipy(self.IRF, shift, mode='wrap')
+            IR = shift_scipy(self.IRF.processed_data, shift, mode='wrap')
             # IR = np.roll(self.IR, shift)
             conv = np.convolve(self.non_convoluted_decay, IR)[0:np.size(self.non_convoluted_decay)]
             conv /= conv.sum()
@@ -167,11 +167,7 @@ class lifeTimeMeasurements(Measurements):
 
     def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment="", logger=None):
         super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment, logger)
-        self.IR_raw, self.IR_processed, self.IR_name = None, None, None
-        self.IR_start, self.IR_end = None, None
-        self.IR_bckg = 0
-        self.IR_shift = None
-        self.IR_time_axis, self.IR_time_axis_processed = None, None
+        self.IRF = None
         self.use_IR = False
 
     def create_histogramm(self, nanotimes):
@@ -183,7 +179,6 @@ class lifeTimeMeasurements(Measurements):
         if self.model is not None:
             self.model.total_count = self.data.sum()
 
-
     def trim_life_time_curve(self):
         nonzero = np.nonzero(self.data)
         idxStartNonZero = nonzero[0][0]
@@ -194,65 +189,13 @@ class lifeTimeMeasurements(Measurements):
     def shift_histogramm(self, shift):
         self.data = np.roll(self.data, shift)
 
-    def set_IR(self, name, data, time_axis):
-        """
-        Fill the raw data of the IR, typically from a special IR measurement spc file.
-        :param name: name of the file
-        :param data: microtime Histogramm of the IR (y axis)
-        :param time_axis: microtime axis in ns.
-        :return:
-        """
-        self.IR_name = name
-        self.IR_raw = np.copy(data)
-        self.IR_time_axis = np.copy(time_axis)
-
     def set_model_IRF(self):
-        self.model.IRF = self.IR_processed
+        self.model.IRF = self.IRF
 
     def set_use_IR(self, use_IR=False):
         self.use_IR = use_IR
         if self.model is not None:
             self.model.use_IR = use_IR
-
-    def process_IR(self):
-        """
-        Shift in nb of microtime channel
-        """
-        idx_begin = int(self.IR_start/100.0 * self.exp_param.nb_of_microtime_channel)
-        idx_end = int(self.IR_end/100.0 * self.exp_param.nb_of_microtime_channel)
-        shift = int(self.IR_shift/100.0 * self.exp_param.nb_of_microtime_channel)
-        # self.IR_processed = np.roll(self.IR_raw[idx_begin:idx_end], int(self.IR_shift/100.0*self.exp_param.nb_of_microtime_channel))
-        if self.IR_raw is not None:
-            self.IR_processed = self.IR_raw[idx_begin:idx_end].astype(np.float64)
-            # background removal
-            self.IR_processed -= self.IR_bckg
-            self.IR_processed[self.IR_processed < 0] = 0
-
-            # We divide by the sum of the IR so that the convolution doesn't change the amplitude of the signal.
-            self.IR_processed /= float(self.IR_processed.sum())
-            if self.model is not None:
-                self.model.IRF = self.IR_processed
-            self.IR_time_axis_processed = self.IR_time_axis[idx_begin - shift:idx_end - shift]
-            return "OK"
-        else:
-            return "No IR was loaded"
-
-    def generate_artificial_IR(self, mainWidth, secondaryWidth, secondaryAmplitude, timeOffset):
-        # FIXME
-        self.IR = (1-secondaryWidth) * np.exp( - (self.eval_x_axis - timeOffset)**2/mainWidth) + secondaryAmplitude * np.exp( - (self.eval_x_axis - timeOffset)**2/secondaryWidth)
-        #scale
-        self.IR /= self.IR.sum()
-
-    def fit_IR(self, ini_params):
-        self.model_IR = ExpConvGauss()
-        self.params_fit_IR = self.model_IR.make_params(mu=ini_params[0], sig=ini_params[1], tau=ini_params[2])
-        self.fit_IR_results = self.model_IR.fit(self.IR_processed, self.params_fit_IR, t=self.IR_time_axis_processed)
-
-        self.fit_IR_y_axis = self.fit_results.best_fit
-        self.fit_IR_x_axis = self.IR_time_axis_processed
-
-        self.residuals = self.fit_results.residual
-        return self.fit_IR_results
 
     def fit(self, idx_start=0, idx_end=-1):
         # ATTENTION au -1 -> cela créé une case de moins dans le tableau.
@@ -311,7 +254,9 @@ class lifeTimeMeasurements(Measurements):
             # TODO choose minimization technique
             minimization = "chi-square"
             # minimization = "maximum likelihood"
-            weights = 1 / np.sqrt(self.data)
+            nonzero_data = np.copy(self.data)
+            nonzero_data = nonzero_data[nonzero_data == 0] = 1
+            weights = 1 / np.sqrt(nonzero_data)
             # weights[y == 0] = 1. / np.sqrt(baseline_true)
             weights[self.data == 0] = 0
             if minimization == "chi-square":
@@ -343,8 +288,6 @@ class lifeTimeMeasurements(Measurements):
             self.residuals = self.data[self.idx_start:self.idx_end] - self.eval_y_axis[self.idx_start:self.idx_end]
             self.fit_x = self.time_axis
             self.residual_x = self.time_axis[self.idx_start:self.idx_end]
-
-
 
             return fit_report(self.fit_results)
         else:
@@ -417,7 +360,6 @@ class lifeTimeMeasurements(Measurements):
             ax[1].plot(self.time_axis, self.fit_results.residual, 'k')
             ym = np.abs(self.fit_results.residual).max()
             ax[1].set_ylim(-ym, ym)
-
 
         if is_plot_text:
             pass
@@ -503,7 +445,7 @@ class lifeTimeMeasurements(Measurements):
     def set_model(self, model_name):
         if model_name == "One Decay IRF":
             self.modelName = model_name
-            self.model = OneExpDecay(self.IR_processed)
+            self.model = OneExpDecay(self.IRF)
             self.params = self.model.make_params()
 
         elif model_name == "One Decay Tail":
@@ -513,7 +455,7 @@ class lifeTimeMeasurements(Measurements):
 
         elif model_name == "Two Decays IRF":
             self.modelName = model_name
-            self.model = TwoExpDecay(self.IR_processed)
+            self.model = TwoExpDecay(self.IRF)
             self.params = self.model.make_params()
 
         elif model_name == "Two Decays Tail":
@@ -521,11 +463,58 @@ class lifeTimeMeasurements(Measurements):
             self.modelName = model_name
             self.model = TwoExpDecay()
 
-
         self.model.use_IR = self.use_IR
-        self.model.IR = self.IR_processed
+        self.model.IR = self.IRF
 
 
+class IRF:
+    def __init__(self, exps, exp, file_path=None):
+        self.exps = exps
+        self.exp = exp
+        self.exp_param = exp.exp_param
+        self.raw_data, self.processed_data, self.name = None, None, None
+        self.start, self.end = None, None
+        self.bckgnd = 0
+        self.shift = None
+        self.time_axis, self.time_axis_processed = None, None
+        if file_path is not None:
+            self.get_data(file_path)
+
+    def get_data(self, file_path):
+        self.name, self.raw_data, self.time_axis = self.exps.get_IRF_from_file(file_path)
+
+    def fit(self, ini_params):
+        # TODO test
+        self.model_IR = ExpConvGauss()
+        self.params_fit_IR = self.model_IR.make_params(mu=ini_params[0], sig=ini_params[1], tau=ini_params[2])
+        self.fit_results = self.model_IR.fit(self.processed_data, self.params_fit_IR, t=self.time_axis_processed)
+
+        self.fit_y_axis = self.fit_results.best_fit
+        self.fit_x_axis = self.time_axis_processed
+
+        self.residuals = self.fit_results.residual
+        return self.fit_results
+
+    def process(self):
+        """
+        Shift in nb of microtime channel
+        """
+        idx_begin = int(self.start/100.0 * self.exp_param.nb_of_microtime_channel)
+        idx_end = int(self.end/100.0 * self.exp_param.nb_of_microtime_channel)
+        # shift = int(self.shift/100.0 * self.exp_param.nb_of_microtime_channel)
+        # self.IR_processed = np.roll(self.IR_raw[idx_begin:idx_end], int(self.IR_shift/100.0*self.exp_param.nb_of_microtime_channel))
+        if self.raw_data is not None:
+            self.processed_data = self.raw_data[idx_begin:idx_end].astype(np.float64)
+            # background removal
+            self.processed_data -= self.bckgnd
+            self.processed_data[self.processed_data < 0] = 0
+
+            # We divide by the sum of the IR so that the convolution doesn't change the amplitude of the signal.
+            self.processed_data /= float(self.processed_data.sum())
+            self.time_axis_processed = self.time_axis[idx_begin:idx_end]
+            return "OK"
+        else:
+            return "No IR was loaded"
 
 
 

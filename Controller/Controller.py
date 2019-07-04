@@ -24,6 +24,7 @@ from core import ExpParam
 from core import Results
 from core import Data
 from core import Experiment, Experiments
+from core.analyze.lifetime import IRF
 
 from GUI import View, burst_analysis
 from GUI import guiForFitOperation
@@ -60,11 +61,14 @@ class Controller:
         self.current_exp = self.model.experiments[exp.file_name]
         self.current_exp.create_navigation_chronogram(0, 0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
 
+        self.current_measurement = None
+
         # FIXME le channel 0 is hardcoded
         self.view.currentTimeWindow = [0, self.current_exp.convert_ticks_in_seconds(self.current_exp.data.channels[0].end_tick) * 1E6]
         self.view.is_a_FileLoaded = True
         self.view.currentChannel = 0
         self.set_chrono_bin_size_s(0.01)
+
 
         # Put the file in the browser
         self.view.archi.status_area.insert_exp(self.current_exp)
@@ -222,6 +226,9 @@ class Controller:
             measurement = self.current_exp.measurements[name]
             self.current_measurement = measurement
             return measurement
+        elif name is None:
+            self.current_measurement = None
+            return None
         else:
             return None
         # self.view.archi.analyze_area.set_current_measurement(measurement)
@@ -398,10 +405,21 @@ class Controller:
 
             self.view.archi.analyze_area.resultArea_gui.graph_results.plot(measurement, is_plot_fit=True)
 
-    def shift_IR(self, main_width, secondary_width, secondary_amplitude, time_offset):
-        channel = self.view.currentChannel
-        lf = self.current_exp.results.lifetimes[channel]
-        lf.generate_artificial_IR(main_width, secondary_width, secondary_amplitude, time_offset)
+    #IRF
+    def open_and_set_IRF_file(self, file_path):
+        irf = IRF(self.model, self.current_exp, file_path)
+        self.model.add_irf(irf)
+        self.current_measurement.IRF = irf
+        return irf.name
+
+    def set_IRF(self, irf_name):
+        self.current_measurement.IRF = self.model.irf[irf_name]
+
+
+    # def shift_IR(self, main_width, secondary_width, secondary_amplitude, time_offset):
+    #     channel = self.view.currentChannel
+    #     lf = self.current_exp.results.lifetimes[channel]
+    #     lf.generate_artificial_IR(main_width, secondary_width, secondary_amplitude, time_offset)
 
     def fit_IR(self, iniParams):
         fit_IR_results = self.current_measurement.fit_IR(iniParams)
@@ -409,6 +427,8 @@ class Controller:
         self.view.archi.analyze_area.resultArea_gui.setTextResult(fit_IR_results.fit_report())
         # FIXME
         self.view.archi.analyze_area.resultArea_gui.graph_results.plot(measurement, is_plot_fit=True)
+
+
 
     def export_graph_result(self, mode, file_path):
         result = False

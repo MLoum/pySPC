@@ -1,5 +1,7 @@
 from core import Experiment
-import shelve
+# import shelve
+import os
+import numpy as np
 
 class Experiments(object):
     """
@@ -15,6 +17,7 @@ class Experiments(object):
 
     def __init__(self):
         self.experiments = {}
+        self.irf = {}
 
     def add_new_exp(self, mode, params):
         #TODO test if creation of exp is successfull
@@ -58,4 +61,21 @@ class Experiments(object):
                     exp.calculate_life_time(measurement)
                 elif type_ == "DLS":
                     exp.calculate_DLS(measurement)
+
+    def get_IRF_from_file(self, file_path):
+        filename, file_extension = os.path.splitext(file_path)
+        if file_extension in ["txt", "dat"]:
+            # TODO IRF from ascii FIle
+            raw = np.loadtxt(file_path)
+            pass
+        ir_exp = Experiment.Experiment("file", [file_path])
+        measurement_ir = ir_exp.create_measurement(0, 0, -1,"lifetime", "", "")
+        ir_exp.calculate_life_time(measurement_ir)
+        return ir_exp.file_name, measurement_ir.data, measurement_ir.time_axis
+
+    def add_irf(self, irf):
+        self.irf[irf.name] = irf
+
+    def get_irf_name_list(self):
+        return list(self.irf.keys())
 

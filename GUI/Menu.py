@@ -122,19 +122,3 @@ class Menu():
                 return filePath
 
 
-    # def askOpenFile(self, title_):
-    #     #filePath = filedialog.askopenfilename(title=title_, initialdir=self.mainGUI.saveDir) #
-    #     #TODO initial directory
-    #     filePath = filedialog.askopenfilename(title=title_)  #
-    #     #TODO logic in controller ?
-    #     if filePath == None or filePath == '':
-    #         return None
-    #     else:
-    #         extension = os.path.splitext(filePath)[1]
-    #         if extension  not in (".spc", ".pt3", ".ttt"):
-    #             messagebox.showwarning("Open file", "The file has not the correct .spc, .pt3, .ttt, extension. Aborting")
-    #             return None
-    #         else:
-    #             self.saveDir = os.path.split(filePath)[0]
-    #             self.controller.open_SPC_File(filePath)
-    #             return filePath

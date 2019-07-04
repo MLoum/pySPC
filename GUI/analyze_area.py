@@ -69,6 +69,10 @@ class Analyze_area():
         for child in self.frame_operation.winfo_children():
             child.destroy()
 
+        if measurement is None:
+            self.gui_for_fit_operation = None
+            return
+
         if measurement.type == "FCS":
             self.analyze_gui = FCS_Analyze_gui(self.frame_operation, self.controller,
                                                        self.appearence_param, measurement)
@@ -79,13 +83,12 @@ class Analyze_area():
         elif measurement.type == "lifetime":
             self.analyze_gui = lifeTimeAnalyze_gui(self.frame_operation, self.controller, self.appearence_param, measurement)
             self.analyze_gui.populate()
-            if measurement.IR_raw is not None:
+            if measurement.IRF is not None and measurement.IRF.raw_data is not None:
                 self.analyze_gui.isDraw_IR.set(measurement.use_IR)
-                self.analyze_gui.ir_name_sv.set(measurement.IR_name)
-                self.analyze_gui.ir_start_sv.set(str(measurement.IR_start))
-                self.analyze_gui.ir_end_sv.set(str(measurement.IR_end))
-                self.analyze_gui.shiftIR_amount_sv.set(str(measurement.IR_shift))
-                self.analyze_gui.bckg_IR_sv.set(str(measurement.IR_bckg))
+                self.analyze_gui.ir_start_sv.set(str(measurement.IRF.start))
+                self.analyze_gui.ir_end_sv.set(str(measurement.IRF.end))
+                # self.analyze_gui.shiftIR_amount_sv.set(str(measurement.IRF.shift))
+                self.analyze_gui.bckg_IR_sv.set(str(measurement.IRF.bckgnd))
 
             self.gui_for_fit_operation = self.analyze_gui.gui_for_fit_operation
         elif measurement.type == "DLS":
@@ -94,53 +97,6 @@ class Analyze_area():
             self.gui_for_fit_operation = None
 
         self.frame_operation.pack(side="top", fill="both", expand=True)
-
-    def copyData(self, target):
-        """
-        We can't change a widget master with Tkintyer, so one way to ove" a widget from one point
-        to another in the GUI is to have two instance of the GUI with different master and copy the -> data <- form
-        one to the other
-        """
-        #TODO
-        pass
-        #self.resultArea_gui.graph_results.copyData(target.graph_navigation)
-
-    def add_measurement(self):
-        if self.controller.current_exp is not None:
-            d = add_measurement_dialog(self.master_frame, "add experiment", self.controller)
-            if d.result is not None:
-                exp_type, exp_name, exp_comment = d.result
-                new_measurement = self.controller.create_measurement(exp_type, exp_name, exp_comment)
-                self.controller.add_measurement(new_measurement)
-                #TODO tick start and end.
-                #TODO node for each file and multi_measurement.
-                iid = self.tree_view.insert(parent="", index='end', values=(exp_name, exp_type, exp_comment, 0, -1))
-                self.tree_view.focus(iid)
-                self.treeview_measurement_select(None)
-        else:
-            self.controller.log_message("No experiment loaded")
-
-    def del_measurement(self):
-        list_selection = self.list_measurement.curselection()
-        num = int(list_selection[0])
-        measurement_name = self.list_measurement.get(num)
-        self.controller.del_measurement(measurement_name)
-        self.list_measurement.delete(num)
-
-    def duplicate_measurement(self):
-        list_selection = self.list_measurement.curselection()
-        num = int(list_selection[0])
-        measurement_name = self.list_measurement.get(num)
-        self.controller.duplicate_measurement(measurement_name)
-        self.list_measurement.insert(tk.END, measurement_name + "_b")
-
-    def treeview_measurement_select(self, event):
-        id_selected_item = self.tree_view.focus()
-        selected_item = self.tree_view.item(id_selected_item)
-        measurement_name = selected_item["values"][0]
-        measurement_type = selected_item["values"][1]
-        measurement = self.controller.set_current_measurement(measurement_name)
-        #display corresponding operation frame
 
 
 
@@ -156,22 +112,6 @@ class Analyze_area():
         elif measurement.type == "DLS":
             pass
 
-
-    # def on_ChangeAnalyzeTab(self, event):
-    #     if self.view.is_a_FileLoaded == False:
-    #         return
-    #     currentNumTab  =  self.tabOperation.index(self.tabOperation.select())
-    #     if currentNumTab == 0:
-    #         self.view.currentOperation = "macro"
-    #     elif currentNumTab == 1:
-    #         self.view.currentOperation = "micro"
-    #     elif currentNumTab == 2:
-    #         self.view.currentOperation = "filter"
-    #     elif currentNumTab == 3:
-    #         self.view.currentOperation = "FCS"
-    #     elif currentNumTab == 4:
-    #         self.view.currentOperation = "DLS"
-    #     # self.view.controller.update_analyze()
 
     def change_analyze_source(self, event=None):
         # Moved to the controller

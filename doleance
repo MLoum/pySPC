@@ -8,9 +8,19 @@ Test Lifetime, simulation avec convolution IRF.
 
 Fit de l'IRF.
 
+Fit tps de vie peu de photon et amplitude.
+
+Deconvolution de l'IRF via mesure temps de vie.
+
+Integrer la DLS.
+
+Share IRF among FIles.
+
 Export Graphe en script python
 
 Script des actions -> cf controleur.
+
+Methode de fit pour le tps de vie -> chi quare ou MLE.
 
 Améliorer l'algo de FCS Whal pour le passer en tout numba
 Identifer dans le time zoom des zones de temps de vie et de corrélation.
