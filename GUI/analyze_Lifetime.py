@@ -73,6 +73,7 @@ class lifeTimeAnalyze_gui():
         self.measurement = measurement
         self.is_keep_selection_for_filter = True
         self.is_burst_analysis = is_burst_analysis
+        self.type = "lifetime"
         # self.is_graph_x_ns = True
 
     def populate(self):
@@ -102,9 +103,8 @@ class lifeTimeAnalyze_gui():
         b = ttk.Button(self.frameMicro_graph, text="Graph", width=6, command=self.launch_micro_time_histo)
         b.grid(row=0, column=0)
 
-        self.isSemiLog = tk.IntVar()
-        self.is_draw_IR_check_box = ttk.Checkbutton(self.frameMicro_graph, text="SemiLog ?", variable=self.isSemiLog)
-        self.is_draw_IR_check_box.grid(row=0, column=1)
+        self.is_semi_log = tk.IntVar()
+        ttk.Checkbutton(self.frameMicro_graph, text="SemiLog ?", variable=self.is_semi_log).grid(row=0, column=1)
 
         # self.toggle_button_graph = ttk.Button(self.frameMicro_graph, text="ns", width=15, command=self.toggle_graph_x)
         # self.toggle_button_graph.grid(row=0, column=0)
@@ -116,13 +116,15 @@ class lifeTimeAnalyze_gui():
         e.grid(row=1, column=1)
         self.num_channel_sv.set('0')
 
-        #Filter
+        self.is_overlay_on_time_zoom = tk.IntVar()
+        ttk.Checkbutton(self.frameMicro_graph, text="Overlay on time zoom", variable=self.is_overlay_on_time_zoom, command=self.is_draw_overlay).grid(row=2, column=0, columnspan=2)
 
+        #Filter
         self.toggle_button = ttk.Button(self.frameMicro_filter, text="Keep selection", width=15, command=self.toggle_filter_mode)
         self.toggle_button.grid(row=0, column=0)
 
-        b = ttk.Button(self.frameMicro_filter, text="Filter", width=6, command=self.microtime_filter)
-        b.grid(row=1, column=0)
+        ttk.Button(self.frameMicro_filter, text="Filter", width=6, command=self.microtime_filter).grid(row=1, column=0)
+
 
 
         #IR
@@ -206,6 +208,9 @@ class lifeTimeAnalyze_gui():
 
     def select_bckgnd_w_cursor(self):
         pass
+
+    def is_draw_overlay(self):
+        self.controller.update_navigation()
 
     def fit_IR(self):
         d = fitIRFDialog(self.masterFrame, title="Initial fit parameters")

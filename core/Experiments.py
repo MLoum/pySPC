@@ -19,7 +19,7 @@ class Experiments(object):
     def add_new_exp(self, mode, params):
         #TODO test if creation of exp is successfull
 
-        exp = Experiment.Experiment(mode, params)
+        exp = Experiment.Experiment(mode, params, exps=self)
         self.experiments[exp.file_name] = exp
         return exp
 

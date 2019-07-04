@@ -230,6 +230,18 @@ class guiForFitOperation():
             self.list_entry_string_variable_fit[i].set(str(param.value))
             i += 1
 
+    def get_lim_for_fit(self):
+        if self.idx_lim_for_fit_min_sv.get() == "":
+            xlim_min_fit = 0
+        else:
+            xlim_min_fit = float(self.idx_lim_for_fit_min_sv.get())
+
+        if self.idx_lim_for_fit_max_sv.get() == "":
+            xlim_max_fit = -1
+        else:
+            xlim_max_fit = float(self.idx_lim_for_fit_max_sv.get())
+        return xlim_min_fit, xlim_max_fit
+
     def get_fit_params(self):
         model_name = self.cb_model_sv.get()
         params = []
@@ -269,14 +281,6 @@ class guiForFitOperation():
             else:
                 params_hold.append(False)
 
-        if self.idx_lim_for_fit_min_sv.get() == "":
-            xlim_min_fit = 0
-        else:
-            xlim_min_fit = float(self.idx_lim_for_fit_min_sv.get())
-
-        if self.idx_lim_for_fit_max_sv.get() == "":
-            xlim_max_fit = -1
-        else:
-            xlim_max_fit = float(self.idx_lim_for_fit_max_sv.get())
+        xlim_min_fit, xlim_max_fit = self.get_lim_for_fit()
 
         return model_name, params, xlim_min_fit, xlim_max_fit, params_min, params_max, params_hold

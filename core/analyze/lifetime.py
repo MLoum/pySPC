@@ -165,8 +165,8 @@ class ExpConvGauss(Model):
 #TODO creer une classe mère pour les analyses.
 class lifeTimeMeasurements(Measurements):
 
-    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment="", logger=None):
-        super().__init__(exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment, logger)
+    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment="", logger=None):
+        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment, logger)
         self.IR_raw, self.IR_processed, self.IR_name = None, None, None
         self.IR_start, self.IR_end = None, None
         self.IR_bckg = 0
@@ -444,6 +444,36 @@ class lifeTimeMeasurements(Measurements):
         ax[1].tick_params(axis='x', which='minor', labelsize=8)
 
         return self.canonic_fig
+
+    def create_chronogram_overlay(self, chronogram, micro_1, micro_2, photon_threshold=5):
+        if micro_1 > micro_2:
+            micro_1, micro_2 = micro_2, micro_1
+        micro_1 = int(micro_1 / (self.exp_param.mIcrotime_clickEquivalentIn_second*1E9))
+        micro_2 = int(micro_2 / (self.exp_param.mIcrotime_clickEquivalentIn_second * 1E9))
+        nanotimes = chronogram.get_raw_data("nanotimes")
+
+        # Test if photon are in the interval
+        nanotimes_mask = (nanotimes >= micro_1) & (nanotimes <= micro_2)
+
+        nanotimes_mask = nanotimes_mask.astype(int)
+        # Count for each chronogram bin the ratio photon inside the nanotimes boundaries vs total number of photon
+        num_photon_edge = chronogram.get_num_photon_of_edge(is_absolute_number=False)
+
+        multi_dim_mask = np.hsplit(nanotimes_mask, num_photon_edge)
+        # multi_dim_selected_photon_by_bin = np.cumsum(multi_dim_mask, axis=1)
+        selected_photon_by_bin = np.zeros(len(multi_dim_mask))
+        for i, dim in enumerate(multi_dim_mask):
+            selected_photon_by_bin[i] = np.sum(dim)
+
+        # selected_photon_by_bin = np.ravel(multi_dim_selected_photon_by_bin)
+
+        # selected_photon_by_bin = np.ravel(np.cumsum(np.hsplit(nanotimes_mask, num_photon_edge)))
+        chrono = np.copy(chronogram.data)
+        # can't divide by zero...
+        chrono[chrono == 0] = 1
+        overlay_data = selected_photon_by_bin / chrono
+        overlay_data[chrono < photon_threshold] = 0
+        return overlay_data
 
     def set_params(self, params):
         if self.modelName == "One Decay":

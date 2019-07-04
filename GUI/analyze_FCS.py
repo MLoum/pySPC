@@ -42,6 +42,7 @@ class FCS_Analyze_gui():
         self.controller = controller
         self.appearenceParam = appearenceParam
         self.measurement = measurement
+        self.type = "FCS"
 
 
     def populate(self):

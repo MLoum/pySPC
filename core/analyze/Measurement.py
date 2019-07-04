@@ -13,8 +13,11 @@ def update_param_vals(pars, prefix, **kwargs):
 
 
 class Measurements:
-    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="", name="", comment="", logger=None):
+    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="", name="", comment="", logger=None):
+        #FIXME exp_param from exp
         self.exp_param = exp_param
+        self.exps = exps
+        self.exp = exp
 
         self.type = type
         self.name = name
@@ -65,6 +68,7 @@ class Measurements:
             self.idx_end = np.searchsorted(self.time_axis, idx_end)
         else:
             self.idx_end = len(self.time_axis)
+        return self.idx_start, self.idx_end
 
 
     def fit(self, idx_start=0, idx_end=-1):
@@ -172,5 +176,15 @@ class Measurements:
         if self.logger is not None:
             if level=="info":
                 self.logger.info(msg)
+
+    def get_raw_data(self, type="timestamp"):
+
+        timeStamps = self.exp.data.channels[self.num_channel].photons['timestamps']
+        nanotimes = self.exp.data.channels[self.num_channel].photons['nanotimes']
+
+        idxStart, idxEnd = np.searchsorted(timeStamps, (self.start_tick, self.end_tick))
+
+        if type=="nanotimes":
+            return nanotimes[idxStart:idxEnd]
 
 

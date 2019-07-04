@@ -5,7 +5,7 @@ from tkinter import ttk
 #from pylab import *
 import matplotlib.pyplot as plt
 
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 
 import numpy as np
 
@@ -18,7 +18,8 @@ import matplotlib.patches as patches
 
 from .interactiveGraphs import InteractiveGraph
 
-class Graph_timeZoom(InteractiveGraph):
+# class Graph_timeZoom(InteractiveGraph):
+class Graph_timeZoom():
     """
         Il s'agit d'une zone où on peut zoomer sur la time trace pour faire des analyses précises,
         voire à la particule unique si le S/N le permet.
@@ -31,9 +32,43 @@ class Graph_timeZoom(InteractiveGraph):
     """
 
     def __init__(self, master_frame, view, controller, figsize, dpi):
-        super().__init__(master_frame, view, controller, figsize, dpi)
+        # super().__init__(master_frame, view, controller, figsize, dpi)
         #self.ax.axis('off')
-        self.figure.tight_layout()
+
+
+        self.masterFrame = master_frame
+        self.view = view
+        self.controller = controller
+        self.appearanceParam = view.appearenceParam
+
+        self.ctrl_is_held = False
+        self.shift_is_held = False
+        self.alt_is_held = False
+
+        self.data_x = None
+        self.data_y = None
+        self.data_fit = None
+        self.data_residual = None
+
+        self.frame = tk.Frame(self.masterFrame)
+        self.frame.pack(side="top", fill="both", expand=True)
+
+        # self.figure = plt.Figure(figsize=figsize, dpi=dpi)
+        # self.ax = self.figure.add_subplot(111)
+        #
+        # self.canvas = FigureCanvasTkAgg(self.figure, master=self.frame)
+        # self.canvas.get_tk_widget().pack(side='top', fill='both', expand=1)
+
+        self.figure, self.ax = plt.subplots(2, 1, figsize=(18, 8), dpi=50, sharex=True,
+                               gridspec_kw={'height_ratios': [9, 1]})
+
+        plt.subplots_adjust(hspace=0)
+        self.figure.set_tight_layout(True)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.frame)
+        # self.canvas.get_tk_widget().pack(side='top', fill='both', expand=1)
+
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.frame)
+        self.canvas._tkcanvas.pack(side='top', fill='both', expand=1)
 
         self.threshold = None
         self.threshold_flank = None
@@ -43,37 +78,38 @@ class Graph_timeZoom(InteractiveGraph):
         self.createWidgets()
         self.createCallBacks()
 
-    def plot(self, chrono):
+    def plot(self, chrono, overlay=None):
         self.chrono = chrono
 
-        if self.ax == None:
-            self.mainAx = self.figure.add_subplot(111)
-            self.subplot3D = None
-        self.ax.clear()
+        self.ax[0].clear()
+        self.ax[1].clear()
 
         #reduce nb of point to 1000 (approximative size in pixel
         if chrono.nb_of_bin > 1000:
             skipsize = int(chrono.nb_of_bin/1000)
             idx = np.arange(0, len(chrono.data), skipsize)
             chronoPlot = chrono.data[idx]
+            if overlay is not None:
+                overlay = overlay[idx]
             chronoPlotX = chrono.time_axis[idx]
         else:
             chronoPlot = chrono.data
             chronoPlotX = chrono.time_axis
 
-        self.ax.set_xlim(chrono.time_axis[0], chrono.time_axis[-1])
+        self.ax[0].set_xlim(chrono.time_axis[0], chrono.time_axis[-1])
+        self.ax[1].set_xlim(chrono.time_axis[0], chrono.time_axis[-1])
 
-        self.ax.plot(chronoPlotX, chronoPlot)
-        self.ax.fill_between(chronoPlotX, 0, chronoPlot, alpha=0.3)
+        self.ax[0].plot(chronoPlotX, chronoPlot)
+        self.ax[0].fill_between(chronoPlotX, 0, chronoPlot, alpha=0.3)
 
         if self.threshold is not None:
-            self.ax.hlines(self.threshold, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
+            self.ax[0].hlines(self.threshold, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
 
         if self.threshold_flank is not None:
-            self.ax.hlines(self.threshold_flank, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
+            self.ax[0].hlines(self.threshold_flank, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
 
         if self.view.current_time_zoom_window != [0, 0]:
-            self.ax.add_patch(
+            self.ax[0].add_patch(
                 patches.Rectangle(
                     (self.view.current_time_zoom_window[0], 0),  # (x,y)
                     self.view.current_time_zoom_window[1]-self.view.current_time_zoom_window[0],  # width
@@ -81,6 +117,16 @@ class Graph_timeZoom(InteractiveGraph):
                     alpha=0.2
                 )
             )
+
+        if overlay is not None:
+            # Overlay is a 1D array
+            nb_y_point = 10
+            y = np.linspace(0, chrono.data.max(), nb_y_point)
+            # z = np.repeat(overlay, nb_y_point, axis=0)
+            z = np.tile(overlay, (nb_y_point, 1))
+            self.ax[0].contourf(chronoPlotX, y, z, 30, alpha=0.3, cmap=plt.cm.hot)
+
+
 
         self.figure.canvas.draw()
 
@@ -134,6 +180,16 @@ class Graph_timeZoom(InteractiveGraph):
             #tell other graph, via the controller ?, that the cursor has changed its position
             pass
 
+    def createCallBacks(self):
+        #https://stackoverflow.com/questions/18141069/matplotlib-how-to-pick-up-shift-click-on-figure
+        # self.figure.canvas.mpl_connect('key_press_event', self.on_key_press)
+        # self.figure.canvas.mpl_connect('key_release_event', self.on_key_release)
+
+        self.figure.canvas.mpl_connect('scroll_event', self.scrollEvent)
+        self.figure.canvas.mpl_connect('button_press_event', self.button_press_event)
+        self.figure.canvas.mpl_connect('button_release_event', self.button_release_event)
+        # self.figure.canvas.mpl_connect('motion_notify_event', self.motion_notify_event)
+
     def button_release_event(self, event):
         if event.button == 1:
             pass
@@ -161,7 +217,12 @@ class Graph_timeZoom(InteractiveGraph):
         self.controller.update_navigation()
 
     def createWidgets(self):
-        super().createWidgets()
+        # set useblit True on gtkagg for enhanced performance
+        # TODO right button click ?
+        # TODO Cursors
+        self.spanSelec = SpanSelector(self.ax[0], self.onSpanSelect, 'horizontal', useblit=True,
+                                    onmove_callback=self.onSpanMove,
+                                    rectprops=dict(alpha=0.5, facecolor='red'), span_stays=True)
         # self.cursor_h = Cursor(self.ax, useblit=True, color='red', horizOn=True, vertOn=False, linewidth=2)
         #
         # self.cursor_h.set_active(False)
@@ -171,12 +232,9 @@ class Graph_timeZoom(InteractiveGraph):
         # self.setOnOffCursors(True)
 
 
-    def createCallBacks(self):
-        super().createCallBacks()
-        # self.cursor_h.connect_event('onmove', callback=self.cursorMove)
-
 
     def cursorMove(self, event):
         print('Cursor move')
         print(event)
+
 

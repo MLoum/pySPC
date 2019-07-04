@@ -23,7 +23,8 @@ class Experiment(object):
     - save_state/load_state
     """
 
-    def __init__(self, mode, params):
+    def __init__(self, mode, params, exps=None):
+        self.exps = exps
         self.exp_param = ExpParam.Experiment_param()
         # self.results = Results.Results()
         self.measurements = {}
@@ -120,32 +121,32 @@ class Experiment(object):
 
     def create_measurement(self, num_channel, start_tick, end_tick, type, name, comment, is_store=True, logger=None):
         if type == "FCS":
-            fcs = FCS.FCSMeasurements(self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
+            fcs = FCS.FCSMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
             if is_store :
                 self.store_measurement(fcs)
             return fcs
         elif type == "chronogram":
-            chrono = chronogram.Chronogram(self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
+            chrono = chronogram.Chronogram(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
             if is_store:
                 self.store_measurement(chrono)
             return chrono
         elif type == "lifetime":
-            lifetime_ = lifetime.lifeTimeMeasurements(self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
+            lifetime_ = lifetime.lifeTimeMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
             if is_store:
                 self.store_measurement(lifetime_)
             return lifetime_
         elif type == "DLS":
-            dls = DLS.DLS_Measurements(self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
+            dls = DLS.DLS_Measurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
             if is_store:
                 self.store_measurement(dls)
             return dls
         elif type == "PCH":
-            pch = PCH.PCH(self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
+            pch = PCH.PCH(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
             if is_store:
                 self.store_measurement(pch)
             return pch
         elif type == "burst":
-            burst = burstDetection.DetectBurst(self.data, self.exp_param, num_channel, start_tick, end_tick, name, comment)
+            burst = burstDetection.DetectBurst(self.exps, self, self.data, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(burst)
             return burst
@@ -190,6 +191,7 @@ class Experiment(object):
         self.time_zoom_chronogram.start_tick = t1_tick
         self.time_zoom_chronogram.end_tick = t2_tick
         self.time_zoom_chronogram = self.calculate_chronogram(self.time_zoom_chronogram, bin_in_tick)
+        return self.time_zoom_chronogram
 
     def create_mini_PCH(self, num_channel, logger=None):
         if self.time_zoom_chronogram is not None:

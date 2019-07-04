@@ -1,14 +1,18 @@
 Ecran d'attente -> ~OK
 
+Temps de vie en log
+
 Restore IR parameter in state file.
 
-Test Lifetime
+Test Lifetime, simulation avec convolution IRF.
+
+Fit de l'IRF.
 
 Export Graphe en script python
 
-Script des actions -> cf controlleur.
+Script des actions -> cf controleur.
 
-Améliorer l'alog de FCS Whal pour le passer en tout numba
+Améliorer l'algo de FCS Whal pour le passer en tout numba
 Identifer dans le time zoom des zones de temps de vie et de corrélation.
 
 Burst

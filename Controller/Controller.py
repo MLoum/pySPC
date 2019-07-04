@@ -163,8 +163,18 @@ class Controller:
                 self.current_exp.data.channels[0].end_tick) * 1E6]
 
         # Time zoom
-        self.current_exp.create_time_zoom_chronogram(channel, t1_tick, t2_tick, bin_in_tick)
-        self.view.archi.navigation_area.timeZoom.graph_timeZoom.plot(self.current_exp.time_zoom_chronogram)
+        time_zoom_chronogram = self.current_exp.create_time_zoom_chronogram(channel, t1_tick, t2_tick, bin_in_tick)
+
+        # Overlay
+        overlay = None
+        if self.view.archi.analyze_area.analyze_gui is not None and self.view.archi.analyze_area.analyze_gui.type=="lifetime":
+            if self.view.archi.analyze_area.analyze_gui.is_overlay_on_time_zoom.get():
+                x1, x2 = self.view.archi.analyze_area.gui_for_fit_operation.get_lim_for_fit()
+                if x1 !=0 and x2 != -1:
+                    overlay = self.current_measurement.create_chronogram_overlay(time_zoom_chronogram, x1, x2)
+
+
+        self.view.archi.navigation_area.timeZoom.graph_timeZoom.plot(self.current_exp.time_zoom_chronogram, overlay)
 
         if is_draw_burst:
             self.view.archi.navigation_area.graph_navigation.bursts = bursts

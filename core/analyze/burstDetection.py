@@ -52,8 +52,10 @@ def threshold_loop_numba(idx, data, burst_threshold, flank_threshold):
 
 
 class DetectBurst(Measurements):
-    def __init__(self, data, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
+    def __init__(self, exps, exp, data, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
         super().__init__(exp_param, num_channel, start_tick, end_tick, "burst", name, comment)
+        self.exps = exps
+        self.exp = exp
         self.data = data
         self.bursts = []
         self.parameters = None

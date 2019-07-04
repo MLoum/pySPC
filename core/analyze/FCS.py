@@ -108,8 +108,8 @@ class TwoSpeDiffusion(Model):
 
 
 class CorrelationMeasurement(Measurements):
-    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="correlation", name="", comment="", logger=None):
-        super().__init__(exp_param, num_channel, start_tick, end_tick, type, name, comment, logger)
+    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="correlation", name="", comment="", logger=None):
+        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, type, name, comment, logger)
         self.num_c1 = 0
         self.num_c2 = 0
         self.start_cor_time_micros = 10
@@ -487,8 +487,8 @@ class CorrelationMeasurement(Measurements):
 
 class FCSMeasurements(CorrelationMeasurement):
 
-    def __init__(self, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment="", logger=None):
-        super().__init__(exp_param, num_channel, start_tick, end_tick, "FCS", name, comment, logger)
+    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment="", logger=None):
+        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "FCS", name, comment, logger)
 
 
     def remove_afterpulsing_via_FLCS(self, nanotimes):
