@@ -8,8 +8,8 @@ from .Measurement import Measurements
 
 class Chronogram(Measurements):
 
-    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment="", logger=None):
-        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "chronogram", name, comment, logger)
+    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
+        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "chronogram", name, comment)
 
     def create_chronogram(self, timestamps,  bin_in_tick=1E5):
         """

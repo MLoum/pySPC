@@ -332,6 +332,41 @@ def correlate_whal(t_stamp_a_true, coeff_a, t_stamp_b_true, coeff_b, lags, B=10,
 
     return G
 
+@numba.jit(nopython=True, nogil=True)
+def find_correlation_area(t_stamp_a, t_stamp_b, correl_tick1, correl_tick2):
+
+    # TODO cross correlation (and coeff ?)
+    correl_score = np.zeros(t_stamp_a.size)
+    idx_photon = 0
+    while idx_photon < t_stamp_a.size:
+        # search left
+        idx = idx_photon
+        t_photon = t_stamp_a[idx_photon]
+        t_lim_1 = t_stamp_a[idx_photon] - correl_tick1
+        t_lim_2 = t_stamp_a[idx_photon] - correl_tick2
+
+
+        while idx >= 0 and t_stamp_a[idx] > t_lim_1:
+            idx -= 1
+        while idx >= 0 and t_stamp_a[idx] > t_lim_2:
+            correl_score[idx_photon] += 1
+            idx -= 1
+
+        # search right
+        idx = idx_photon
+        t_lim_1 = t_stamp_a[idx_photon] + correl_tick1
+        t_lim_2 = t_stamp_a[idx_photon] + correl_tick2
+
+        while idx < t_stamp_a.size and t_stamp_a[idx] < t_lim_1:
+            idx += 1
+        while idx < t_stamp_a.size and t_stamp_a[idx] < t_lim_2:
+            correl_score[idx_photon] += 1
+            idx += 1
+
+        idx_photon += 1
+
+    return correl_score
+
 
 
 @numba.jit(nopython=True, nogil=True)

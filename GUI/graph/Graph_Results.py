@@ -21,6 +21,8 @@ from matplotlib.widgets import MultiCursor
 
 from .interactiveGraphs import InteractiveGraph
 
+
+
 class Graph_Results:
     """
     doc todo
@@ -53,6 +55,13 @@ class Graph_Results:
         self.shift_factor_x = 0
         self.shift_factor_y = 0
 
+        self.is_plot_error_bar = True
+        self.is_plot_all_FCS_curve = False
+        self.is_autoscale = True
+        self.is_zoom_x_selec = False
+        self.is_plot_fit = True
+
+
         self.frame = tk.Frame(self.masterFrame)
         self.frame.pack(side="top", fill="both", expand=True)
 
@@ -84,7 +93,12 @@ class Graph_Results:
         self.createCallBacks()
         self.createWidgets()
 
-    def plot(self, measurement, is_plot_fit=False, is_zoom_x_selec=False, is_autoscale=False, is_plot_error_bar=False):
+    def plot(self, measurement):
+        """
+        Plot appearance param are hold in the view.plot_param object
+        :param measurement:
+        :return:
+        """
         self.ax[0].clear()
         self.ax[1].clear()
 
@@ -94,9 +108,6 @@ class Graph_Results:
 
         self.type = measurement.type
         self.measurement = measurement
-        self.is_plot_fit = is_plot_fit
-        # self.ax.clear()
-        # self.axResidual.clear()
 
         self.data_y = y = measurement.data
         self.data_x = x = measurement.time_axis
@@ -109,13 +120,7 @@ class Graph_Results:
         if y is None:
             return
 
-        # Default :
-        # plt_function = self.ax.plot
-        # plt_residual_fct = self.axResidual.plot
-        #
-        # self.ax.set_xlim(x[0], x[-1])
-        # self.axResidual.set_xlim(x[0], x[-1])
-
+        # default plot function
         plt_function = self.ax[0].plot
         plt_residual_fct = self.ax[1].plot
         plt_error_bar_fct = self.ax[0].plot
@@ -174,23 +179,29 @@ class Graph_Results:
             a.grid(True, which='minor', lw=0.3)
 
         if self.x_selec_min is None:
-            # There is no time selection on the graph
+            # There is no time selection on the graph -> plot all time selection
             plt_function(x, y, self.appearanceParam.line_type_data, alpha=self.appearanceParam.alpha_data)
             plt_residual_fct(x, np.zeros(np.size(y)), self.appearanceParam.line_type_residual)
-            if is_plot_fit:
+            if self.is_plot_fit and fit_y is not None:
                 self.ax[0].set_xlim(fit_x[0], fit_x[-1])
                 plt_function(fit_x, fit_y, self.appearanceParam.line_type_fit)
                 plt_residual_fct(residual_x, residuals_y, self.appearanceParam.line_type_residual)
                 ym = np.abs(residuals_y).max()
                 self.ax[1].set_ylim(-ym, ym)
         else:
+            # There is three areas for the plot :
+            # - outside the time selection at the left
+            # - inside the time selection
+            # - outside the time selection at the right
+
+
             x1 = np.searchsorted(x, self.x_selec_min)
             x2 = np.searchsorted(x, self.x_selec_max)
 
             self.x_selection_area = x[x1:x2]
             self.y_selection_area = y[x1:x2]
 
-            if is_zoom_x_selec:
+            if self.is_zoom_x_selec:
                 self.ax[0].set_xlim(x[x1], x[x2])
                 self.ax[1].set_xlim(x[x1], x[x2])
 
@@ -198,28 +209,41 @@ class Graph_Results:
                 if residuals_y is not None :
                     self.ax[1].set_ylim(np.min(residuals_y[x1:x2]), np.max(residuals_y[x1:x2]))
 
-            if is_autoscale:
+            elif self.is_autoscale:
                 self.ax[0].set_ylim(np.min(y), np.max(y))
                 self.ax[1].set_ylim(np.min(residuals_y), np.max(residuals_y))
 
+            # outside the time selection at the left
             plt_function(x[:x1], y[:x1], self.appearanceParam.line_type_data_non_selected, alpha=self.appearanceParam.alpha_non_selected)
+            # inside the time selection
             plt_function(x[x1:x2], y[x1:x2], self.appearanceParam.line_type_data, alpha=self.appearanceParam.alpha_selected)
+            # outside the time selection at the right
             plt_function(x[x2:], y[x2:], self.appearanceParam.line_type_data_non_selected, alpha=self.appearanceParam.alpha_non_selected)
+
             plt_residual_fct(x, np.zeros(np.size(y)), self.appearanceParam.line_type_residual)
 
             # Plot Fit
-            if is_plot_fit:
-                plt_function(fit_x, fit_y, self.appearanceParam.line_type_fit)
+            if self.is_plot_fit:
+                # The fit data are usually inside the time selection area
+                plt_function(fit_x, fit_y, self.appearanceParam.line_type_fit, label="fit")
                 plt_residual_fct(residual_x, residuals_y, self.appearanceParam.line_type_residual)
 
-        is_plot_error_bar = True
-        if is_plot_error_bar and error_bar is not None:
+        # Error Bar
+        if self.is_plot_error_bar and error_bar is not None:
             plt_error_bar_fct(x, y + error_bar, alpha=self.appearanceParam.alpha_error_bar)
             plt_error_bar_fct(x, y - error_bar, alpha=self.appearanceParam.alpha_error_bar)
 
+        if self.is_plot_all_FCS_curve and self.type == "FCS":
+            if measurement.sub_correlation_curves is not None:
+                NUM_COLORS = len(measurement.sub_correlation_curves)
+                cm = plt.get_cmap('hot')
+                for i, curve in enumerate(measurement.sub_correlation_curves):
+                    plt_function(x, curve, self.appearanceParam.line_type_fit, color=cm(1. * i / NUM_COLORS), label="FCS_" + str(i))
+                plt.legend()
+
 
         # selection patch
-        if self.x_selec_min is not None :
+        if self.x_selec_min is not None:
             self.ax[0].add_patch(
                 patches.Rectangle(
                     (self.x_selec_min, 0),  # (x,y)
@@ -229,37 +253,20 @@ class Graph_Results:
                 )
             )
 
-
-        # zoom and shift
-        x_min, x_max = self.ax[0].get_xlim()
-        y_min, y_max = self.ax[0].get_ylim()
-
-        # # shift
-        # x_min += self.shift_factor_x * (x_max - x_min)
-        # x_max += self.shift_factor_x * (x_max - x_min)
-        # y_min += self.shift_factor_y * (y_max - y_min)
-        # y_max += self.shift_factor_y * (y_max - y_min)
-        #
-        # # x_min *= self.zoom_factor_x
-        # # x_max *= self.zoom_factor_x
-        #
-        # # zoom
-        # self.ax[0].set_xlim(x_min, x_max)
-        # self.ax[1].set_xlim(x_min, x_max)
-        # self.ax[0].set_ylim(y_min, y_max)
-        # self.ax[1].set_ylim(y_min, y_max)
-
-
         self.figure.canvas.draw()
 
     def replot(self, is_zoom_x_selec=False, is_autoscale=False):
-        self.plot(self.measurement, self.is_plot_fit, is_zoom_x_selec, is_autoscale)
+        self.plot(self.measurement)
 
     def zoom_to_x_selec(self):
-        self.plot(self.measurement, self.is_plot_fit, is_zoom_x_selec=True, is_autoscale=False)
+        self.is_zoom_x_selec = True
+        self.is_autoscale = False
+        self.plot(self.measurement)
 
     def zoom_full(self):
-        self.plot(self.measurement, self.is_plot_fit, is_zoom_x_selec=False, is_autoscale=False)
+        self.is_zoom_x_selec = False
+        self.is_autoscale = True
+        self.plot(self.measurement)
 
     def export(self, mode, file_path):
 

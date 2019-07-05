@@ -18,6 +18,7 @@ class Experiments(object):
     def __init__(self):
         self.experiments = {}
         self.irf = {}
+        self.logger = None
 
     def add_new_exp(self, mode, params):
         #TODO test if creation of exp is successfull
@@ -38,11 +39,33 @@ class Experiments(object):
     def save_state(self, shelf):
         # self.shelf = shelve.open(savefile_path, 'n') #n for new
         # self.shelf['experiments'] = self.experiments
+
+        # shelf['irf'] = self.irf
+        #
+        # for key in self.experiments.keys():
+        #     exp = self.experiments[key]
+        #     for key_m in exp.measurements.keys():
+        #         mes = exp.measurements[key_m]
+        #         # shelf[mes.name] = mes
+        #         for item in dir(mes):
+        #             print(item)
+        #             shelf[str(item)] = item
+        #
+        #
+        # shelf[exp.file_name] = exp
+
+        # FIXME cause a bug ???
         shelf['experiments'] = self.experiments
 
-        # shelf.close()
 
     def load_state(self, shelf):
+        # klist = list(shelf.keys())
+        #
+        # for key in klist:
+        #     if key != "irf":
+        #         self.add_exp(shelf[key])
+
+        # FIXME
         self.experiments = shelf['experiments']
 
     def global_tau_FCS(self):

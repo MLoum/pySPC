@@ -401,11 +401,44 @@ class Data():
 
         if is_keep:
             # We have to "invert" the idx_photons_to_filter list
-            all_the_hoton_idx = np.linspace(self.channels[num_channel].photons.size)
-            idx_photons_to_filter = all_the_hoton_idx[np.isin(all_the_hoton_idx, idx_photons_to_filter, assume_unique=True, invert=True)]
+            all_the_photon_idx = np.linspace(self.channels[num_channel].photons.size)
+            idx_photons_to_filter = all_the_photon_idx[np.isin(all_the_photon_idx, idx_photons_to_filter, assume_unique=True, invert=True)]
 
         if replacement_mode == "nothing":
             self.channels[burst_detection_measurement.num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                            idx_photons_to_filter)
 
         self.channels[num_channel].update(self.expParam.mAcrotime_clickEquivalentIn_second)
+
+    def filter_based_on_photon_score(self, num_channel, scores, params, is_keep=True, mode="sigma", replacement_mode="nothing"):
+
+        if mode == "threshold":
+            threshold = params[0]
+
+        elif mode == "sigma":
+            nb_of_sigma = params[0]
+            mean = np.mean(scores)
+            std_dev = np.std(scores)
+            threshold =  mean + nb_of_sigma*std_dev
+        elif mode == "median":
+            # FIXME
+            median = np.median(scores)
+            threshold = median
+        elif mode == "percentile":
+            qth_percentile = params[0]
+            percentile = np.percentile(scores, qth_percentile)
+            threshold = percentile
+
+        idx_photons_to_filter = np.where(scores > threshold)
+
+        if is_keep:
+            # We have to "invert" the idx_photons_to_filter list
+            all_the_photon_idx = np.linspace(self.channels[num_channel].photons.size)
+            idx_photons_to_filter = all_the_photon_idx[
+                np.isin(all_the_photon_idx, idx_photons_to_filter, assume_unique=True, invert=True)]
+
+        if replacement_mode == "nothing":
+            self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
+                                                           idx_photons_to_filter)
+
+

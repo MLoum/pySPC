@@ -1,5 +1,7 @@
 Ecran d'attente -> ~OK
 
+Fill GUI with measurement param.
+
 Temps de vie en log
 
 Restore IR parameter in state file.
@@ -7,6 +9,9 @@ Restore IR parameter in state file.
 Test Lifetime, simulation avec convolution IRF.
 
 Fit de l'IRF.
+
+Show all curve of FCS
+Show error bar.
 
 Fit tps de vie peu de photon et amplitude.
 

@@ -42,6 +42,7 @@ class Controller:
         self.current_measurement = None
         self.current_burst = None
         self.view = View.View(self.root, self)
+        # self.model.logger = self.view.logger
 
         self.root.protocol("WM_DELETE_WINDOW",
                            self.on_quit)  # Exit when x pressed, notice that its the name of the function 'self.handler' and not a method call self.handler()
@@ -171,11 +172,13 @@ class Controller:
 
         # Overlay
         overlay = None
-        if self.view.archi.analyze_area.analyze_gui is not None and self.view.archi.analyze_area.analyze_gui.type=="lifetime":
-            if self.view.archi.analyze_area.analyze_gui.is_overlay_on_time_zoom.get():
-                x1, x2 = self.view.archi.analyze_area.gui_for_fit_operation.get_lim_for_fit()
-                if x1 !=0 and x2 != -1:
-                    overlay = self.current_measurement.create_chronogram_overlay(time_zoom_chronogram, x1, x2)
+        if self.view.archi.analyze_area.analyze_gui is not None:
+            type_ = self.view.archi.analyze_area.analyze_gui.type
+            if type_ in ["lifetime", "FCS"]:
+                if self.view.archi.analyze_area.analyze_gui.is_overlay_on_time_zoom.get():
+                    x1, x2 = self.view.archi.analyze_area.gui_for_fit_operation.get_lim_for_fit()
+                    if x1 !=0 and x2 != -1:
+                        overlay = self.current_measurement.create_chronogram_overlay(time_zoom_chronogram, x1, x2)
 
 
         self.view.archi.navigation_area.timeZoom.graph_timeZoom.plot(self.current_exp.time_zoom_chronogram, overlay)
@@ -207,7 +210,7 @@ class Controller:
     def create_measurement(self, type, name, comment):
         start_tick, end_tick = self.get_analysis_start_end_tick()
         num_channel = self.view.currentChannel
-        return self.current_exp.create_measurement(num_channel, start_tick, end_tick, type, name, comment, is_store=True, logger=self.view.logger)
+        return self.current_exp.create_measurement(num_channel, start_tick, end_tick, type, name, comment, is_store=True)
 
     def get_measurement(self, measurement_name):
         return self.current_exp.get_measurement(measurement_name)
@@ -356,17 +359,14 @@ class Controller:
     def replot_result(self, is_zoom_x_selec=False, is_autoscale=False):
         self.view.archi.analyze_area.resultArea_gui.graph_results.replot(is_zoom_x_selec, is_autoscale)
 
-    def guess_eval_fit(self, mode, model_name, params, params_min, params_max, params_hold, idx_start=0, idx_end=-1,  is_burst_analysis=False):
+    def guess_eval_fit(self, mode, params, is_burst_analysis=False):
         """
         :param mode can be fit, eval or guess
-        :param model_name string for the model name
-        :param params: list of paramaters for the fit
-        xlims_idx : index of the limits of the x axis where to perform the fit.
+        :param params : dict of parameters for the fit. See guiForFitOperation.get_fit_params
         :return:
-
         """
         data, gui, fit_plot_mode = None, None, None
-
+        measurement = None
         if is_burst_analysis==False:
             measurement = self.current_measurement
             gui = self.view.archi.analyze_area.gui_for_fit_operation
@@ -379,31 +379,29 @@ class Controller:
 
         channel = self.view.currentChannel
         # TODO cursor with fit limits.
-
+        model_name = params["model_name"]
         measurement.set_model(model_name)
 
         if measurement.data is not None:
             if mode == "eval":
-                measurement.set_params(params)
-                measurement.eval(idx_start, idx_end)
+                measurement.eval(params)
 
             elif mode == "guess":
-                measurement.guess(idx_start, idx_end)
+                measurement.guess(params)
                 gui.setParamsFromFit(measurement.params)
 
             elif mode == "fit":
-                measurement.set_params(params)
-                measurement.set_params_max(params_max)
-                measurement.set_params_min(params_min)
-                measurement.set_hold_params(params_hold)
-                fit_report = measurement.fit(idx_start, idx_end)
+                fit_report = measurement.fit(params)
                 # TODO set option to tell if user want fit results exported to fit params
                 gui.setParamsFromFit(measurement.params)
                 # self.view.archi.analyze_area.resultArea_gui.setTextResult(fitResults.fit_report())
                 self.view.archi.analyze_area.resultArea_gui.setTextResult(fit_report)
 
+            self.view.graph_result.is_plot_fit = True
+            self.view.graph_result.plot(measurement)
 
-            self.view.archi.analyze_area.resultArea_gui.graph_results.plot(measurement, is_plot_fit=True)
+    def set_use_error_bar(self, is_error_bar_for_fit):
+        self.current_measurement.is_error_bar_for_fit = bool(is_error_bar_for_fit)
 
     #IRF
     def open_and_set_IRF_file(self, file_path):
@@ -491,7 +489,7 @@ class Controller:
         burst_measurement.perform_measurements(self, type, model_name, fit_params, idx_start, idx_end)
 
     def save_state(self, savefile_path):
-        if self.current_exp.file_name is None:
+        if self.current_exp is None:
             self.log_message("No experiment to save !\n")
             return
         self.shelf = shelve.open(savefile_path, 'n')  # n for new

@@ -37,52 +37,42 @@ class guiForFitOperation_FCS(guiForFitOperation):
 
 
 class FCS_Analyze_gui():
-    def __init__(self, masterFrame, controller, appearenceParam, measurement=None):
+    def __init__(self, masterFrame, controller, appearence_param, measurement=None):
         self.masterFrame = masterFrame
         self.controller = controller
-        self.appearenceParam = appearenceParam
+        self.view = self.controller.view
+        self.appearence_param = appearence_param
         self.measurement = measurement
         self.type = "FCS"
 
 
     def populate(self):
         self.frame_Correlate = tk.LabelFrame(self.masterFrame, text="Correlate",
-                                                borderwidth=self.appearenceParam.frameLabelBorderWidth)
+                                             borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_fit = tk.LabelFrame(self.masterFrame, text="Fit",
-                                          borderwidth=self.appearenceParam.frameLabelBorderWidth)
+                                       borderwidth=self.appearence_param.frameLabelBorderWidth)
 
         self.frame_Correlate.pack(side="left", fill="both", expand=True)
         self.frame_fit.pack(side="left", fill="both", expand=True)
 
-        label = ttk.Label(self.frame_Correlate, text='Max Correl Time (ms)')
-        label.grid(row=0, column=0)
+        # TODO default value object in view
+        ttk.Label(self.frame_Correlate, text='Max Correl Time (ms)').grid(row=0, column=0)
 
-        self.maxCorrelTime_sv = tk.StringVar()
-        e = ttk.Entry(self.frame_Correlate, textvariable=self.maxCorrelTime_sv, justify=tk.CENTER, width=7)
-        e.grid(row=0, column=1)
-        self.maxCorrelTime_sv.set('1000')
+        self.maxCorrelTime_sv = tk.StringVar(value='1000')
+        ttk.Entry(self.frame_Correlate, textvariable=self.maxCorrelTime_sv, justify=tk.CENTER, width=7).grid(row=0, column=1)
 
-        label = ttk.Label(self.frame_Correlate, text='Max Correl Time (µs)')
-        label.grid(row=0, column=2)
-        self.startCorrelTime_sv = tk.StringVar()
-        e = ttk.Entry(self.frame_Correlate, textvariable=self.startCorrelTime_sv, justify=tk.CENTER, width=7)
-        e.grid(row=0, column=3)
-        self.startCorrelTime_sv.set('10')
+        ttk.Label(self.frame_Correlate, text='Max Correl Time (µs)').grid(row=0, column=2)
+        self.startCorrelTime_sv = tk.StringVar(value='10')
+        ttk.Entry(self.frame_Correlate, textvariable=self.startCorrelTime_sv, justify=tk.CENTER, width=7).grid(row=0, column=3)
 
 
-        label = ttk.Label(self.frame_Correlate, text='channel A')
-        label.grid(row=0, column=4)
-        self.num_c1_sv = tk.StringVar()
-        e = ttk.Entry(self.frame_Correlate, textvariable=self.num_c1_sv, justify=tk.CENTER, width=7)
-        e.grid(row=0, column=5)
-        self.num_c1_sv.set('1')
+        ttk.Label(self.frame_Correlate, text='channel A').grid(row=0, column=4)
+        self.num_c1_sv = tk.StringVar(value='1')
+        ttk.Entry(self.frame_Correlate, textvariable=self.num_c1_sv, justify=tk.CENTER, width=7).grid(row=0, column=5)
 
-        label = ttk.Label(self.frame_Correlate, text='channel B')
-        label.grid(row=0, column=6)
-        self.num_c2_sv = tk.StringVar()
-        e = ttk.Entry(self.frame_Correlate, textvariable=self.num_c2_sv, justify=tk.CENTER, width=7)
-        e.grid(row=0, column=7)
-        self.num_c2_sv.set('1')
+        ttk.Label(self.frame_Correlate, text='channel B').grid(row=0, column=6)
+        self.num_c2_sv = tk.StringVar(value='1')
+        ttk.Entry(self.frame_Correlate, textvariable=self.num_c2_sv, justify=tk.CENTER, width=7).grid(row=0, column=7)
 
         ttk.Label(self.frame_Correlate, text='Algo').grid(row=0, column=8)
 
@@ -93,28 +83,28 @@ class FCS_Analyze_gui():
         self.algo_combo_box_sv.set('Whal')
         cb.grid(row=0, column=9)
 
+        ttk.Button(self.frame_Correlate, text="AutoCorrelation", width=12, command=self.launchAutoCorrelationFCS).grid(row=1, column=0)
+        ttk.Button(self.frame_Correlate, text="CrossCorrelation", width=12, command=self.launchCrossCorrelationFCS).grid(row=1, column=1)
 
-        b = ttk.Button(self.frame_Correlate, text="AutoCorrelation", width=12, command=self.launchAutoCorrelationFCS)
-        b.grid(row=1, column=0)
+        self.is_multiproc_iv = tk.IntVar(value=1)
+        ttk.Checkbutton(self.frame_Correlate, text="Multi Proc", variable=self.is_multiproc_iv).grid(row=2, column=0)
 
-        b = ttk.Button(self.frame_Correlate, text="CrossCorrelation", width=12, command=self.launchCrossCorrelationFCS)
-        b.grid(row=1, column=1)
+        self.is_show_all_curve = tk.IntVar(value=0)
+        ttk.Checkbutton(self.frame_Correlate, text="Show all curves", variable=self.is_show_all_curve, command=self.show_all_curve).grid(row=2, column=1)
 
-        self.is_multiproc_iv = tk.IntVar()
-        self.is_multiproc_check_box = ttk.Checkbutton(self.frame_Correlate, text="Multi Proc", variable=self.is_multiproc_iv)
-        self.is_multiproc_check_box.grid(row=2, column=0)
-        self.is_multiproc_iv.set(1)
+        self.is_show_error_bar = tk.IntVar(value=1)
+        ttk.Checkbutton(self.frame_Correlate, text="Show error bars", variable=self.is_show_error_bar, command=self.show_error_bar).grid(row=2, column=2)
 
-        self.is_show_all_curve = tk.IntVar()
-        self.is_show_all_curve_check_box = ttk.Checkbutton(self.frame_Correlate, text="Show all curves", variable=self.is_show_all_curve, command=self.show_all_curve)
-        self.is_show_all_curve_check_box.grid(row=2, column=1)
+        self.is_overlay_on_time_zoom = tk.IntVar(value=0)
+        ttk.Checkbutton(self.frame_Correlate, text="Overlay on time zoom", variable=self.is_overlay_on_time_zoom, command=self.update_navigation).grid(row=3, column=0, columnspan=3)
 
-
-
-        #FIT
+        # Fit GUI
         self.gui_for_fit_operation = guiForFitOperation_FCS(self.frame_fit, self.controller, ('1 Diff',  '2 Diff', 'Rotation'), nb_param_fit=8)
         self.gui_for_fit_operation.populate()
 
+
+    def update_navigation(self):
+        self.controller.update_navigation()
 
     def launchAutoCorrelationFCS(self):
         self.controller.calculate_measurement()
@@ -126,5 +116,10 @@ class FCS_Analyze_gui():
         #self.controller.correlateFCS()
 
     def show_all_curve(self):
-        pass
+        self.view.graph_result.is_plot_all_FCS_curve = bool(self.is_show_all_curve.get())
+        self.controller.update_analyze()
+
+    def show_error_bar(self):
+        self.view.graph_result.is_plot_error_bar = bool(self.is_show_error_bar.get())
+        self.controller.update_analyze()
 

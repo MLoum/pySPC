@@ -49,8 +49,8 @@ class BurstAnalysis_gui():
         self.frame_chronogram = tk.LabelFrame(self.frame_detection, text="a) chronogramm", borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_chronogram.pack(side="top", fill="both", expand=True)
 
-        label = ttk.Label(self.frame_chronogram, text='bin size (ms)')
-        label.grid(row=0, column=0)
+        label = ttk.Label(self.frame_chronogram, text='bin size (ms)').grid(row=0, column=0)
+
 
         self.binsize_sv = tk.StringVar()
         e = ttk.Entry(self.frame_chronogram, textvariable=self.binsize_sv, justify=tk.CENTER, width=12)

@@ -9,7 +9,7 @@ from .correlate import whal_auto
 
 from threading import Thread
 
-from core.analyze.pycorrelate import pcorrelate, make_loglags, ucorrelate_coeff, pnormalize, find_pair_Whal, pnormalize_coeff, coarsen_timestamp, pnormalize_coeff_whal, correlate_whal
+from core.analyze.pycorrelate import pcorrelate, make_loglags, ucorrelate_coeff, pnormalize, find_pair_Whal, pnormalize_coeff, coarsen_timestamp, pnormalize_coeff_whal, correlate_whal, find_correlation_area
 
 import numba
 
@@ -108,13 +108,14 @@ class TwoSpeDiffusion(Model):
 
 
 class CorrelationMeasurement(Measurements):
-    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="correlation", name="", comment="", logger=None):
-        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, type, name, comment, logger)
+    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="correlation", name="", comment=""):
+        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, type, name, comment)
         self.num_c1 = 0
         self.num_c2 = 0
         self.start_cor_time_micros = 10
         self.max_cor_time_ms = 1000
         self.precision = 10
+        self.sub_correlation_curves = None
 
     def correlateMonoProc(self, timestamps_1, timestamps_2, coeff_1, coeff_2, max_correlation_time_in_tick, start_correlation_time_in_tick=2, nb_of_point_per_cascade_aka_B=10, tick_duration_micros=1, algo="Whal"):
 
@@ -125,6 +126,7 @@ class CorrelationMeasurement(Measurements):
         else:
             is_auto_cor = False
 
+        self.error_bar = None
 
         self.tick_duration_micros = tick_duration_micros
         self.maxTimeInTick = timestamps_1[-1]
@@ -145,94 +147,6 @@ class CorrelationMeasurement(Measurements):
             self.time_axis = self.time_axis[:-1]
         # self.pcorrelate_me(timestamps1, self.timeAxis, self.data)
 
-
-    # def correlate_whal(self, t_stamp_a_true, coeff_a, t_stamp_b_true, coeff_b, lags, B=10, is_normalize=True):
-    #     """
-    #     lags in tick
-    #     :param t_stamps_a:
-    #     :param lags:
-    #     :return:
-    #     """
-    #
-    #     G = np.zeros(lags.size)
-    #     if id(t_stamp_a_true) == id(t_stamp_b_true):
-    #         is_auto_cor = True
-    #     else:
-    #         is_auto_cor = False
-    #
-    #     t_stamp_a = np.copy(t_stamp_a_true)
-    #     if is_auto_cor:
-    #         t_stamp_b = t_stamp_a
-    #     else:
-    #         t_stamp_b = np.copy(t_stamp_b_true)
-    #
-    #
-    #     coaserning_value = 1
-    #     coarsening_counter = 0
-    #     # def coarsen_timeStamp(t_stamps, coeffs):
-    #     #     # NB : //= -> integer division
-    #     #     t_stamps //= 2
-    #     #     # t_stamps, unique_idx = np.unique(t_stamps, return_index=True)
-    #     #     # find the position of consecutive idx with same timestamp (i.e difference = 0)
-    #     #     consecutive_idxs = np.argwhere(np.diff(t_stamps) == 0)
-    #     #     # Merge weighting (coeff) of same timestamps
-    #     #     coeffs[consecutive_idxs] += coeffs[consecutive_idxs + 1]
-    #     #     # Removing duplicate timestamps
-    #     #
-    #     #     t_stamp_a = np.delete(t_stamps, consecutive_idxs + 1)
-    #     #     coeff_a = np.delete(coeffs, consecutive_idxs + 1)
-    #     #
-    #     #
-    #     #     # idx_to_keep = np.nonzero(np.diff(t_stamp_a))
-    #     #     # # idx_to_keep = np.invert(consecutive_idxs)
-    #     #     # t_stamp_a = t_stamp_a[idx_to_keep]
-    #     #     # coeff_a = coeff_a[idx_to_keep]
-    #
-    #     for idx_G, lag in enumerate(lags):
-    #         if coarsening_counter == B:
-    #             t_stamp_a, coeff_a = coarsen_timestamp(t_stamp_a, coeff_a)
-    #
-    #             # coarsen_timeStamp(t_stamp_a, coeff_a)
-    #             coaserning_value *= 2
-    #             if not is_auto_cor:
-    #                 # coarsen_timeStamp(t_stamp_b, t_stamp_b)
-    #                 t_stamp_a, coeff_a = coarsen_timestamp(t_stamp_b, t_stamp_b)
-    #             else:
-    #                 t_stamp_b = t_stamp_a
-    #                 coeff_b = coeff_a
-    #
-    #             coarsening_counter = 1
-    #         else:
-    #             coarsening_counter += 1
-    #
-    #         # Lag as also to be divided by 2 for each cascade
-    #         # corrected_lag = int(lag / np.power(2, idx_G//B))
-    #         corrected_lag = int(lag / coaserning_value)
-    #
-    #         # Short numpy implementation that is quite slow bevause it does'nt take into account the fact that the list are ordered.
-    #         # correlation_match = np.in1d(t_stamp_a, t_stamp_a_dl, assume_unique=True)
-    #         # G[idx_G] = np.sum(coeff_a[correlation_match])
-    #
-    #         # Pair calculation
-    #         # Numba or Cython implementation
-    #         G[idx_G] = find_pair_Whal(t_stamp_a, coeff_a, t_stamp_b, coeff_b, corrected_lag)
-    #         G[idx_G] /= coaserning_value
-    #
-    #     # G /= np.diff(lags)
-    #     if is_normalize:
-    #         G = pnormalize_coeff_whal(G, t_stamp_a_true, t_stamp_b_true, lags)
-    #         # G = pnormalize_coeff()
-    #         # nb_photon = t_stamp_a.size
-    #         # G *= (duration - lags) / (nb_photon ** 2)
-    #         # for idx_G, lag in enumerate(lags):
-    #         #     G[idx_G] *= (duration - lag) / (nb_photon**2)
-    #         # for i, tau in enumerate(bins[1:]):
-    #         #     Gn[i] *= ((duration - tau) /
-    #         #               (float((t - t[0] >= tau).sum()) *
-    #         #                float((u - u[0] <= (u.max() - u[0] - tau)).sum())))
-    #
-    #
-    #     return G
 
     def pcorrelate_me(self, timestamps, taus, G):
         numLastPhoton = np.size(timestamps)
@@ -302,6 +216,8 @@ class CorrelationMeasurement(Measurements):
             boundary = np.searchsorted(timestamps_1, chunk_time_limit)
 
         nb_of_chunk = len(chunk_boundaries)
+        if nb_of_chunk > 15:
+            nb_of_chunk = 15
 
         self.log("nb of chunk : %d\n" % nb_of_chunk)
 
@@ -364,10 +280,10 @@ class CorrelationMeasurement(Measurements):
             pass
         elif algo == "lin":
             pass
-        self.Gs = np.vstack(Gs)
+        self.sub_correlation_curves = np.vstack(Gs)
 
-        self.data = np.mean(Gs, axis=0)
-        self.error_bar = np.std(Gs, axis=0)
+        self.data = np.mean(self.sub_correlation_curves, axis=0)
+        self.error_bar = np.std(self.sub_correlation_curves, axis=0)
 
         # self.normalize_correlation()
         self.scale_time_axis()
@@ -417,6 +333,39 @@ class CorrelationMeasurement(Measurements):
         self.nb_of_correlation_point = taus.size
         self.time_axis = taus
         return taus
+
+    def create_chronogram_overlay(self, chronogram, correl_tick1, correl_tick2):
+        if correl_tick1 > correl_tick2:
+            correl_tick1, correl_tick2 = correl_tick2, correl_tick1
+
+        correl_tick1 = int(correl_tick1 / (self.exp_param.mAcrotime_clickEquivalentIn_second*1E6))
+        correl_tick2 = int(correl_tick2 / (self.exp_param.mAcrotime_clickEquivalentIn_second*1E6))
+
+
+        timestamps = chronogram.get_raw_data(type="timestamp", mode="data")
+        # TODO Extend on left and right ?
+        # tick_left = chronogram.start_tick - correl_tick2
+        # tick_right = chronogram.end_tick + correl_tick2
+        #
+        # timestamps = chronogram.get_raw_data(type="timestamp", mode="full")
+        # idx_l, idx_r = np.searchsorted(timestamps, (tick_left, tick_right))
+        # timestamps = timestamps[idx_l:idx_r]
+
+        # TODO multiproc if too much photons
+        # TODO cross correlation
+        self.correl_scores = find_correlation_area(timestamps, timestamps, correl_tick1, correl_tick2)
+
+        num_photon_edge = chronogram.get_num_photon_of_edge(is_absolute_number=False)
+
+        multi_dim_mask = np.hsplit(self.correl_scores, num_photon_edge)
+        # multi_dim_selected_photon_by_bin = np.cumsum(multi_dim_mask, axis=1)
+        correl_score_by_bin = np.zeros(len(multi_dim_mask))
+        for i, dim in enumerate(multi_dim_mask):
+            correl_score_by_bin[i] = np.sum(dim)
+
+        return correl_score_by_bin
+
+
 
 
     def set_params(self, params):
@@ -487,8 +436,8 @@ class CorrelationMeasurement(Measurements):
 
 class FCSMeasurements(CorrelationMeasurement):
 
-    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment="", logger=None):
-        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "FCS", name, comment, logger)
+    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
+        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "FCS", name, comment)
 
 
     def remove_afterpulsing_via_FLCS(self, nanotimes):
@@ -520,9 +469,11 @@ class FCSMeasurements(CorrelationMeasurement):
         if self.modelName == "2 Diff":
             self.params['G0a'].set(value=params[0],  vary=True, min=0, max=None)
             self.params['tdiffa'].set(value=params[1], vary=True, min=0, max=None)
-            self.params['G0b'].set(value=params[0],  vary=True, min=0, max=None)
-            self.params['tdiffb'].set(value=params[1], vary=True, min=0, max=None)
-            self.params['cst'].set(value=params[2], vary=True, min=0, max=None)
+            self.params['r'].set(value=params[2], vary=True, min=0, max=None)
+            self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
+            self.params['G0b'].set(value=params[4],  vary=True, min=0, max=None)
+            self.params['tdiffb'].set(value=params[5], vary=True, min=0, max=None)
+
 
     def set_model(self, modelName):
         #il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *

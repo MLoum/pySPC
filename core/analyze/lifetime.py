@@ -1,5 +1,5 @@
 import numpy as np
-from lmfit import minimize, Parameters, Model, fit_report
+from lmfit import minimize, Parameters, Model, fit_report, Minimizer
 from lmfit.models import LinearModel, ExponentialModel
 import matplotlib.pyplot as plt
 
@@ -23,7 +23,7 @@ def update_param_vals(pars, prefix, **kwargs):
 class lifetimeModelClass():
     def __init__(self, IRF=None):
         self.IRF = IRF
-        self.x_range = None
+        # self.x_range = None
         self.data = None
         self.non_convoluted_decay = None
         self.observed_count = 0
@@ -66,6 +66,7 @@ class OneExpDecay(lifetimeModelClass):
             IR = shift_scipy(self.IRF.processed_data, shift, mode='wrap')
             # IR = np.roll(self.IR, shift)
             conv = np.convolve(self.non_convoluted_decay, IR)[0:np.size(self.non_convoluted_decay)]
+            # Test if sum is different from zero ?
             conv /= conv.sum()
             # return conv[self.x_range[0]:self.x_range[1]] + self.data_bckgnd
             return self.observed_count*conv + self.data_bckgnd
@@ -75,7 +76,7 @@ class OneExpDecay(lifetimeModelClass):
 
     def make_params(self):
         params = Parameters()
-        params.add(name="tau", value=1, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="tau", value=1, min=0.01, max=np.inf, brute_step=0.1)
         params.add(name="shift", value=0, min=-np.inf, max=np.inf, brute_step=0.1)
         params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
         return params
@@ -165,8 +166,8 @@ class ExpConvGauss(Model):
 #TODO creer une classe mère pour les analyses.
 class lifeTimeMeasurements(Measurements):
 
-    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment="", logger=None):
-        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment, logger)
+    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
+        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment)
         self.IRF = None
         self.use_IR = False
 
@@ -255,7 +256,8 @@ class lifeTimeMeasurements(Measurements):
             minimization = "chi-square"
             # minimization = "maximum likelihood"
             nonzero_data = np.copy(self.data)
-            nonzero_data = nonzero_data[nonzero_data == 0] = 1
+            # nonzero_data = nonzero_data[nonzero_data == 0] = 1
+            nonzero_data[nonzero_data == 0] = 1
             weights = 1 / np.sqrt(nonzero_data)
             # weights[y == 0] = 1. / np.sqrt(baseline_true)
             weights[self.data == 0] = 0
@@ -308,40 +310,39 @@ class lifeTimeMeasurements(Measurements):
         else:
             super().guess(idx_start, idx_end)
 
-    def eval(self, idx_start=0, idx_end=-1):
-        if self.model is not None:
-            self.model.data = self.data
-
-        if self.use_IR:
-            self.find_idx_of_fit_limit(idx_start, idx_end)
+    def eval(self, params_=None):
+            self.set_params(params_)
             y = self.data[self.idx_start:self.idx_end]
             x_eval_range = self.time_axis[self.idx_start:self.idx_end]
             self.model.x_range = (self.idx_start, self.idx_end)
-
+            # FIXME NB !!! est-ce que  observed_count doit tenir compte de tout la trace temporelle ou seulement de la parite fitée ?
             self.model.observed_count = (self.data - self.params['bckgnd'].value).sum()
+            super().eval(params_)
 
-            # self.eval_y_axis = self.model.eval(self.params, t=self.time_axis)
-            # self.residuals = self.eval_y_axis - y
+    def explore_chi2_surf(self, params_):
+        self.set_model(params_["model_name"])
+        self.params = self.model.make_params()
 
-            ymodel = self.model.eval(self.time_axis, self.params)
+        self.set_params(params_)
 
-            # self.find_idx_of_fit_limit(idx_start, idx_end)
-            #
-            # x_eval_range = self.time_axis[self.idx_start:self.idx_end]
-            # y = self.data[self.idx_start:self.idx_end]
-            #
-            # self.model.x_range = (self.idx_start, self.idx_end)
-            #
-            # self.eval_y_axis = self.model.eval(self.params, t=self.time_axis)
-            self.eval_y_axis = ymodel
-            self.residuals = self.eval_y_axis[self.idx_start:self.idx_end] - self.data[self.idx_start:self.idx_end]
-            self.eval_x_axis = self.time_axis
+        def fcn2min(params_, x, data, weights):
+            ymodel = self.model.eval(params=params_, t=x)
+            return (data[self.idx_start:self.idx_end] - ymodel[self.idx_start:self.idx_end]) * weights[self.idx_start:self.idx_end]
 
-            self.fit_x = self.time_axis
-            self.residual_x = self.time_axis[self.idx_start:self.idx_end]
+        self.model.observed_count = (self.data - self.params['bckgnd'].value).sum()
 
-        else:
-            super().eval(idx_start, idx_end)
+        nonzero_data = np.copy(self.data)
+        nonzero_data[nonzero_data == 0] = 1
+        weights = 1 / np.sqrt(nonzero_data)
+        # weights[y == 0] = 1. / np.sqrt(baseline_true)
+        weights[self.data == 0] = 0
+
+        y = self.data[self.idx_start:self.idx_end]
+        x = self.time_axis[self.idx_start:self.idx_end]
+
+        fitter = Minimizer(fcn2min, self.params, fcn_args=(self.time_axis, self.data, weights))
+        result_brute = fitter.minimize(method='brute', Ns=25, keep=25)
+        return result_brute
 
     def create_canonic_graph(self, is_plot_error_bar=False, is_plot_text=False):
         self.canonic_fig, self.canonic_fig_ax = plt.subplots(2, 1, figsize=(10, 8), sharex=True,
@@ -417,30 +418,30 @@ class lifeTimeMeasurements(Measurements):
         overlay_data[chrono < photon_threshold] = 0
         return overlay_data
 
-    def set_params(self, params):
-        if self.modelName == "One Decay":
-            self.params['t0'].set(value=params[0],  vary=True, min=0, max=None)
-            self.params['amp'].set(value=params[1], vary=True, min=0, max=None)
-            self.params['tau'].set(value=params[2], vary=True, min=0, max=None)
-            self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
-
-        elif self.modelName == "One Decay IRF":
-            self.params['tau'].set(value=params[0])
-            self.params['shift'].set(value=params[1])
-            self.params['bckgnd'].set(value=params[2])
-            # self.model.bckgnd = params[2]
-
-        elif self.modelName == "One Decay Normalized":
-            self.params['t0'].set(value=params[0],  vary=True, min=0, max=None)
-            self.params['tau'].set(value=params[1], vary=True, min=0, max=None)
-            self.params['cst'].set(value=params[2], vary=True, min=0, max=None)
-
-        elif self.modelName == "Two Decays IRF":
-            self.params['tau1'].set(value=params[0])
-            self.params['a1'].set(value=params[1])
-            self.params['tau2'].set(value=params[2])
-            self.params['shift'].set(value=params[3])
-            self.params['bckgnd'].set(value=params[4])
+    # def set_params(self, params):
+    #     if self.modelName == "One Decay":
+    #         self.params['t0'].set(value=params[0],  vary=True, min=0, max=None)
+    #         self.params['amp'].set(value=params[1], vary=True, min=0, max=None)
+    #         self.params['tau'].set(value=params[2], vary=True, min=0, max=None)
+    #         self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
+    #
+    #     elif self.modelName == "One Decay IRF":
+    #         self.params['tau'].set(value=params[0])
+    #         self.params['shift'].set(value=params[1])
+    #         self.params['bckgnd'].set(value=params[2])
+    #         # self.model.bckgnd = params[2]
+    #
+    #     elif self.modelName == "One Decay Normalized":
+    #         self.params['t0'].set(value=params[0],  vary=True, min=0, max=None)
+    #         self.params['tau'].set(value=params[1], vary=True, min=0, max=None)
+    #         self.params['cst'].set(value=params[2], vary=True, min=0, max=None)
+    #
+    #     elif self.modelName == "Two Decays IRF":
+    #         self.params['tau1'].set(value=params[0])
+    #         self.params['a1'].set(value=params[1])
+    #         self.params['tau2'].set(value=params[2])
+    #         self.params['shift'].set(value=params[3])
+    #         self.params['bckgnd'].set(value=params[4])
 
     def set_model(self, model_name):
         if model_name == "One Decay IRF":

@@ -8,8 +8,8 @@ from .Measurement import Measurements
 
 class PCH(Measurements):
 
-    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment="", logger=None):
-        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "PCH", name, comment, logger)
+    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
+        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "PCH", name, comment)
 
     def create_histogram(self, chronogram, timestamps=None,  bin_size=1):
         if chronogram is not None :

@@ -1,5 +1,5 @@
 import numpy as np
-from lmfit import minimize, Parameters, Model
+from lmfit import minimize, Parameters, Model, Minimizer
 from lmfit.models import LinearModel, ExponentialModel
 
 
@@ -13,7 +13,7 @@ def update_param_vals(pars, prefix, **kwargs):
 
 
 class Measurements:
-    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="", name="", comment="", logger=None):
+    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="", name="", comment=""):
         #FIXME exp_param from exp
         self.exp_param = exp_param
         self.exps = exps
@@ -42,10 +42,10 @@ class Measurements:
         self.data = None
         self.error_bar = None
 
+        self.is_error_bar_for_fit = True
+
         self.fit_x = None
         self.residual_x = None
-
-        self.logger = logger
 
 
         self.canonic_fig, self.canonic_fig_ax = None, None
@@ -71,18 +71,24 @@ class Measurements:
         return self.idx_start, self.idx_end
 
 
-    def fit(self, idx_start=0, idx_end=-1):
+    def fit(self, idx_start=0, idx_end=-1, params=None):
         """
 
         :param idx_start:
         :param idx_end:
         :return:
         """
-        self.find_idx_of_fit_limit(idx_start, idx_end)
+        if params is not None:
+            self.set_params(params)
+
         y = self.data[self.idx_start:self.idx_end]
         x = self.time_axis[self.idx_start:self.idx_end]
-        error_bar = self.error_bar[self.idx_start:self.idx_end]
-        self.fit_results = self.model.fit(y, self.params, t=x, weights=error_bar)
+
+        if self.is_error_bar_for_fit:
+            error_bar = self.error_bar[self.idx_start:self.idx_end]
+            self.fit_results = self.model.fit(y, self.params, t=x, weights=error_bar)
+        else:
+            self.fit_results = self.model.fit(y, self.params, t=x)
 
         self.eval_y_axis = self.fit_results.best_fit
         self.eval_x_axis = self.fit_x = x
@@ -92,24 +98,25 @@ class Measurements:
 
         return self.fit_results.fit_report()
 
-    def eval(self, idx_start=0, idx_end=-1):
+    def eval(self, params_=None):
         """
 
         :param idx_start:
         :param idx_end:
         :return:
         """
-        self.find_idx_of_fit_limit(idx_start, idx_end)
+        if params_ is not None:
+            self.set_params(params_)
 
         x = self.time_axis[self.idx_start:self.idx_end]
         y = self.data[self.idx_start:self.idx_end]
 
-        self.eval_y_axis = self.model.eval(self.params, t=x)
+        self.eval_y_axis = self.model.eval(params=self.params, t=x)
         self.residuals = self.eval_y_axis - y
         self.residual_x = x
         self.eval_x_axis = self.fit_x = x
 
-    def guess(self, idx_start=0, idx_end=-1):
+    def guess(self, params=None):
         """
         Guess the parameters using the guess method of the lmfit Model class instance  (i.e. the member self.model)
 
@@ -117,34 +124,60 @@ class Measurements:
         :param idx_end:
         :return:
         """
-        self.find_idx_of_fit_limit(idx_start, idx_end)
+        if params is not None:
+            self.set_params(params)
 
         y = self.data[self.idx_start:self.idx_end]
         x = self.time_axis[self.idx_start:self.idx_end]
 
         self.params = self.model.guess(y, x)
-        self.eval(idx_start, idx_end)
+        self.eval()
 
-    def set_params(self, params):
+    def explore_chi2_surf(self, params_):
+
+        self.set_params(params_)
+
+
+        def fcn2min(params):
+            x = self.time_axis[self.idx_start:self.idx_end]
+            y = self.data[self.idx_start:self.idx_end]
+
+            ymodel = self.model.eval(params=self.params, t=x)
+            self.residuals = self.eval_y_axis - y
+
+            return y[self.idx_start:self.idx_end] - ymodel[self.idx_start:self.idx_end]
+
+        y = self.data[self.idx_start:self.idx_end]
+        x = self.time_axis[self.idx_start:self.idx_end]
+
+        fitter = Minimizer(fcn2min, self.params)
+        result_brute = fitter.minimize(method='brute', Ns=25, keep=25)
+        return result_brute
+
+    def set_params(self, params_):
         """
-        "Virtual" Method that has to be explicited in child classes
-
         :param params:
         :return:
         """
-        pass
+        x_start, x_end = params_["lim_fit"]
+        self.find_idx_of_fit_limit(x_start, x_end)
+        self.is_error_bar_for_fit = params_["use_error_bar"]
 
-    def set_hold_params(self, params_hold):
         for i, key in enumerate(self.params):
-            self.params[key].set(vary=params_hold[i])
+            self.params[key].set(value=params_["val"][i], min=params_["min"][i], max=params_["max"][i], vary=bool(params_["hold"][i]), brute_step=params_["brute_step"][i])
 
-    def set_params_min(self, params_min):
-        for i, key in enumerate(self.params):
-            self.params[key].set(min=params_min[i])
 
-    def set_params_max(self, params_max):
-        for i, key in enumerate(self.params):
-            self.params[key].set(max=params_max[i])
+    # def set_hold_params(self, params_hold):
+    #     for i, key in enumerate(self.params):
+    #         self.params[key].set(vary=params_hold[i])
+    #
+    # def set_params_min(self, params_min):
+    #     for i, key in enumerate(self.params):
+    #         self.params[key].set(min=params_min[i])
+    #
+    # def set_params_max(self, params_max):
+    #     for i, key in enumerate(self.params):
+    #         self.params[key].set(max=params_max[i])
 
 
     def set_model(self, model_name):
@@ -173,18 +206,27 @@ class Measurements:
         return "TODO !"
 
     def log(self, msg, level="info"):
-        if self.logger is not None:
-            if level=="info":
-                self.logger.info(msg)
+        if self.exps.logger is not None:
+            if level == "info":
+                self.exps.logger.info(msg)
 
-    def get_raw_data(self, type="timestamp"):
+    def get_raw_data(self, type="timestamp", mode="data"):
 
-        timeStamps = self.exp.data.channels[self.num_channel].photons['timestamps']
+        timestamps = self.exp.data.channels[self.num_channel].photons['timestamps']
         nanotimes = self.exp.data.channels[self.num_channel].photons['nanotimes']
 
-        idxStart, idxEnd = np.searchsorted(timeStamps, (self.start_tick, self.end_tick))
+        idxStart, idxEnd = np.searchsorted(timestamps, (self.start_tick, self.end_tick))
 
-        if type=="nanotimes":
-            return nanotimes[idxStart:idxEnd]
+        if type == "nanotimes":
+            if mode == "data":
+                return nanotimes[idxStart:idxEnd]
+            elif mode == "full":
+                return nanotimes
+
+        if type == "timestamp":
+            if mode == "data":
+                return timestamps[idxStart:idxEnd]
+            elif mode == "full":
+                return timestamps
 
 

@@ -119,29 +119,29 @@ class Experiment(object):
         else:
             return None
 
-    def create_measurement(self, num_channel, start_tick, end_tick, type, name, comment, is_store=True, logger=None):
+    def create_measurement(self, num_channel, start_tick, end_tick, type, name, comment, is_store=True):
         if type == "FCS":
-            fcs = FCS.FCSMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
+            fcs = FCS.FCSMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store :
                 self.store_measurement(fcs)
             return fcs
         elif type == "chronogram":
-            chrono = chronogram.Chronogram(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
+            chrono = chronogram.Chronogram(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(chrono)
             return chrono
         elif type == "lifetime":
-            lifetime_ = lifetime.lifeTimeMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
+            lifetime_ = lifetime.lifeTimeMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(lifetime_)
             return lifetime_
         elif type == "DLS":
-            dls = DLS.DLS_Measurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
+            dls = DLS.DLS_Measurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(dls)
             return dls
         elif type == "PCH":
-            pch = PCH.PCH(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment, logger)
+            pch = PCH.PCH(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(pch)
             return pch
@@ -181,12 +181,12 @@ class Experiment(object):
     def create_navigation_chronogram(self, num_channel, t1_tick, t2_tick, bin_in_tick, logger=None):
         binInTick = self.convert_seconds_in_ticks(self.defaultBinSize_s)
         if self.navigation_chronogram is None:
-            self.navigation_chronogram = self.create_measurement(num_channel, t1_tick, t2_tick, type="chronogram", name="dont_store", comment="", is_store=False, logger=logger)
+            self.navigation_chronogram = self.create_measurement(num_channel, t1_tick, t2_tick, type="chronogram", name="dont_store", comment="", is_store=False)
         self.navigation_chronogram = self.calculate_chronogram(self.navigation_chronogram, bin_in_tick)
 
     def create_time_zoom_chronogram(self, num_channel, t1_tick, t2_tick, bin_in_tick, logger=None):
         if self.time_zoom_chronogram is None:
-            self.time_zoom_chronogram = self.create_measurement(num_channel, t1_tick, t2_tick, type="chronogram", name="dont_store", comment="", is_store=False, logger=logger)
+            self.time_zoom_chronogram = self.create_measurement(num_channel, t1_tick, t2_tick, type="chronogram", name="dont_store", comment="", is_store=False)
         self.time_zoom_chronogram.num_channel = num_channel
         self.time_zoom_chronogram.start_tick = t1_tick
         self.time_zoom_chronogram.end_tick = t2_tick
@@ -198,7 +198,7 @@ class Experiment(object):
             if self.mini_PCH is None:
                 start_tick, end_tick = self.time_zoom_chronogram.start_tick, self.time_zoom_chronogram.end_tick
                 self.mini_PCH = self.create_measurement(num_channel, start_tick, end_tick, "PCH",
-                                                                    name="dont_store", comment="", is_store=False, logger=logger)
+                                                                    name="dont_store", comment="", is_store=False)
             self.mini_PCH = self.calculate_PCH(self.mini_PCH, self.time_zoom_chronogram, bin_size=1)
 
     def calculate_life_time(self, measurement):

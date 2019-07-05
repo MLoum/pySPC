@@ -25,6 +25,8 @@ from . import Menu
 
 from . import Architecture
 
+from .PlotParam import PlotParam
+
 import logging
 
 
@@ -36,6 +38,7 @@ class View():
         self.controller = controller
 
         self.appearenceParam = appearenceParam()
+        # self.plot_param = PlotParam()
 
         self.logger = None
 
@@ -74,7 +77,7 @@ class View():
 
         #https://stackoverflow.com/questions/27215326/tkinter-keypress-keyrelease-events
         self.initialize()
-
+        self.create_syntaxic_shortcut()
         self.create_shorcut()
 
         self.saveDir = None
@@ -87,6 +90,10 @@ class View():
         self.master.bind_all("<Control-l>", lambda event : self.menu.load_state())
         self.master.bind_all("<Control-s>", lambda event : self.menu.save_state())
         self.master.bind_all("<Control-q>", lambda event : self.menu.quit())
+
+    def create_syntaxic_shortcut(self):
+        self.graph_result = self.archi.analyze_area.resultArea_gui.graph_results
+        self.gui_for_fit_operation = self.archi.analyze_area.gui_for_fit_operation
 
     def onStart(self):
         pass
@@ -174,6 +181,17 @@ class View():
 
     def zoomOnMainChrono(self, t1_ms, t2_ms):
         self.controller.drawMainChronogram(self.currentChannel, t1_ms, t2_ms, self.timezoom_bin_size_s)
+
+
+
+    def fill_view_with_measurement_params(self, measurement):
+        pass
+
+    def fill_view_with_exp_params(self, measurement):
+        pass
+
+    def fill_view_with_expS_params(self, measurement):
+        pass
 
     def saveState(self, shelf):
         shelf['appearenceParam'] = self.appearenceParam
