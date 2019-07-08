@@ -59,6 +59,10 @@ class OneExpDecay(lifetimeModelClass):
         tau = params['tau'].value
         shift = params['shift'].value
         self.data_bckgnd = params['bckgnd'].value
+        bckgnd_corrected_data = self.data - self.data_bckgnd
+        bckgnd_corrected_data[bckgnd_corrected_data < 0] = 0
+        self.observed_count = (bckgnd_corrected_data).sum()
+        # self.observed_count = (self.data - self.data_bckgnd).sum()
         self.non_convoluted_decay = np.exp(-(t) / tau)
         # t_0 is in the shift
 
@@ -105,6 +109,7 @@ class TwoExpDecay(lifetimeModelClass):
         tau2 = params['tau2'].value
         shift = params['shift'].value
         self.data_bckgnd = params['bckgnd'].value
+        self.observed_count = (self.data - self.data_bckgnd).sum()
         self.non_convoluted_decay = a1*np.exp(-t/tau1) + (1-a1)*np.exp(-t/tau2)
         # t_0 is in the shift
 
@@ -198,13 +203,15 @@ class lifeTimeMeasurements(Measurements):
         if self.model is not None:
             self.model.use_IR = use_IR
 
-    def fit(self, idx_start=0, idx_end=-1):
+    def fit(self, params=None, mode="chi2"):
         # ATTENTION au -1 -> cela créé une case de moins dans le tableau.
         if self.model is not None:
             self.model.data = self.data
 
         if self.use_IR:
-            self.find_idx_of_fit_limit(idx_start, idx_end)
+            self.set_params(params)
+
+            # self.find_idx_of_fit_limit(idx_start, idx_end)
             y_eval_range  = self.data[self.idx_start:self.idx_end]
             x_eval_range = self.time_axis[self.idx_start:self.idx_end]
             self.model.x_range = (self.idx_start, self.idx_end)
@@ -262,13 +269,13 @@ class lifeTimeMeasurements(Measurements):
             # weights[y == 0] = 1. / np.sqrt(baseline_true)
             weights[self.data == 0] = 0
             if minimization == "chi-square":
-                self.fit_results = minimize(residuals, self.params, args=(self.time_axis, self.data, weights), method='nelder', iter_cb=callback_iteration)
+                self.fit_results = minimize(residuals, self.params, args=(self.time_axis, self.data, weights), method='nelder', iter_cb=callback_iteration, nan_policy='propagate')
 
                 self.fit_results = minimize(residuals, self.fit_results.params, args=(self.time_axis, self.data, weights),
-                                            method='leastsq', iter_cb=callback_iteration)
+                                            method='leastsq', iter_cb=callback_iteration, nan_policy='propagate')
             elif minimization == "maximum likelihood":
                 # self.fit_results = minimize(maximum_likelihood_method, self.params, args=(self.time_axis, self.data), method='nelder', iter_cb=callback_iteration)
-                self.fit_results = minimize(maximum_likelihood_method, self.params, args=(self.time_axis, self.data), method='nelder', iter_cb=callback_iteration)
+                self.fit_results = minimize(maximum_likelihood_method, self.params, args=(self.time_axis, self.data), method='nelder', iter_cb=callback_iteration, nan_policy='propagate')
 
                 # self.fit_results = minimize(maximum_likelihood_method, self.fit_results.params, args=(self.time_axis, self.data),
                 #                             method='leastsq', iter_cb=callback_iteration)
@@ -311,19 +318,39 @@ class lifeTimeMeasurements(Measurements):
             super().guess(idx_start, idx_end)
 
     def eval(self, params_=None):
-            self.set_params(params_)
-            y = self.data[self.idx_start:self.idx_end]
-            x_eval_range = self.time_axis[self.idx_start:self.idx_end]
-            self.model.x_range = (self.idx_start, self.idx_end)
-            # FIXME NB !!! est-ce que  observed_count doit tenir compte de tout la trace temporelle ou seulement de la parite fitée ?
-            self.model.observed_count = (self.data - self.params['bckgnd'].value).sum()
-            super().eval(params_)
+
+        # Because of the convolution with the IRF, the eval function needs to access all the data and not only
+        # the x-selected area
+
+        self.set_params(params_)
+        # y = self.data[self.idx_start:self.idx_end]
+        # x_eval_range = self.time_axis[self.idx_start:self.idx_end]
+        # self.model.x_range = (self.idx_start, self.idx_end)
+        # self.model.observed_count = (self.data - self.params['bckgnd'].value).sum()
+        self.model.data = self.data
+
+        # x = self.time_axis[self.idx_start:self.idx_end]
+        # y = self.data[self.idx_start:self.idx_end]
+
+        # self.model.data = self.data
+        self.eval_y_axis = self.model.eval(params=self.params, t=self.time_axis)
+
+        self.eval_y_axis = self.eval_y_axis[self.idx_start:self.idx_end]
+        x = self.time_axis[self.idx_start:self.idx_end]
+        y = self.data[self.idx_start:self.idx_end]
+
+        self.residuals = self.eval_y_axis - y
+        self.residual_x = x
+        self.eval_x_axis = self.fit_x = x
+
+
 
     def explore_chi2_surf(self, params_):
         self.set_model(params_["model_name"])
         self.params = self.model.make_params()
 
         self.set_params(params_)
+        self.model.data = self.data
 
         def fcn2min(params_, x, data, weights):
             ymodel = self.model.eval(params=params_, t=x)

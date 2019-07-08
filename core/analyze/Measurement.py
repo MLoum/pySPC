@@ -71,7 +71,7 @@ class Measurements:
         return self.idx_start, self.idx_end
 
 
-    def fit(self, idx_start=0, idx_end=-1, params=None):
+    def fit(self, params=None, mode="chi2"):
         """
 
         :param idx_start:
@@ -111,6 +111,7 @@ class Measurements:
         x = self.time_axis[self.idx_start:self.idx_end]
         y = self.data[self.idx_start:self.idx_end]
 
+        # self.model.data = self.data
         self.eval_y_axis = self.model.eval(params=self.params, t=x)
         self.residuals = self.eval_y_axis - y
         self.residual_x = x

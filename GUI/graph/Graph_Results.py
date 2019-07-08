@@ -57,7 +57,7 @@ class Graph_Results:
 
         self.is_plot_error_bar = True
         self.is_plot_all_FCS_curve = False
-        self.is_autoscale = True
+        self.is_autoscale = False
         self.is_zoom_x_selec = False
         self.is_plot_fit = True
 
@@ -265,7 +265,7 @@ class Graph_Results:
 
     def zoom_full(self):
         self.is_zoom_x_selec = False
-        self.is_autoscale = True
+        self.is_autoscale = False
         self.plot(self.measurement)
 
     def export(self, mode, file_path):
