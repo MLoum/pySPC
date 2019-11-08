@@ -59,8 +59,11 @@ class Graph_timeZoom():
         # self.canvas = FigureCanvasTkAgg(self.figure, master=self.frame)
         # self.canvas.get_tk_widget().pack(side='top', fill='both', expand=1)
 
-        self.figure, self.ax = plt.subplots(2, 1, figsize=(18, 8), dpi=50, sharex=True,
-                               gridspec_kw={'height_ratios': [9, 1]})
+        # self.figure, self.ax = plt.subplots(2, 1, figsize=(18, 8), dpi=50, sharex=True,
+        #                        gridspec_kw={'height_ratios': [9, 1]})
+
+        self.figure = plt.Figure(figsize=(18,8), dpi=100)
+        self.ax = self.figure.add_subplot(111)
 
         plt.subplots_adjust(hspace=0)
         self.figure.set_tight_layout(True)
@@ -81,8 +84,8 @@ class Graph_timeZoom():
     def plot(self, chrono, overlay=None):
         self.chrono = chrono
 
-        self.ax[0].clear()
-        self.ax[1].clear()
+        self.ax.clear()
+        # self.ax[1].clear()
 
         #reduce nb of point to 1000 (approximative size in pixel
         if chrono.nb_of_bin > 1000:
@@ -96,20 +99,25 @@ class Graph_timeZoom():
             chronoPlot = chrono.data
             chronoPlotX = chrono.time_axis
 
-        self.ax[0].set_xlim(chrono.time_axis[0], chrono.time_axis[-1])
-        self.ax[1].set_xlim(chrono.time_axis[0], chrono.time_axis[-1])
+        self.ax.set_xlim(chrono.time_axis[0], chrono.time_axis[-1])
+        # self.ax[1].set_xlim(chrono.time_axis[0], chrono.time_axis[-1])
 
-        self.ax[0].plot(chronoPlotX, chronoPlot)
-        self.ax[0].fill_between(chronoPlotX, 0, chronoPlot, alpha=0.3)
+        self.ax.plot(chronoPlotX, chronoPlot)
+        self.ax.fill_between(chronoPlotX, 0, chronoPlot, alpha=0.3)
+        self.ax.set_xlabel("time / µs", fontsize=20)
+        self.ax.set_ylabel("Intensity", fontsize=20)
+
+        self.ax.tick_params(axis='both', which='major', labelsize=20)
+        self.ax.tick_params(axis='both', which='minor', labelsize=8)
 
         if self.threshold is not None:
-            self.ax[0].hlines(self.threshold, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
+            self.ax.hlines(self.threshold, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
 
         if self.threshold_flank is not None:
-            self.ax[0].hlines(self.threshold_flank, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
+            self.ax.hlines(self.threshold_flank, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
 
         if self.view.current_time_zoom_window != [0, 0]:
-            self.ax[0].add_patch(
+            self.ax.add_patch(
                 patches.Rectangle(
                     (self.view.current_time_zoom_window[0], 0),  # (x,y)
                     self.view.current_time_zoom_window[1]-self.view.current_time_zoom_window[0],  # width
@@ -124,7 +132,7 @@ class Graph_timeZoom():
             y = np.linspace(0, chrono.data.max(), nb_y_point)
             # z = np.repeat(overlay, nb_y_point, axis=0)
             z = np.tile(overlay, (nb_y_point, 1))
-            self.ax[0].contourf(chronoPlotX, y, z, 30, alpha=0.3, cmap=plt.cm.hot)
+            self.ax.contourf(chronoPlotX, y, z, 30, alpha=0.3, cmap=plt.cm.hot)
 
 
 
@@ -220,7 +228,7 @@ class Graph_timeZoom():
         # set useblit True on gtkagg for enhanced performance
         # TODO right button click ?
         # TODO Cursors
-        self.spanSelec = SpanSelector(self.ax[0], self.onSpanSelect, 'horizontal', useblit=True,
+        self.spanSelec = SpanSelector(self.ax, self.onSpanSelect, 'horizontal', useblit=True,
                                     onmove_callback=self.onSpanMove,
                                     rectprops=dict(alpha=0.5, facecolor='red'), span_stays=True)
         # self.cursor_h = Cursor(self.ax, useblit=True, color='red', horizOn=True, vertOn=False, linewidth=2)

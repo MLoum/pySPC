@@ -4,7 +4,7 @@ from core import Results
 import os
 import numpy as np
 
-from core.analyze import lifetime, FCS, DLS, chronogram, PCH, burstDetection
+from core.analyze import lifetime, FCS, DLS, chronogram, PCH, burstDetection, phosphorescence
 
 """
 Test Experiment
@@ -150,6 +150,12 @@ class Experiment(object):
             if is_store:
                 self.store_measurement(burst)
             return burst
+        elif type == "phosphorescence":
+            phospho = phosphorescence.PhosphoMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
+            if is_store:
+                self.store_measurement(phospho)
+            return phospho
+
 
     def del_measurement(self, name):
         self.measurements.pop(name, None)
@@ -227,6 +233,36 @@ class Experiment(object):
         nanotimes = nanotimes[idxStart:idxEnd]
 
         measurement.create_histogramm(nanotimes)
+        return measurement
+
+    def calculate_phosphorescence(self, measurement, num_start, num_stop, time_step_micros):
+        """
+
+        :param measurement:
+        :param num_start:
+        :param num_end:
+        :param time_step_micros:
+        :return:
+        """
+        start_tick_start = start_tick_stop = measurement.start_tick
+        end_tick_start = end_tick_stop = measurement.end_tick
+
+        timestamps_start = self.data.channels[num_start].photons['timestamps']
+        timestamps_stop = self.data.channels[num_stop].photons['timestamps']
+        if start_tick_start == 0:
+            start_tick_start = self.data.channels[num_start].start_tick
+            start_tick_stop = self.data.channels[num_stop].start_tick
+
+        if end_tick_start == -1:
+            end_tick_start = self.data.channels[num_stop].end_tick
+            end_tick_stop = self.data.channels[num_stop].end_tick
+
+        idxStart, idxEnd = np.searchsorted(timestamps_start, (start_tick_start, end_tick_start))
+        timestamps_start = timestamps_start[idxStart:idxEnd]
+        idxStart, idxEnd = np.searchsorted(timestamps_stop, (start_tick_stop, end_tick_stop))
+        timestamps_stop = timestamps_stop[idxStart:idxEnd]
+
+        measurement.create_histogramm(timestamps_start, timestamps_stop, time_step_micros)
         return measurement
 
     def get_available_name_for_measurement(self, type):

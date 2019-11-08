@@ -368,11 +368,11 @@ class CorrelationMeasurement(Measurements):
 
 
 
-    def set_params(self, params):
-        if self.modelName == "1 Diff":
-            self.params['G0'].set(value=params[0], vary=True, min=0, max=None)
-            self.params['tdiff'].set(value=params[1], vary=True, min=0, max=None)
-            self.params['cst'].set(value=params[2], vary=True, min=0, max=None)
+    # def set_params(self, params):
+    #     if self.modelName == "1 Diff":
+    #         self.params['G0'].set(value=params[0], vary=True, min=0, max=None)
+    #         self.params['tdiff'].set(value=params[1], vary=True, min=0, max=None)
+    #         self.params['cst'].set(value=params[2], vary=True, min=0, max=None)
 
     def set_model(self, modelName):
         # il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *
@@ -460,19 +460,19 @@ class FCSMeasurements(CorrelationMeasurement):
         self.filter_after_pulsing_coeff = f[0,:]
 
 
-    def set_params(self, params):
-        if self.modelName == "1 Diff":
-            self.params['G0'].set(value=params[0],  vary=True, min=0, max=None)
-            self.params['tdiff'].set(value=params[1], vary=True, min=0, max=None)
-            self.params['r'].set(value=params[2], vary=True, min=0, max=None)
-            self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
-        if self.modelName == "2 Diff":
-            self.params['G0a'].set(value=params[0],  vary=True, min=0, max=None)
-            self.params['tdiffa'].set(value=params[1], vary=True, min=0, max=None)
-            self.params['r'].set(value=params[2], vary=True, min=0, max=None)
-            self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
-            self.params['G0b'].set(value=params[4],  vary=True, min=0, max=None)
-            self.params['tdiffb'].set(value=params[5], vary=True, min=0, max=None)
+    # def set_params(self, params):
+    #     if self.modelName == "1 Diff":
+    #         self.params['G0'].set(value=params[0],  vary=True, min=0, max=None)
+    #         self.params['tdiff'].set(value=params[1], vary=True, min=0, max=None)
+    #         self.params['r'].set(value=params[2], vary=True, min=0, max=None)
+    #         self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
+    #     if self.modelName == "2 Diff":
+    #         self.params['G0a'].set(value=params[0],  vary=True, min=0, max=None)
+    #         self.params['tdiffa'].set(value=params[1], vary=True, min=0, max=None)
+    #         self.params['r'].set(value=params[2], vary=True, min=0, max=None)
+    #         self.params['cst'].set(value=params[3], vary=True, min=0, max=None)
+    #         self.params['G0b'].set(value=params[4],  vary=True, min=0, max=None)
+    #         self.params['tdiffb'].set(value=params[5], vary=True, min=0, max=None)
 
 
     def set_model(self, modelName):

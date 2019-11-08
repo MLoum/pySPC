@@ -314,7 +314,7 @@ class add_measurement_dialog(simpledialog.Dialog):
 
         self.cb_sv = tk.StringVar()
         self.cb = ttk.Combobox(master, width=25, justify=tk.CENTER, textvariable=self.cb_sv, values='')
-        self.cb['values'] = ('FCS', 'lifetime', 'DLS')
+        self.cb['values'] = ('FCS', 'lifetime', 'DLS', 'phosphorescence')
         self.cb.set('FCS')
         self.cb.bind('<<ComboboxSelected>>', self.change_type)
         self.cb.grid(row=0, column=1)

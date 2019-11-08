@@ -118,7 +118,6 @@ class Controller:
         return start_tick, end_tick
 
 
-
     def update_all(self, is_full_update=False):
         self.update_status(is_full_update)
         self.update_navigation(is_full_update)

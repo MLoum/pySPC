@@ -6,6 +6,7 @@ import tkinter.scrolledtext as tkst
 from .analyze_Lifetime import lifeTimeAnalyze_gui
 from .analyze_DLS import DLS_Analyze_gui
 from .analyze_FCS import FCS_Analyze_gui
+from .analyze_phospho import PhosphoAnalyze_gui
 
 from .resultsArea import Results_area
 
@@ -90,6 +91,10 @@ class Analyze_area():
                 # self.analyze_gui.shiftIR_amount_sv.set(str(measurement.IRF.shift))
                 self.analyze_gui.bckg_IR_sv.set(str(measurement.IRF.bckgnd))
 
+            self.gui_for_fit_operation = self.analyze_gui.gui_for_fit_operation
+        elif measurement.type == "phosphorescence":
+            self.analyze_gui = PhosphoAnalyze_gui(self.frame_operation, self.controller, self.appearence_param, measurement)
+            self.analyze_gui.populate()
             self.gui_for_fit_operation = self.analyze_gui.gui_for_fit_operation
         elif measurement.type == "DLS":
             self.gui_for_fit_operation = None

@@ -378,7 +378,7 @@ class lifeTimeMeasurements(Measurements):
         ax = self.canonic_fig_ax
         ax[0].semilogy(self.time_axis, self.data, "ro", alpha=0.5)
         for a in ax:
-            a.grid(True);
+            a.grid(True)
             a.grid(True, which='minor', lw=0.3)
 
 

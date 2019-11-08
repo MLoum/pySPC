@@ -76,7 +76,8 @@ is_plot = True
 # OF1530 -> Fluor  OF 155 -> CN OF 154 - NO2
 print(plt.style.available)
 
-plt.style.use('ggplot')
+# plt.style.use('ggplot')
+plt.style.use('tableau-colorblind10')
 plt.rcParams['lines.linewidth'] = 4
 
 label_Fluor = "F"
