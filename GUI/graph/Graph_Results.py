@@ -277,7 +277,7 @@ class Graph_Results:
                 #FIXME index ?
                 export_size = min(self.x_selection_area.size, self.data_fit.size)
                 data = np.column_stack((self.x_selection_area[0:export_size], self.y_selection_area[0:export_size], self.data_fit[0:export_size], self.data_residual[0:export_size]))
-            np.savetxt(file_path.name, data, header="x data fit residual")
+            np.savetxt(file_path, data, header="x data fit residual")
 
         elif mode == "script":
             #TODO

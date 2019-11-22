@@ -95,7 +95,14 @@ class Results_area():
 
     def export(self, mode):
         base_exp_name = os.path.splitext(os.path.basename(self.controller.current_exp.file_name))[0]
-        initialfile = base_exp_name + "_" + self.controller.current_measurement.name + ".png"
+        if mode == "text":
+            initialfile = base_exp_name + "_" + self.controller.current_measurement.name + ".txt"
+        elif mode == "image":
+            initialfile = base_exp_name + "_" + self.controller.current_measurement.name + ".png"
+        elif mode == "script":
+            initialfile = base_exp_name + "_" + self.controller.current_measurement.name + ".py"
+        else:
+            initialfile = base_exp_name + "_" + self.controller.current_measurement.name + ".txt"
         file_path = filedialog.asksaveasfile(title="Export file name ?", initialdir=self.controller.view.saveDir, initialfile=initialfile)
         if file_path == None or file_path == '':
             return None
