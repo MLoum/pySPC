@@ -26,33 +26,47 @@ class Graph_navigation(InteractiveGraph):
     def __init__(self, master_frame, view, controller, figsize, dpi):
         super().__init__(master_frame, view, controller, figsize, dpi)
         self.ax.axis('off')
-        self.main_chrono = None
+        self.main_chronos = None
         self.bursts = None
         self.figure.tight_layout()
         self.createCallBacks()
         self.createWidgets()
 
-    def plot(self, main_chrono, tSelec_1=0, tSelec_2=-1, is_draw_burst=None):
-        self.main_chrono = main_chrono
+    #TODO share common code with graph time zoom ?
+    def plot(self, main_chronos, tSelec_1=0, tSelec_2=-1, is_draw_burst=None):
+        self.main_chronos = main_chronos
         self.ax.clear()
 
+        max_data = -1
+        for num_channel in self.view.displayed_channel:
+            chrono = main_chronos[num_channel]
+        #reduce nb of point to something aroudn 1000 (approximative size in pixel
+            if chrono.nb_of_bin > self.view.appearenceParam.max_pixel_for_chrono:
+                skipsize = int(chrono.nb_of_bin / self.view.appearenceParam.max_pixel_for_chrono)
+                idx = np.arange(0, len(chrono.data), skipsize)
+                chrono_y = chrono.data[idx]
+                chrono_plot_x = chrono.time_axis[idx]
+            else:
+                chrono_y = chrono.data
+                chrono_plot_x = chrono.time_axis
 
-        #FIXME test if 1000 bins ?
-        # reduce nb of point to 1000 (approximative size in pixel
-        min_nb_of_bin = 1000
-        if main_chrono.nb_of_bin  > 1000:
-            skipsize = int(main_chrono.nb_of_bin / 1000)
-            idx = np.arange(0, len(main_chrono.data), skipsize)
-            plot = main_chrono.data[idx]
-            plotX = main_chrono.time_axis[idx]
-        else:
-            plot = main_chrono.data
-            plotX = main_chrono.time_axis
+            if max(chrono_y) > max_data:
+                max_data = max(chrono_y)
+
+            # self.ax.plot(plotX, plot)
+            self.ax.plot(chrono_plot_x, chrono_y, self.view.appearenceParam.channels_trace_color[num_channel])
 
 
+        # Autoscale
+        max_time = -1
+        min_time = 1E35
+        for num_channel in self.view.displayed_channel:
+            if main_chronos[num_channel].time_axis[-1] > max_time:
+                max_time = main_chronos[num_channel].time_axis[-1]
+            if main_chronos[num_channel].time_axis[0] < min_time:
+                min_time = main_chronos[num_channel].time_axis[0]
 
-        self.ax.plot(plotX, plot)
-        self.ax.set_xlim(main_chrono.time_axis[0], main_chrono.time_axis[-1])
+        self.ax.set_xlim(min_time, max_time)
 
         if is_draw_burst and self.bursts is not None:
             x_lines = []
@@ -60,14 +74,14 @@ class Graph_navigation(InteractiveGraph):
                 burst_mean_timestamp = (burst.tick_end + burst.tick_start)/2
                 burst_micros = self.controller.current_exp.convert_ticks_in_seconds(burst_mean_timestamp)*1E6
                 x_lines.append(burst_micros)
+            #FIXME 0 for min position of the lines ?
+            self.ax.vlines(x_lines, 0, max_data)
 
-            self.ax.vlines(x_lines, np.min(plot), np.max(plot))
 
-
-
+        # Selection Patch
         x_start = tSelec_1
         if tSelec_2 == -1:
-            x_end = main_chrono.time_axis.max()
+            x_end = main_chronos.time_axis.max()
         else:
             x_end = tSelec_2
 
@@ -75,7 +89,7 @@ class Graph_navigation(InteractiveGraph):
             patches.Rectangle(
                 (x_start, 0),  # (x,y)
                 x_end-x_start,  # width
-                main_chrono.data.max(),  # height
+                max_data,  # height
                 alpha=0.2
             )
         )

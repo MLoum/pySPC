@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # exp_100nm = exps.add_new_exp("file", [filepath])
     # exp_poisson = Experiment.Experiment()
     exp_poisson = exps.add_new_exp(mode="generate", params=["Poisson", 2, 5000])
-    FCS_measurement = exp_poisson.create_measurement(num_channel=0, start_tick=0, end_tick=-1, type="FCS", name="FCS_poisson", comment="", is_store=True)
+    FCS_measurement = exp_poisson.create_measurement(num_channel=0, start_tick=0, end_tick=-1, type_="FCS", name="FCS_poisson", comment="", is_store=True)
 
     exp_poisson.calculate_FCS(measurement=FCS_measurement, num_c1=0, num_c2=0, start_cor_time_micros=0.5, max_cor_time_ms=100)
 

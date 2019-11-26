@@ -116,8 +116,53 @@ class CorrelationMeasurement(Measurements):
         self.max_cor_time_ms = 1000
         self.precision = 10
         self.sub_correlation_curves = None
+        self.is_multi_proc = True
+        self.algo = "Whal"
 
-    def correlateMonoProc(self, timestamps_1, timestamps_2, coeff_1, coeff_2, max_correlation_time_in_tick, start_correlation_time_in_tick=2, nb_of_point_per_cascade_aka_B=10, tick_duration_micros=1, algo="Whal"):
+    def set_additional_param_for_calculation(self, params):
+        self.num_c1, self.num_c2, self.start_cor_time_micros, self.max_cor_time_ms, self.is_multi_proc, self.precision, self.algo = params
+
+    def calculate(self):
+        start_tick = self.start_tick
+        end_tick = self.end_tick
+
+        if start_tick == 0:
+            start_tick = self.exp.data.channels[self.num_c1].start_tick
+
+        if end_tick == -1:
+            end_tick = self.exp.data.channels[self.num_c1].end_tick
+
+        timeStamps_1 = self.exp.data.channels[self.num_c1].photons['timestamps']
+        idxStart, idxEnd = np.searchsorted(timeStamps_1, (start_tick, end_tick))
+        timeStamps_1_reduc = timeStamps_1[idxStart:idxEnd]
+
+        timeStamps_2 = self.exp.data.channels[self.num_c2].photons['timestamps']
+        idxStart, idxEnd = np.searchsorted(timeStamps_2, (start_tick, end_tick))
+        timeStamps_2_reduc = timeStamps_2[idxStart:idxEnd]
+
+        max_correlation_time_in_tick = int(
+            self.max_cor_time_ms / 1E3 / self.exp_param.mAcrotime_clickEquivalentIn_second)
+
+        start_correlation_time_in_tick = int(
+            self.start_cor_time_micros / 1E6 / self.exp_param.mAcrotime_clickEquivalentIn_second)
+
+        tick_duration_micros = self.exp_param.mAcrotime_clickEquivalentIn_second*1E6
+
+        #FIXME from afterpulsing filter
+        coeff_1 = np.ones(timeStamps_1_reduc.size, dtype=np.uint32)
+        coeff_2 = np.ones(timeStamps_2_reduc.size, dtype=np.uint32)
+
+        if self.is_multi_proc:
+            fct = self.correlate_multicore
+        else:
+            fct = self.correlate_mono_proc
+
+        fct(timeStamps_1_reduc, timeStamps_2_reduc, coeff_1, coeff_2,
+                                            max_correlation_time_in_tick, start_correlation_time_in_tick, self.precision, tick_duration_micros, algo=self.algo)
+
+        return self
+
+    def correlate_mono_proc(self, timestamps_1, timestamps_2, coeff_1, coeff_2, max_correlation_time_in_tick, start_correlation_time_in_tick=2, nb_of_point_per_cascade_aka_B=10, tick_duration_micros=1, algo="Whal"):
 
         # if id(t_stamp_a) == id(t_stamp_b):
         if np.array_equal(timestamps_1, timestamps_2):
@@ -173,7 +218,7 @@ class CorrelationMeasurement(Measurements):
             G[i] = np.sum(G_u[lags[i]:lags[i+1]])
         return G
 
-    def correlateFCS_multicore(self, timestamps_1, timestamps_2, coeff_1, coeff_2, max_correlation_time_in_tick, start_correlation_time_in_tick=2, nb_of_point_per_cascade_aka_B=10, tick_duration_micros=1, algo="Whal"):
+    def correlate_multicore(self, timestamps_1, timestamps_2, coeff_1, coeff_2, max_correlation_time_in_tick, start_correlation_time_in_tick=2, nb_of_point_per_cascade_aka_B=10, tick_duration_micros=1, algo="Whal"):
         """
         :param timestamps_1:
         :param timestamps_2:

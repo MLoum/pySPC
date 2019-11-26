@@ -50,6 +50,15 @@ class Measurements:
 
         self.canonic_fig, self.canonic_fig_ax = None, None
 
+    def calculate(self):
+        """
+        Performs the calculation of the measurement from the raw data
+        :return:
+        """
+        pass
+
+    def set_additional_param_for_calculation(self, params):
+        pass
 
     def find_idx_of_fit_limit(self, idx_start, idx_end):
         """
@@ -157,6 +166,7 @@ class Measurements:
 
     def set_params(self, params_):
         """
+        Set parameters for fit
         :param params:
         :return:
         """

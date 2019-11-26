@@ -66,7 +66,7 @@ for spc_file in glob.glob("*.spc"):
     t2_tick = exp.data.channels[0].end_tick
     print("Calculating correlation")
 
-    measurement = exp.create_measurement(num_channel, t1_tick, t2_tick, type="DLS", name="dls", comment="")
+    measurement = exp.create_measurement(num_channel, t1_tick, t2_tick, type_="DLS", name="dls", comment="")
     measurement.start_cor_time_micros = 8
     measurement.num_c1 = 0
     measurement.num_c2 = 0

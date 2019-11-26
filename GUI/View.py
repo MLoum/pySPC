@@ -48,6 +48,8 @@ class View():
         self.currentChannel = 0
         self.timezoom_bin_size_s = 0.01
 
+        self.displayed_channel = [0]
+
         self.is_a_FileLoaded = False
 
         #TODO gestion des modfiers.

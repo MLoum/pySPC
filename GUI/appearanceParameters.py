@@ -9,6 +9,11 @@ class appearenceParam():
         self.line_type_fit_FCS = "b-"
         self.line_type_fit = "b-"
 
+        # Graph time zoom
+        self.max_pixel_for_chrono = 1024
+        self.channels_trace_color = ["b", "b", "b", "b"]
+        self.channels_trace_alpha = [0.3, 0.3, 0.3, 0.3]
+
         self.line_type_data = "ro"
         self.line_type_data_non_selected = "bo"
         self.alpha_data = 0.5

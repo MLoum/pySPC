@@ -76,14 +76,8 @@ class Experiments(object):
             exp = self.experiments[exp_name]
             if measurement_name in exp.measurements:
                 measurement = exp.measurements[measurement_name]
-                type_ = measurement.type
-                if type_ == "FCS":
-                    num_c1, num_c2, start_cor_time_micros, max_cor_time_ms, is_multi_proc, algo = params
-                    exp.calculate_FCS(measurement, num_c1, num_c2, start_cor_time_micros, max_cor_time_ms, is_multi_proc, algo)
-                elif type_ == "lifetime":
-                    exp.calculate_life_time(measurement)
-                elif type_ == "DLS":
-                    exp.calculate_DLS(measurement)
+                measurement.set_additional_param_for_calculation(params)
+                measurement.calculate()
 
     def get_IRF_from_file(self, file_path):
         filename, file_extension = os.path.splitext(file_path)

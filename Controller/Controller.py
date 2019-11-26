@@ -60,7 +60,7 @@ class Controller:
         # TODO test extension
         exp = self.model.add_new_exp("file", [file_path])
         self.current_exp = self.model.experiments[exp.file_name]
-        self.current_exp.create_navigation_chronogram(0, 0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
+        self.current_exp.create_navigation_chronograms(0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
 
         self.current_measurement = None
 
@@ -79,7 +79,7 @@ class Controller:
     def generate_poisson_noise_file(self, time_s, count_per_secound):
         exp = self.model.add_new_exp("generate", ["Poisson", time_s, count_per_secound])
         self.current_exp = self.model.experiments[exp.file_name]
-        self.current_exp.create_navigation_chronogram(0, 0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
+        self.current_exp.create_navigation_chronograms(0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
 
         # FIXME le channel 0 is hardcoded
         self.view.currentTimeWindow = [0, self.current_exp.convert_ticks_in_seconds(self.current_exp.data.channels[0].end_tick) * 1E6]
@@ -162,12 +162,12 @@ class Controller:
 
         # navigation
         if is_full_update:
-            self.current_exp.create_navigation_chronogram(0, 0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
+            self.current_exp.create_navigation_chronograms(0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
             self.view.currentTimeWindow = [0, self.current_exp.convert_ticks_in_seconds(
                 self.current_exp.data.channels[0].end_tick) * 1E6]
 
         # Time zoom
-        time_zoom_chronogram = self.current_exp.create_time_zoom_chronogram(channel, t1_tick, t2_tick, bin_in_tick)
+        time_zoom_chronograms = self.current_exp.create_time_zoom_chronograms(t1_tick, t2_tick, bin_in_tick)
 
         # Overlay
         overlay = None
@@ -177,10 +177,10 @@ class Controller:
                 if self.view.archi.analyze_area.analyze_gui.is_overlay_on_time_zoom.get():
                     x1, x2 = self.view.archi.analyze_area.gui_for_fit_operation.get_lim_for_fit()
                     if x1 !=0 and x2 != -1:
-                        overlay = self.current_measurement.create_chronogram_overlay(time_zoom_chronogram, x1, x2)
+                        overlay = self.current_measurement.create_chronogram_overlay(time_zoom_chronograms, x1, x2)
 
 
-        self.view.archi.navigation_area.timeZoom.graph_timeZoom.plot(self.current_exp.time_zoom_chronogram, overlay)
+        self.view.archi.navigation_area.timeZoom.graph_timeZoom.plot(self.current_exp.time_zoom_chronograms, overlay)
 
         if is_draw_burst:
             self.view.archi.navigation_area.graph_navigation.bursts = bursts
@@ -188,7 +188,7 @@ class Controller:
                                                               self.view.currentTimeWindow[0],
                                                               self.view.currentTimeWindow[1], is_draw_burst=True)
         else:
-            self.view.archi.navigation_area.graph_navigation.plot(self.current_exp.navigation_chronogram,
+            self.view.archi.navigation_area.graph_navigation.plot(self.current_exp.navigation_chronograms,
                                                               self.view.currentTimeWindow[0],
                                                               self.view.currentTimeWindow[1])
 
@@ -198,18 +198,21 @@ class Controller:
         self.view.archi.navigation_area.filtre_t1_sv.set(str(self.view.current_time_zoom_window[0]))
         self.view.archi.navigation_area.filtre_t2_sv.set(str(self.view.current_time_zoom_window[1]))
 
-        self.current_exp.create_mini_PCH(channel)
-        self.view.archi.navigation_area.timeZoom.graph_miniPCH.plot(self.current_exp.mini_PCH)
+        self.current_exp.create_mini_PCH()
+        self.view.archi.navigation_area.timeZoom.graph_miniPCH.plot(self.current_exp.mini_PCHs)
 
     def set_chrono_bin_size_s(self, binSize_s):
         self.view.archi.navigation_area.timeZoom.bin_size_micros_sv.set(str(binSize_s * 1E6))
         self.view.timezoom_bin_size_s = binSize_s
 
     # Measurement management
-    def create_measurement(self, type, name, comment):
+    def create_measurement(self, type_, name, comment, additional_params=None):
         start_tick, end_tick = self.get_analysis_start_end_tick()
         num_channel = self.view.currentChannel
-        return self.current_exp.create_measurement(num_channel, start_tick, end_tick, type, name, comment, is_store=True)
+
+        # for key, value in additional_params.items():
+        #     params[key] = value
+        return self.current_exp.create_measurement(num_channel, start_tick, end_tick, type_, name, comment, is_store=True)
 
     def get_measurement(self, measurement_name):
         return self.current_exp.get_measurement(measurement_name)
@@ -252,38 +255,49 @@ class Controller:
         # Display fit
 
     def calculate_measurement(self, measurement_name="current"):
+        """
+        Fetch the data on the GUI based on the type of the measurement and ask the core to calculate the measurement
+        :param measurement_name:
+        :return:
+        """
 
+        # Get the measurement
         exp_name = self.current_exp.file_name
         if measurement_name == "current":
             measurement = self.current_measurement
         else:
             measurement = self.current_exp.get_measurement(measurement_name)
-        param = None
+        params = None
 
+        # End and start of the measurement
         measurement.start_tick, measurement.end_tick = self.get_analysis_start_end_tick()
 
+        gui = self.view.archi.analyze_area.analyze_gui
         if measurement.type == "FCS":
-            is_multi_proc = self.view.archi.analyze_area.analyze_gui.is_multiproc_iv.get()
-            algo = self.view.archi.analyze_area.analyze_gui.algo_combo_box_sv.get()
-            gui = self.view.archi.analyze_area.analyze_gui
+            is_multi_proc = gui.is_multiproc_iv.get()
+            algo = gui.algo_combo_box_sv.get()
             num_c1 = int(gui.num_c1_sv.get()) - 1
             num_c2 = int(gui.num_c2_sv.get()) - 1
             max_correlTime_ms = float(gui.maxCorrelTime_sv.get())
             start_correlTime_ms = float(gui.startCorrelTime_sv.get())
-            param = [num_c1, num_c2, start_correlTime_ms, max_correlTime_ms, is_multi_proc, algo]
+            precision = int(gui.precision_sv.get())
+            params = [num_c1, num_c2, start_correlTime_ms, max_correlTime_ms, is_multi_proc, precision, algo]
         elif measurement.type == "lifetime":
             # TODO create Entry
             channel = 0
             self.current_exp.set_measurement_channel(measurement, channel)
-            param = None
-
-
+            params = None
+        elif measurement.type == "phosphorescence":
+            num_channel_start = int(gui.num_channel_start_sv.get()) - 1
+            num_channel_stop = int(gui.num_channel_stop_sv.get()) - 1
+            time_step_micros = int(gui.time_step_micros_sv.get())
+            params = [num_channel_start, num_channel_stop, time_step_micros]
 
         self.view.archi.log_area.master_frame.focus_set()
         self.view.archi.log_area.logger.info("starting measurement calculation\n")
         self.view.archi.analyze_area.analyzePgb.start()
 
-        self.model.calculate_measurement(exp_name, measurement.name, param)
+        self.model.calculate_measurement(exp_name, measurement.name, params)
 
         self.view.archi.analyze_area.analyzePgb.stop()
         self.view.archi.status_area.update_tree_view_line(measurement)

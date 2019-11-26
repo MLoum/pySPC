@@ -30,9 +30,11 @@ class Experiment(object):
         self.measurements = {}
         self.data = Data.Data(self.exp_param)
 
-        self.navigation_chronogram = None
-        self.time_zoom_chronogram = None
-        self.mini_PCH = None
+
+
+        self.navigation_chronograms = None
+        self.time_zoom_chronograms = None
+        self.mini_PCHs = None
 
 
         self.file_name = None
@@ -119,38 +121,40 @@ class Experiment(object):
         else:
             return None
 
-    def create_measurement(self, num_channel, start_tick, end_tick, type, name, comment, is_store=True):
-        if type == "FCS":
+    # def create_measurement(self, num_channel, start_tick, end_tick, type, name, comment, is_store=True):
+    def create_measurement(self, num_channel, start_tick, end_tick, type_, name, comment, is_store=True):
+        # TODO compact code
+        if type_ == "FCS":
             fcs = FCS.FCSMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
-            if is_store :
+            if is_store:
                 self.store_measurement(fcs)
             return fcs
-        elif type == "chronogram":
+        elif type_ == "chronogram":
             chrono = chronogram.Chronogram(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(chrono)
             return chrono
-        elif type == "lifetime":
+        elif type_ == "lifetime":
             lifetime_ = lifetime.lifeTimeMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(lifetime_)
             return lifetime_
-        elif type == "DLS":
+        elif type_ == "DLS":
             dls = DLS.DLS_Measurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(dls)
             return dls
-        elif type == "PCH":
+        elif type_ == "PCH":
             pch = PCH.PCH(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(pch)
             return pch
-        elif type == "burst":
+        elif type_ == "burst":
             burst = burstDetection.DetectBurst(self.exps, self, self.data, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(burst)
             return burst
-        elif type == "phosphorescence":
+        elif type_ == "phosphorescence":
             phospho = phosphorescence.PhosphoMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
             if is_store:
                 self.store_measurement(phospho)
@@ -184,86 +188,50 @@ class Experiment(object):
         return pch
 
     #TODO put it in the controller or view module ?
-    def create_navigation_chronogram(self, num_channel, t1_tick, t2_tick, bin_in_tick, logger=None):
+    def create_navigation_chronograms(self, t1_tick, t2_tick, bin_in_tick, logger=None):
         binInTick = self.convert_seconds_in_ticks(self.defaultBinSize_s)
-        if self.navigation_chronogram is None:
-            self.navigation_chronogram = self.create_measurement(num_channel, t1_tick, t2_tick, type="chronogram", name="dont_store", comment="", is_store=False)
-        self.navigation_chronogram = self.calculate_chronogram(self.navigation_chronogram, bin_in_tick)
+        if self.navigation_chronograms is None:
+            self.navigation_chronograms = []
+        for i in range(self.exp_param.nbOfChannel):
+            self.navigation_chronograms.append(self.create_measurement(i, t1_tick, t2_tick, type_="chronogram", name="dont_store", comment="", is_store=False))
+            self.navigation_chronograms[i] = self.calculate_chronogram(self.navigation_chronograms[i], bin_in_tick)
 
-    def create_time_zoom_chronogram(self, num_channel, t1_tick, t2_tick, bin_in_tick, logger=None):
-        if self.time_zoom_chronogram is None:
-            self.time_zoom_chronogram = self.create_measurement(num_channel, t1_tick, t2_tick, type="chronogram", name="dont_store", comment="", is_store=False)
-        self.time_zoom_chronogram.num_channel = num_channel
-        self.time_zoom_chronogram.start_tick = t1_tick
-        self.time_zoom_chronogram.end_tick = t2_tick
-        self.time_zoom_chronogram = self.calculate_chronogram(self.time_zoom_chronogram, bin_in_tick)
-        return self.time_zoom_chronogram
-
-    def create_mini_PCH(self, num_channel, logger=None):
-        if self.time_zoom_chronogram is not None:
-            if self.mini_PCH is None:
-                start_tick, end_tick = self.time_zoom_chronogram.start_tick, self.time_zoom_chronogram.end_tick
-                self.mini_PCH = self.create_measurement(num_channel, start_tick, end_tick, "PCH",
-                                                                    name="dont_store", comment="", is_store=False)
-            self.mini_PCH = self.calculate_PCH(self.mini_PCH, self.time_zoom_chronogram, bin_size=1)
-
-    def calculate_life_time(self, measurement):
+    def create_time_zoom_chronograms(self, t1_tick, t2_tick, bin_in_tick, logger=None):
         """
-        Calculate the histogramm of the microtime and fill the corresponding "results" member
-        with a lifeTimeMeasurement object
-
-        :param num_channel: Default is 0.
-        :param start_tick: Default value is 0
-        :param end_tick: Default value is -1
-        :return: Fill the "results" member with a lifeTimeMeasurement object
-        """
-        num_channel = measurement.num_channel
-        start_tick = measurement.start_tick
-        end_tick = measurement.end_tick
-
-        timeStamps = self.data.channels[num_channel].photons['timestamps']
-        nanotimes = self.data.channels[num_channel].photons['nanotimes']
-        if start_tick == 0:
-            start_tick = self.data.channels[num_channel].start_tick
-
-        if end_tick == -1:
-            end_tick = self.data.channels[num_channel].end_tick
-
-        idxStart, idxEnd = np.searchsorted(timeStamps, (start_tick, end_tick))
-        nanotimes = nanotimes[idxStart:idxEnd]
-
-        measurement.create_histogramm(nanotimes)
-        return measurement
-
-    def calculate_phosphorescence(self, measurement, num_start, num_stop, time_step_micros):
-        """
-
-        :param measurement:
-        :param num_start:
-        :param num_end:
-        :param time_step_micros:
+        Create a chronogram with a time zoom for each channel
+        :param t1_tick:
+        :param t2_tick:
+        :param bin_in_tick:
+        :param logger:
         :return:
         """
-        start_tick_start = start_tick_stop = measurement.start_tick
-        end_tick_start = end_tick_stop = measurement.end_tick
 
-        timestamps_start = self.data.channels[num_start].photons['timestamps']
-        timestamps_stop = self.data.channels[num_stop].photons['timestamps']
-        if start_tick_start == 0:
-            start_tick_start = self.data.channels[num_start].start_tick
-            start_tick_stop = self.data.channels[num_stop].start_tick
+        #FIXME check if the channel actually has data in the time bin.
+        if self.time_zoom_chronograms is None:
+            self.time_zoom_chronograms = []
+        for i in range(self.exp_param.nbOfChannel):
+            self.time_zoom_chronograms.append(self.create_measurement(i, t1_tick, t2_tick, type_="chronogram", name="dont_store", comment="", is_store=False))
+            self.time_zoom_chronograms[i].num_channel = i
+            self.time_zoom_chronograms[i].start_tick = t1_tick
+            self.time_zoom_chronograms[i].end_tick = t2_tick
+            self.time_zoom_chronograms[i] = self.calculate_chronogram(self.time_zoom_chronograms[i], bin_in_tick)
+        return self.time_zoom_chronograms
 
-        if end_tick_start == -1:
-            end_tick_start = self.data.channels[num_stop].end_tick
-            end_tick_stop = self.data.channels[num_stop].end_tick
+    def create_mini_PCH(self, logger=None):
+        """
+        Create mini PCH for all channels
+        :param logger:
+        :return:
+        """
+        if self.time_zoom_chronograms is not None:
+            if self.mini_PCHs is None:
+                self.mini_PCHs = []
+                for i in range(self.exp_param.nbOfChannel):
+                    start_tick, end_tick = self.time_zoom_chronograms[i].start_tick, self.time_zoom_chronograms[i].end_tick
+                    self.mini_PCHs.append(self.create_measurement(i, start_tick, end_tick, "PCH",
+                                                         name="dont_store", comment="", is_store=False))
+                    self.mini_PCHs[i] = self.calculate_PCH(self.mini_PCHs[i], self.time_zoom_chronograms[i], bin_size=1)
 
-        idxStart, idxEnd = np.searchsorted(timestamps_start, (start_tick_start, end_tick_start))
-        timestamps_start = timestamps_start[idxStart:idxEnd]
-        idxStart, idxEnd = np.searchsorted(timestamps_stop, (start_tick_stop, end_tick_stop))
-        timestamps_stop = timestamps_stop[idxStart:idxEnd]
-
-        measurement.create_histogramm(timestamps_start, timestamps_stop, time_step_micros)
-        return measurement
 
     def get_available_name_for_measurement(self, type):
         nb_of_existing_type = 0
@@ -333,12 +301,12 @@ class Experiment(object):
         coeff_2 = np.ones(timeStamps_reduc.size, dtype=np.uint32)
 
         if is_multi_proc:
-            measurement.correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc, coeff_1, coeff_2,
-                                                                    max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros, algo=algo)
+            measurement.correlate_multicore(timeStamps_reduc, timeStamps_reduc, coeff_1, coeff_2,
+                                            max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros, algo=algo)
         else:
-            measurement.correlateMonoProc(timeStamps_reduc,  timeStamps_reduc, coeff_1, coeff_2,
-                                               max_correlation_time_in_tick, start_correlation_time_in_tick, B,
-                                               tick_duration_micros, algo=algo)
+            measurement.correlate_mono_proc(timeStamps_reduc, timeStamps_reduc, coeff_1, coeff_2,
+                                            max_correlation_time_in_tick, start_correlation_time_in_tick, B,
+                                            tick_duration_micros, algo=algo)
 
         return measurement
 
@@ -396,9 +364,9 @@ class Experiment(object):
         # measurement.correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc,
         #                                                             max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros)
 
-        measurement.correlateMonoProc(timeStamps_reduc, timeStamps_reduc,
-                                           max_correlation_time_in_tick, start_correlation_time_in_tick, B,
-                                           tick_duration_micros)
+        measurement.correlate_mono_proc(timeStamps_reduc, timeStamps_reduc,
+                                        max_correlation_time_in_tick, start_correlation_time_in_tick, B,
+                                        tick_duration_micros)
 
         return measurement
 

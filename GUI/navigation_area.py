@@ -17,6 +17,26 @@ class navigation_area():
         self.is_keep_bin_thre = True
 
     def populate(self):
+
+        self.frame_display_channel = tk.LabelFrame(self.master_frame, text="Display Selection", borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frame_display_channel.pack(side="top", fill="both", expand=True)
+
+        self.is_channel_1_iv = tk.IntVar()
+        ttk.Checkbutton(self.frame_display_channel, text="1", variable=self.is_channel_1_iv, command=self.change_detector_selection).grid(row=0, column=0)
+        self.is_channel_1_iv.set(1)
+
+        self.is_channel_2_iv = tk.IntVar()
+        ttk.Checkbutton(self.frame_display_channel, text="2", variable=self.is_channel_2_iv, command=self.change_detector_selection).grid(row=0, column=1)
+
+        self.is_channel_3_iv = tk.IntVar()
+        ttk.Checkbutton(self.frame_display_channel, text="3", variable=self.is_channel_3_iv, command=self.change_detector_selection).grid(row=0, column=2)
+
+        self.is_channel_4_iv = tk.IntVar()
+        ttk.Checkbutton(self.frame_display_channel, text="4", variable=self.is_channel_4_iv, command=self.change_detector_selection).grid(row=0, column=3)
+
+        ttk.Button(self.frame_display_channel, text="Change colors", width=15, command=self.change_color_channel).grid(row=0, column=4)
+
+
         self.graph_navigation = Graph_navigation(self.master_frame, self.view, self.controller, figsize=(30, 2), dpi=50)
 
         self.frameTimeZoom = tk.LabelFrame(self.master_frame, text="Time Evolution (zoom)", borderwidth=self.appearenceParam.frameLabelBorderWidth)
@@ -108,6 +128,21 @@ class navigation_area():
             self.toggle_button_action_threshold.config(text='Filter above')
             self.is_keep_bin_thre = True
 
+    def change_detector_selection(self):
+        #FIXME 4 channels max ?
+        self.view.displayed_channel = []
+        if self.is_channel_1_iv.get():
+            self.view.displayed_channel.append(0)
+        if self.is_channel_2_iv.get():
+            self.view.displayed_channel.append(1)
+        if self.is_channel_3_iv.get():
+            self.view.displayed_channel.append(2)
+        if self.is_channel_4_iv.get():
+            self.view.displayed_channel.append(3)
+        self.controller.update_all(is_full_update=True)
+
+    def change_color_channel(self):
+        pass
 
     def filter_time_selection(self):
         t1_micro = float(self.filtre_t1_sv.get())

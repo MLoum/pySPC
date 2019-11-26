@@ -22,9 +22,39 @@ def update_param_vals(pars, prefix, **kwargs):
 
 class PhosphoMeasurements(Measurements):
 
-    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
+    def __init__(self, exps, exp, exp_param=None, num_channel=0,  start_tick=0, end_tick=-1, name="", comment=""):
         super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "phosphorescence", name, comment)
+        self.num_start = 0
+        self.num_stop = 1
+        self.time_step_micros = 10
 
+    def calculate(self):
+
+        # We need two start and end tick, one for the start detector and one for the stop detector.
+        start_tick_start = start_tick_stop = self.start_tick
+        end_tick_start = end_tick_stop = self.end_tick
+
+        timestamps_start = self.exp.data.channels[self.num_start].photons['timestamps']
+        timestamps_stop = self.exp.data.channels[self.num_stop].photons['timestamps']
+        if start_tick_start == 0:
+            start_tick_start = self.exp.data.channels[self.num_start].start_tick
+            start_tick_stop = self.exp.data.channels[self.num_stop].start_tick
+
+        if end_tick_start == -1:
+            end_tick_start = self.exp.data.channels[self.num_stop].end_tick
+            end_tick_stop = self.exp.data.channels[self.num_stop].end_tick
+
+        idxStart, idxEnd = np.searchsorted(timestamps_start, (start_tick_start, end_tick_start))
+        timestamps_start = timestamps_start[idxStart:idxEnd]
+        idxStart, idxEnd = np.searchsorted(timestamps_stop, (start_tick_stop, end_tick_stop))
+        timestamps_stop = timestamps_stop[idxStart:idxEnd]
+
+        self.create_histogramm(timestamps_start, timestamps_stop, self.time_step_micros)
+        return self
+
+    def set_additional_param_for_calculation(self, params):
+        self.num_start, self.num_stop, self.time_step_micros = params
+        pass
 
     def create_histogramm(self, timestamps_start, timestamps_stop, time_step_micros):
         """

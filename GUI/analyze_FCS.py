@@ -83,7 +83,11 @@ class FCS_Analyze_gui():
         self.algo_combo_box_sv.set('Whal')
         cb.grid(row=0, column=9)
 
-        ttk.Button(self.frame_Correlate, text="AutoCorrelation", width=12, command=self.launchAutoCorrelationFCS).grid(row=1, column=0)
+        ttk.Label(self.frame_Correlate, text='Precision').grid(row=0, column=4)
+        self.precision_sv = tk.StringVar(value='10')
+        ttk.Entry(self.frame_Correlate, textvariable=self.precision_sv, justify=tk.CENTER, width=7).grid(row=0, column=10)
+
+        ttk.Button(self.frame_Correlate, text="AutoCorrelation", width=12, command=self.launch_auto_correlation_fcs).grid(row=1, column=0)
         ttk.Button(self.frame_Correlate, text="CrossCorrelation", width=12, command=self.launchCrossCorrelationFCS).grid(row=1, column=1)
 
         self.is_multiproc_iv = tk.IntVar(value=1)
@@ -106,7 +110,7 @@ class FCS_Analyze_gui():
     def update_navigation(self):
         self.controller.update_navigation()
 
-    def launchAutoCorrelationFCS(self):
+    def launch_auto_correlation_fcs(self):
         self.controller.calculate_measurement()
         self.controller.graph_measurement()
 

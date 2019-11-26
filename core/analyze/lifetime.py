@@ -176,6 +176,28 @@ class lifeTimeMeasurements(Measurements):
         self.IRF = None
         self.use_IR = False
 
+    def set_additional_param_for_calculation(self, params):
+        pass
+
+    def calculate(self):
+        timeStamps = self.exp.data.channels[self.num_channel].photons['timestamps']
+        nanotimes = self.exp.data.channels[self.num_channel].photons['nanotimes']
+        if self.start_tick == 0:
+            start_tick = self.exp.data.channels[self.num_channel].start_tick
+        else:
+            start_tick = self.start_tick
+
+        if self.end_tick == -1:
+            end_tick = self.exp.data.channels[self.num_channel].end_tick
+        else:
+            end_tick = self.end_tick
+
+        idxStart, idxEnd = np.searchsorted(timeStamps, (start_tick, end_tick))
+        nanotimes = nanotimes[idxStart:idxEnd]
+
+        self.create_histogramm(nanotimes)
+        return self
+
     def create_histogramm(self, nanotimes):
         # self.data = np.zeros(self.exp_param.nb_of_microtime_channel, dtype=np.uint)
         # self.time_axis = np.arange(self.exp_param.nb_of_microtime_channel) * self.exp_param.mIcrotime_clickEquivalentIn_second*1E9

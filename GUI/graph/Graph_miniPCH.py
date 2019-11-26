@@ -27,27 +27,29 @@ class Graph_miniPCH(InteractiveGraph):
         self.figure.tight_layout()
 
         self.threshold = None
-        self.pch = None
+        self.pchs = None
 
         self.createCallBacks()
         self.createWidgets()
 
-    def plot(self, PCH):
-        self.pch = PCH
+    def plot(self, PCHs):
+        self.pchs = PCHs
 
-        if self.ax is None:
-            self.mainAx = self.figure.add_subplot(111)
-            self.subplot3D = None
+        # if self.ax is None:
+        #     self.mainAx = self.figure.add_subplot(111)
+        #     self.subplot3D = None
         self.ax.clear()
 
         # # reduce nb of point to 1000 (approximative size in pixel
         # skipsize = int(PCH.nbOfBin / 1000)
         # idx = np.arange(0, len(PCH.data), skipsize)
 
-        self.ax.semilogx(PCH.data, PCH.time_axis)
+        for num_channel in self.view.displayed_channel:
+            pch = PCHs[num_channel]
+            self.ax.semilogx(pch.data, pch.time_axis)
 
         if self.threshold is not None:
-            self.ax.hlines(self.threshold, 0, PCH.data.max(), linewidth=4)
+            self.ax.hlines(self.threshold, 0, PCHs.data.max(), linewidth=4)
 
         self.figure.canvas.draw()
 

@@ -75,35 +75,60 @@ class Graph_timeZoom():
 
         self.threshold = None
         self.threshold_flank = None
-        self.chrono = None
+        self.chronos = None
 
 
         self.createWidgets()
         self.createCallBacks()
 
-    def plot(self, chrono, overlay=None):
-        self.chrono = chrono
+    def plot(self, chronos, overlay=None):
+        self.chronos = chronos
 
         self.ax.clear()
-        # self.ax[1].clear()
 
-        #reduce nb of point to 1000 (approximative size in pixel
-        if chrono.nb_of_bin > 1000:
-            skipsize = int(chrono.nb_of_bin/1000)
-            idx = np.arange(0, len(chrono.data), skipsize)
-            chronoPlot = chrono.data[idx]
-            if overlay is not None:
-                overlay = overlay[idx]
-            chronoPlotX = chrono.time_axis[idx]
-        else:
-            chronoPlot = chrono.data
-            chronoPlotX = chrono.time_axis
+        if not self.view.displayed_channel:
+            return
 
-        self.ax.set_xlim(chrono.time_axis[0], chrono.time_axis[-1])
-        # self.ax[1].set_xlim(chrono.time_axis[0], chrono.time_axis[-1])
+        max_data = 0
+        for num_channel in self.view.displayed_channel:
+            chrono = chronos[num_channel]
+        #reduce nb of point to something aroudn 1000 (approximative size in pixel
+            if chrono.nb_of_bin > self.view.appearenceParam.max_pixel_for_chrono:
+                skipsize = int(chrono.nb_of_bin / self.view.appearenceParam.max_pixel_for_chrono)
+                idx = np.arange(0, len(chrono.data), skipsize)
 
-        self.ax.plot(chronoPlotX, chronoPlot)
-        self.ax.fill_between(chronoPlotX, 0, chronoPlot, alpha=0.3)
+                chrono_y = chrono.data[idx]
+                chrono_plot_x = chrono.time_axis[idx]
+
+                if overlay is not None:
+                    #FIXME overlay broken
+                    overlay = overlay[idx]
+
+
+            else:
+                chrono_y = chrono.data
+                chrono_plot_x = chrono.time_axis
+
+            if max(chrono_y) > max_data:
+                max_data = max(chrono_y)
+
+            self.ax.plot(chrono_plot_x, chrono_y, self.view.appearenceParam.channels_trace_color[num_channel])
+            self.ax.fill_between(chrono_plot_x, 0, chrono_y, alpha=self.view.appearenceParam.channels_trace_alpha[num_channel])
+
+        # TODO fix this pythonic one line tentative
+        # self.ax.set_xlim(min(chronos, key=lambda x: x.time_axis[-1]), max(chronos, key=lambda x: x.time_axis[-1]))
+
+        max_time = -1
+        min_time = 1E35
+        for num_channel in self.view.displayed_channel:
+            if chronos[num_channel].time_axis[-1] > max_time:
+                max_time = chronos[num_channel].time_axis[-1]
+            if chronos[num_channel].time_axis[0] < min_time:
+                min_time = chronos[num_channel].time_axis[0]
+
+        self.ax.set_xlim(min_time, max_time)
+
+        #FIXME appareance param ?
         self.ax.set_xlabel("time / µs", fontsize=20)
         self.ax.set_ylabel("Intensity", fontsize=20)
 
@@ -111,29 +136,29 @@ class Graph_timeZoom():
         self.ax.tick_params(axis='both', which='minor', labelsize=8)
 
         if self.threshold is not None:
-            self.ax.hlines(self.threshold, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
+            self.ax.hlines(self.threshold, chronos.time_axis[0], chronos.time_axis.max(), linewidth=4)
 
         if self.threshold_flank is not None:
-            self.ax.hlines(self.threshold_flank, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
+            self.ax.hlines(self.threshold_flank, chronos.time_axis[0], chronos.time_axis.max(), linewidth=4)
 
         if self.view.current_time_zoom_window != [0, 0]:
             self.ax.add_patch(
                 patches.Rectangle(
                     (self.view.current_time_zoom_window[0], 0),  # (x,y)
                     self.view.current_time_zoom_window[1]-self.view.current_time_zoom_window[0],  # width
-                    chrono.data.max(),  # height
-                    alpha=0.2
+                    max_data,  # height
+                    alpha=0.2   #TODO appareance param
                 )
             )
 
+        # FIXME Overlay
         if overlay is not None:
             # Overlay is a 1D array
             nb_y_point = 10
-            y = np.linspace(0, chrono.data.max(), nb_y_point)
+            y = np.linspace(0, chronos.data.max(), nb_y_point)
             # z = np.repeat(overlay, nb_y_point, axis=0)
             z = np.tile(overlay, (nb_y_point, 1))
-            self.ax.contourf(chronoPlotX, y, z, 30, alpha=0.3, cmap=plt.cm.hot)
-
+            self.ax.contourf(chrono_plot_x, y, z, 30, alpha=0.3, cmap=plt.cm.hot)
 
 
         self.figure.canvas.draw()
@@ -175,9 +200,9 @@ class Graph_timeZoom():
                 return None
 
             # Export the graph
-            if self.chrono is not None:
-                data = np.column_stack((self.chrono.time_axis,
-                                        self.chrono.data))
+            if self.chronos is not None:
+                data = np.column_stack((self.chronos.time_axis,
+                                        self.chronos.data))
                 np.savetxt(file_path.name, data, header="time chrono")
 
             #Test if filter mode or if the cursord is needed.
