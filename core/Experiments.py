@@ -87,7 +87,8 @@ class Experiments(object):
             pass
         ir_exp = Experiment.Experiment("file", [file_path])
         measurement_ir = ir_exp.create_measurement(0, 0, -1,"lifetime", "", "")
-        ir_exp.calculate_life_time(measurement_ir)
+        measurement_ir.calculate()
+        # ir_exp.calculate_life_time(measurement_ir)
         return ir_exp.file_name, measurement_ir.data, measurement_ir.time_axis
 
     def add_irf(self, irf):
@@ -95,4 +96,12 @@ class Experiments(object):
 
     def get_irf_name_list(self):
         return list(self.irf.keys())
+
+    def get_raw_data(self, exp, num_channel=0, start_tick=0, end_tick=-1, type="timestamp", mode="data"):
+        return exp.get_raw_data(num_channel, start_tick, end_tick, type, mode)
+
+    def export_raw_data(self, exp, nb_of_photon=1000, num_channel=0, type="timestamp", mode="data"):
+        raw = self.get_raw_data(exp, mode="full")
+        raw = raw[0:nb_of_photon]
+        np.savetxt("export.txt", raw)
 

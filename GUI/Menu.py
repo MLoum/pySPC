@@ -19,7 +19,7 @@ class Menu():
         self.menuSystem = tk.Menu(self.master)
 
         # FILE#############
-        self.menuFile = tk.Menu(self.menuSystem, tearoff=0)
+        self.menu_file = tk.Menu(self.menuSystem, tearoff=0)
 
 
         # self.menuFile_open = tk.Menu(self.menuFile)
@@ -44,29 +44,36 @@ class Menu():
 
         #TODO some shortcuts seems to autolaunch at the begining of the soft ???
 
-        self.menuFile.add_command(label='New / Clear', underline=1, accelerator="Ctrl+n", command=self.clear)
+        self.menu_file.add_command(label='New / Clear', underline=1, accelerator="Ctrl+n", command=self.clear)
         #self.master.bind_all("<Control-o>", self.askOpenSPC_file)
 
-        self.menuFile.add_command(label='Add Exp', underline=1, accelerator="Ctrl+o", command=self.askOpenSPC_file)
+        self.menu_file.add_command(label='Add Exp', underline=1, accelerator="Ctrl+o", command=self.askOpenSPC_file)
         #self.master.bind_all("<Control-o>", self.askOpenSPC_file)
 
-        self.menuFile_generate = tk.Menu(self.menuFile)
+        self.menuFile_generate = tk.Menu(self.menu_file)
 
-        self.menuFile.add_cascade(label="Generate", menu=self.menuFile_generate)
+        self.menu_file.add_cascade(label="Generate", menu=self.menuFile_generate)
         self.menuFile_generate.add_command(label='Poissonian Noise', command=self.ask_generate_poissonian_noise)
 
-        self.menuFile.add_command(label='Save State', underline=1, accelerator="Ctrl+s", command=self.save_state)
+        self.menu_file.add_command(label='Save State', underline=1, accelerator="Ctrl+s", command=self.save_state)
         #self.master.bind_all("<Control-s>", self.saveState)
-        self.menuFile.add_command(label='Load State', underline=1, accelerator="Ctrl+l", command=self.load_state)
+        self.menu_file.add_command(label='Load State', underline=1, accelerator="Ctrl+l", command=self.load_state)
         #self.master.bind_all("<Control-l>", self.loadState)
 
-        self.menuFile.add_command(label='Preferences', command=self.openPreferences)
-        self.menuFile.add_command(label='Quit', command=self.quit)
+        self.menu_file.add_command(label='Preferences', command=self.openPreferences)
+        self.menu_file.add_command(label='Quit', command=self.quit)
 
-        self.menuSystem.add_cascade(label="File", menu=self.menuFile)
+        self.menuSystem.add_cascade(label="File", menu=self.menu_file)
 
+        self.menu_debug = tk.Menu(self.menuSystem, tearoff=0)
+        self.menu_debug.add_command(label='Get raw macrotimes', underline=1, command=self.get_raw_macrotimes)
+
+        self.menuSystem.add_cascade(label="Debug", menu=self.menu_debug)
 
         self.master.config(menu=self.menuSystem)
+
+    def get_raw_macrotimes(self):
+        self.controller.get_raw_data()
 
 
     def quit(self):

@@ -555,6 +555,14 @@ class Controller:
         self.root.destroy()
         self.root.quit()
 
+
+    # Debug tools
+
+    def get_raw_data(self):
+        #FIXME channel
+        #self.model.get_raw_data(self.current_exp, num_channel=0)
+        self.model.export_raw_data(self.current_exp, num_channel=0)
+
 if __name__ == "__main__":
 
 

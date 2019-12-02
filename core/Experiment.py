@@ -255,120 +255,24 @@ class Experiment(object):
         if measurement.name != "dont_store":
             self.measurements[measurement.name] = measurement
 
+    def get_raw_data(self, num_channel=0, start_tick=0, end_tick=-1, type="timestamp", mode="data"):
 
-    def calculate_FCS(self, measurement, num_c1=0, num_c2=0, start_cor_time_micros = 0.5, max_cor_time_ms=100, is_multi_proc=False, algo="Whal"):
-        """
-        Fluctuation Correlation Spectroscopy
+        timestamps = self.data.channels[num_channel].photons['timestamps']
+        nanotimes = self.data.channels[num_channel].photons['nanotimes']
 
-        Create a FCS_Measurements object and launch calculation
+        idxStart, idxEnd = np.searchsorted(timestamps, (start_tick, end_tick))
 
-        :param num_c1:
-        :param num_c2:
-        :param start_tick:
-        :param end_tick:
-        :param max_cor_time_ms:
-        :return:
-        """
-        # TODO cross correlation
-        num_channel = num_c1
-        start_tick = measurement.start_tick
-        end_tick = measurement.end_tick
+        if type == "nanotimes":
+            if mode == "data":
+                return nanotimes[idxStart:idxEnd]
+            elif mode == "full":
+                return nanotimes
 
-        if start_tick == 0:
-            start_tick = self.data.channels[num_c1].start_tick
-
-        if end_tick == -1:
-            end_tick = self.data.channels[num_c1].end_tick
-
-        timeStamps = self.data.channels[num_channel].photons['timestamps']
-        idxStart, idxEnd = np.searchsorted(timeStamps, (start_tick, end_tick))
-        timeStamps_reduc = timeStamps[idxStart:idxEnd]
-
-        max_correlation_time_in_tick = int(
-            max_cor_time_ms / 1E3 / self.exp_param.mAcrotime_clickEquivalentIn_second)
-
-        start_correlation_time_in_tick = int(
-            start_cor_time_micros / 1E6 / self.exp_param.mAcrotime_clickEquivalentIn_second)
-
-        # self.results.FCS_Measurements[num_channel].correlateMonoProc(timeStamps_reduc, timeStamps_reduc,
-        #                                                             max_correlation_time_in_tick, start_correlation_time_in_tick)
-        tick_duration_micros = self.exp_param.mAcrotime_clickEquivalentIn_second*1E6
-        B = 10
-        # TODO store in measurement all the aqvuisiiton parameters
-
-        #FIXME from afterpulsing filter
-        coeff_1 = np.ones(timeStamps_reduc.size, dtype=np.uint32)
-        coeff_2 = np.ones(timeStamps_reduc.size, dtype=np.uint32)
-
-        if is_multi_proc:
-            measurement.correlate_multicore(timeStamps_reduc, timeStamps_reduc, coeff_1, coeff_2,
-                                            max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros, algo=algo)
-        else:
-            measurement.correlate_mono_proc(timeStamps_reduc, timeStamps_reduc, coeff_1, coeff_2,
-                                            max_correlation_time_in_tick, start_correlation_time_in_tick, B,
-                                            tick_duration_micros, algo=algo)
-
-        return measurement
-
-    def calculate_DLS(self, measurement):
-        """
-        Dynamic Light Scattering
-
-        Create a DLS_Measurements object and launch calculation
-
-        :param num_channel_1:
-        :param num_channel_2:
-        :param start_tick:
-        :param end_tick:
-        :param max_correlation_time_ms:
-        :param start_time_mu_s:
-        :param precision:
-        :return:
-        """
-
-        # TODO cross correlation
-
-        self.num_c1 = None
-        self.num_c2 = None
-        self.start_cor_time_micros = None
-        self.max_cor_time_ms = None
-        self.precision = None
-
-        num_channel = measurement.num_c1
-        start_tick = measurement.start_tick
-        end_tick = measurement.end_tick
-
-        if start_tick == 0:
-            start_tick = self.data.channels[num_c1].start_tick
-
-        if end_tick == -1:
-            end_tick = self.data.channels[num_c1].end_tick
-
-        timeStamps = self.data.channels[num_channel].photons['timestamps']
-        idxStart, idxEnd = np.searchsorted(timeStamps, (start_tick, end_tick))
-        timeStamps_reduc = timeStamps[idxStart:idxEnd]
-
-        max_correlation_time_in_tick = int(
-            measurement.max_cor_time_ms / 1E3 / self.exp_param.mAcrotime_clickEquivalentIn_second)
-
-        start_correlation_time_in_tick = int(
-            measurement.start_cor_time_micros / 1E6 / self.exp_param.mAcrotime_clickEquivalentIn_second)
-
-        # self.results.FCS_Measurements[num_channel].correlateMonoProc(timeStamps_reduc, timeStamps_reduc,
-        #                                                             max_correlation_time_in_tick, start_correlation_time_in_tick)
-        tick_duration_micros = self.exp_param.mAcrotime_clickEquivalentIn_second*1E6
-
-        B = measurement.precision
-        # TODO store in measurement all the aqvuisiiton parameters
-
-        # measurement.correlateFCS_multicore(timeStamps_reduc, timeStamps_reduc,
-        #                                                             max_correlation_time_in_tick, start_correlation_time_in_tick, B, tick_duration_micros)
-
-        measurement.correlate_mono_proc(timeStamps_reduc, timeStamps_reduc,
-                                        max_correlation_time_in_tick, start_correlation_time_in_tick, B,
-                                        tick_duration_micros)
-
-        return measurement
+        if type == "timestamp":
+            if mode == "data":
+                return timestamps[idxStart:idxEnd]
+            elif mode == "full":
+                return timestamps
 
     def get_info(self):
         print(self.file_name)
