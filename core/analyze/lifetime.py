@@ -58,7 +58,7 @@ class OneExpDecay(lifetimeModelClass):
 
     def eval(self, t,  params):
         tau = params['tau'].value
-        shift = params['IRF shift'].value
+        shift = params['IRF_shift'].value
         self.data_bckgnd = params['bckgnd'].value
         bckgnd_corrected_data = self.data - self.data_bckgnd
         bckgnd_corrected_data[bckgnd_corrected_data < 0] = 0

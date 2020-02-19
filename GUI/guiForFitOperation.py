@@ -171,54 +171,54 @@ class guiForFitOperation():
 
         entry_text_size = 10
 
-        self.changeModel(None)
+        # self.changeModel(None)
 
-        i = 0
-        for key in self.measurement.params.keys():
-            # TODO validate that entries are numeric value (cf method in GUI_root)
-
-            # param name (e.g. tau1)
-            self.dict_label_string_variable_fit[key] = "p"
-            self.dict_label_param_fit[key] = ttk.Label(self.param_frame, text=str(key), textvariable=self.dict_label_string_variable_fit[key])
-            self.dict_label_param_fit[key].grid(row=1+i, column=0)
-
-            # value
-            self.dict_entry_string_variable_fit[key] = tk.StringVar()
-            self.dict_entry_param_fit[key] = ttk.Entry(self.param_frame, textvariable=self.dict_entry_string_variable_fit[key], justify=tk.CENTER,
-                          width=entry_text_size, state=tk.DISABLED)
-            self.dict_entry_param_fit[key].grid(row=1+i, column=1)
-
-            # + button
-            self.dict_button_plus[key] = tk.Button(master=self.param_frame, text='+', command=lambda: self.value_plus(self.dict_entry_string_variable_fit[key]))
-            self.dict_button_plus[key].grid(row=1+i, column=2)
-
-            # - button
-            self.dict_button_minus[key] = tk.Button(master=self.param_frame, text='-', command=lambda: self.value_minus(self.dict_entry_string_variable_fit[key]))
-            self.dict_button_minus[key].grid(row=1+i, column=3)
-
-            # min fit value constraint
-            self.dict_entry_string_variable_fit_min[key] = tk.StringVar()
-            self.dict_entry_param_fit_min[key] = ttk.Entry(self.param_frame, textvariable=self.dict_entry_string_variable_fit_min[i], justify=tk.CENTER,
-                          width=entry_text_size, state=tk.DISABLED)
-            self.dict_entry_param_fit_min[key].grid(row=1+i, column=4)
-
-            # max fit value constraint
-            self.dict_entry_string_variable_fit_max[key] = tk.StringVar()
-            self.dict_entry_param_fit_max[key] =ttk.Entry(self.param_frame, textvariable=self.dict_entry_string_variable_fit_max[key], justify=tk.CENTER,
-                          width=entry_text_size, state=tk.DISABLED)
-            self.dict_entry_param_fit_max[key].grid(row=1+i, column=5)
-
-            # hold check button
-            self.dict_brute_step_sv[key] = tk.StringVar()
-            self.dict_entry_brute_step[key] = ttk.Entry(self.param_frame, textvariable=self.dict_brute_step_sv[key], justify=tk.CENTER,
-                          width=entry_text_size, state=tk.DISABLED)
-            self.dict_entry_brute_step[key].grid(row=1+i, column=6)
-
-
-            # hold check button
-            self.dict_checkbox_int_variable_is_fixed[key] = tk.IntVar()
-            self.dict_param_is_fixed[key] = ttk.Checkbutton(self.param_frame, variable=self.dict_checkbox_int_variable_is_fixed[key], state=tk.DISABLED)
-            self.dict_param_is_fixed[key].grid(row=1+i, column=7)
+        # i = 0
+        # for key in self.measurement.params.keys():
+        #     # TODO validate that entries are numeric value (cf method in GUI_root)
+        #
+        #     # param name (e.g. tau1)
+        #     self.dict_label_string_variable_fit[key] = "p"
+        #     self.dict_label_param_fit[key] = ttk.Label(self.param_frame, text=str(key), textvariable=self.dict_label_string_variable_fit[key])
+        #     self.dict_label_param_fit[key].grid(row=1+i, column=0)
+        #
+        #     # value
+        #     self.dict_entry_string_variable_fit[key] = tk.StringVar()
+        #     self.dict_entry_param_fit[key] = ttk.Entry(self.param_frame, textvariable=self.dict_entry_string_variable_fit[key], justify=tk.CENTER,
+        #                   width=entry_text_size, state=tk.DISABLED)
+        #     self.dict_entry_param_fit[key].grid(row=1+i, column=1)
+        #
+        #     # + button
+        #     self.dict_button_plus[key] = tk.Button(master=self.param_frame, text='+', command=lambda: self.value_plus(self.dict_entry_string_variable_fit[key]))
+        #     self.dict_button_plus[key].grid(row=1+i, column=2)
+        #
+        #     # - button
+        #     self.dict_button_minus[key] = tk.Button(master=self.param_frame, text='-', command=lambda: self.value_minus(self.dict_entry_string_variable_fit[key]))
+        #     self.dict_button_minus[key].grid(row=1+i, column=3)
+        #
+        #     # min fit value constraint
+        #     self.dict_entry_string_variable_fit_min[key] = tk.StringVar()
+        #     self.dict_entry_param_fit_min[key] = ttk.Entry(self.param_frame, textvariable=self.dict_entry_string_variable_fit_min[i], justify=tk.CENTER,
+        #                   width=entry_text_size, state=tk.DISABLED)
+        #     self.dict_entry_param_fit_min[key].grid(row=1+i, column=4)
+        #
+        #     # max fit value constraint
+        #     self.dict_entry_string_variable_fit_max[key] = tk.StringVar()
+        #     self.dict_entry_param_fit_max[key] =ttk.Entry(self.param_frame, textvariable=self.dict_entry_string_variable_fit_max[key], justify=tk.CENTER,
+        #                   width=entry_text_size, state=tk.DISABLED)
+        #     self.dict_entry_param_fit_max[key].grid(row=1+i, column=5)
+        #
+        #     # hold check button
+        #     self.dict_brute_step_sv[key] = tk.StringVar()
+        #     self.dict_entry_brute_step[key] = ttk.Entry(self.param_frame, textvariable=self.dict_brute_step_sv[key], justify=tk.CENTER,
+        #                   width=entry_text_size, state=tk.DISABLED)
+        #     self.dict_entry_brute_step[key].grid(row=1+i, column=6)
+        #
+        #
+        #     # hold check button
+        #     self.dict_checkbox_int_variable_is_fixed[key] = tk.IntVar()
+        #     self.dict_param_is_fixed[key] = ttk.Checkbutton(self.param_frame, variable=self.dict_checkbox_int_variable_is_fixed[key], state=tk.DISABLED)
+        #     self.dict_param_is_fixed[key].grid(row=1+i, column=7)
 
 
         for i in range(self.nb_param_fit):

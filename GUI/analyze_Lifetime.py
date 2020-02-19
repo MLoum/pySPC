@@ -24,12 +24,12 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
         self.measurement.set_model(model_name)
 
         if self.cb_model_sv.get() == "One Decay IRF":
-            for key in self.measurement.params.keys():
-                self.list_label_string_variable_fit[key].set(str(key))
+            # for key in self.measurement.params.keys():
+            #     self.list_label_string_variable_fit[key].set(str(key))
 
-            # self.list_label_string_variable_fit[0].set("tau")
-            # self.list_label_string_variable_fit[1].set("IRF shift")
-            # self.list_label_string_variable_fit[2].set("bckgnd")
+            self.list_label_string_variable_fit[0].set("tau")
+            self.list_label_string_variable_fit[1].set("IRF shift")
+            self.list_label_string_variable_fit[2].set("bckgnd")
             self.enable_disable_ui(3)
             self.setFitFormula(r"f(t; \tau, shift) = IRF(shift) \times (e^{-t/\tau}) + bckgnd")
 
