@@ -80,6 +80,35 @@ class DLS_Measurements(CorrelationMeasurement):
             self.params['mu4'].set(value=params[5], vary=True, min=0, max=None)
 
 
+    def fit(self, params=None, mode="chi2"):
+        """
+        """
+        if params is not None:
+            self.set_params(params)
+
+        y = self.data[self.idx_start:self.idx_end]
+        x = self.time_axis[self.idx_start:self.idx_end]
+
+        fitting_method1 = params["method1"]
+        fitting_method2 = params["method2"]
+
+        if self.is_error_bar_for_fit:
+            error_bar = self.error_bar[self.idx_start:self.idx_end]
+            self.fit_results = self.model.fit(y, self.params, t=x, weights=error_bar, method=fitting_method1)
+        else:
+            self.fit_results = self.model.fit(y, self.params, t=x, method=fitting_method1)
+
+        if fitting_method1 == "brute":
+            pass
+
+        self.eval_y_axis = self.fit_results.best_fit
+        self.eval_x_axis = self.fit_x = x
+
+        self.residuals = self.fit_results.residual
+        self.residual_x = x
+
+        return self.fit_results.fit_report()
+
     def set_model(self, modelName):
         if modelName == "Cumulant":
             self.modelName = modelName

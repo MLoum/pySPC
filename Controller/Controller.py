@@ -31,7 +31,7 @@ from GUI import guiForFitOperation
 
 import shelve
 
-from IPython import embed
+# from IPython import embed
 
 class Controller:
 
@@ -291,7 +291,9 @@ class Controller:
             num_channel_start = int(gui.num_channel_start_sv.get()) - 1
             num_channel_stop = int(gui.num_channel_stop_sv.get()) - 1
             time_step_micros = int(gui.time_step_micros_sv.get())
-            params = [num_channel_start, num_channel_stop, time_step_micros]
+            min_time_micros = float(gui.min_time_micros_sv.get())
+            max_time_ms = float(gui.max_time_ms_sv.get())
+            params = [num_channel_start, num_channel_stop, time_step_micros, min_time_micros, max_time_ms]
 
         self.view.archi.log_area.master_frame.focus_set()
         self.view.archi.log_area.logger.info("starting measurement calculation\n")

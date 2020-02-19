@@ -4,7 +4,7 @@ from tkinter import ttk
 
 #from pylab import *
 import matplotlib.pyplot as plt
-from IPython import embed
+# from IPython import embed
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 #matplotlib.use("TkAgg")
 import matplotlib.patches as patches

@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from IPython import embed
+# from IPython import embed
 
 
 class Status_area():

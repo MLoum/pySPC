@@ -9,6 +9,8 @@ from tkinter import filedialog, messagebox, simpledialog
 from .Dialog import fitIRFDialog
 
 
+
+
 class guiForFitOperation_Lifetime(guiForFitOperation):
 
     def __init__(self, master_frame, controller, model_names, nb_param_fit, is_burst_analysis=False):
@@ -16,24 +18,35 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
 
     def changeModel(self, event):
         # Methode virtuelle, voir les classes dérivées.
-        nbFitParam = self.nb_param_fit
+        nb_fit_param = self.nb_param_fit
+        model_name = self.cb_model_sv.get()
+
+        self.measurement.set_model(model_name)
 
         if self.cb_model_sv.get() == "One Decay IRF":
-            self.list_label_string_variable_fit[0].set("tau")
-            self.list_label_string_variable_fit[1].set("IRF shift")
-            self.list_label_string_variable_fit[2].set("bckgnd")
+            for key in self.measurement.params.keys():
+                self.list_label_string_variable_fit[key].set(str(key))
+
+            # self.list_label_string_variable_fit[0].set("tau")
+            # self.list_label_string_variable_fit[1].set("IRF shift")
+            # self.list_label_string_variable_fit[2].set("bckgnd")
             self.enable_disable_ui(3)
             self.setFitFormula(r"f(t; \tau, shift) = IRF(shift) \times (e^{-t/\tau}) + bckgnd")
 
-            self.list_entry_string_variable_fit_min[0].set("0")
-            # self.list_entry_string_variable_fit_min[1].set("0")
-            self.list_entry_string_variable_fit_min[2].set("0")
+            self.set_min_max_bruteStep_fixed(mins=[0, -50, 0], values=[1, 0, 40],
+                                             maxs=[30, -50, 200], brute_steps=[0.3, 0.1, 5],
+                                             fixeds=[0, 0, 0])
 
         elif self.cb_model_sv.get() == "One Decay Tail":
             self.list_label_string_variable_fit[0].set("t0")
             self.list_label_string_variable_fit[1].set("tau")
-            self.enable_disable_ui(2)
-            self.setFitFormula(r"cst + e^{-(t-t_0)/\tau}")
+            self.list_label_string_variable_fit[2].set("bckgnd")
+            self.enable_disable_ui(3)
+            self.setFitFormula(r"e^{-(t-t_0)/\tau} + bckgnd")
+
+            self.set_min_max_bruteStep_fixed(mins=[-50, 0, 0], values=[0, 1, 40],
+                                             maxs=[50, 30, 200], brute_steps=[0.1, 0.1, 5],
+                                             fixeds=[0, 0, 0])
 
         elif self.cb_model_sv.get() == "Two Decays IRF":
             self.list_label_string_variable_fit[0].set("tau1")
@@ -42,12 +55,38 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
             self.list_label_string_variable_fit[3].set("IRF shift")
             self.list_label_string_variable_fit[4].set("bckgnd")
             self.enable_disable_ui(5)
-            self.setFitFormula(r"IRF(shift) \times  (a1 . e^{-t/\tau_1} + (1-a_1) \times e^{-t/\tau_2}) + bckgnd")
+            self.setFitFormula(r"IRF(shift) \times  (a1 . e^{-t/\tau_1} + (1-a_1).e^{-t/\tau_2}) + bckgnd")
 
-            self.list_entry_string_variable_fit_min[0].set("0")
-            self.list_entry_string_variable_fit_min[1].set("0")
-            self.list_entry_string_variable_fit_min[2].set("0")
-            self.list_entry_string_variable_fit_min[4].set("0")
+            self.set_min_max_bruteStep_fixed(mins=[2,0,0,-50,0], values=[3,0.5,1,0,40], maxs=[10,1,2,50,200], brute_steps=[0.3,0.1,0.1,1,5], fixeds=[0,0,0,0,0])
+
+        elif self.cb_model_sv.get() == "Two Decays Tail":
+            self.list_label_string_variable_fit[0].set("t0")
+            self.list_label_string_variable_fit[1].set("tau1")
+            self.list_label_string_variable_fit[2].set("a1")
+            self.list_label_string_variable_fit[3].set("tau2")
+            self.list_label_string_variable_fit[4].set("bckgnd")
+            self.enable_disable_ui(5)
+            self.setFitFormula(r"a1 . e^{-(t-t_0)/\tau_1} + (1-a_1).e^{-(t-t_0)/\tau_2}) + bckgnd")
+
+            self.set_min_max_bruteStep_fixed(mins=[-50, 0, 0, 0, 0], values=[0, 3, 0.5, 1, 40],
+                                             maxs=[50, 10, 1, 2,  200], brute_steps=[1, 0.3, 0.1, 0.1, 5],
+                                             fixeds=[0, 0, 0, 0, 0])
+
+        elif self.cb_model_sv.get() == "Two Decays IRF A1 A2":
+            self.list_label_string_variable_fit[0].set("tau1")
+            self.list_label_string_variable_fit[1].set("a1")
+            self.list_label_string_variable_fit[2].set("tau2")
+            self.list_label_string_variable_fit[3].set("a2")
+            self.list_label_string_variable_fit[4].set("IRF shift")
+            self.list_label_string_variable_fit[5].set("bckgnd")
+            self.enable_disable_ui(6)
+
+            self.setFitFormula(r"IRF(shift) \times  (a1.e^{-t/\tau_1} + a2.e^{-t/\tau_2}) + bckgnd")
+
+            self.set_min_max_bruteStep_fixed(mins=[2, 0, 0, 0, -50, 0], values=[3, 0.5, 1, 0.5, 0, 40],
+                                             maxs=[10, 1, 2, 1, 50, 200], brute_steps=[0.3, 0.1, 0.3, 0.1, 1, 5],
+                                             fixeds=[0, 0, 0, 0, 0, 0])
+
 
         elif self.cb_model_sv.get() == "IRF":
             self.list_label_string_variable_fit[0].set("mu")
@@ -59,9 +98,36 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
             self.setFitFormula(r"\frac{\lambda}{2} e^{\frac{\lambda}{2} (2 \mu + \lambda \sigma^2 - 2 x)} \operatorname{erfc} (\frac{\mu + \lambda \sigma^2 - x}{ \sqrt{2} \sigma})")
 
         else:
-            for i in range(nbFitParam) :
+            for i in range(nb_fit_param) :
                 self.list_label_string_variable_fit[i].set("")
                 self.enable_disable_ui(0)
+
+    def copy_param_from_fit(self):
+        # self.measurement.fit_results.params
+
+        if self.cb_model_sv.get() == "One Decay IRF":
+            self.list_label_string_variable_fit[0].set("tau")
+            self.list_label_string_variable_fit[1].set("IRF shift")
+            self.list_label_string_variable_fit[2].set("bckgnd")
+
+        elif self.cb_model_sv.get() == "One Decay Tail":
+            pass
+
+        elif self.cb_model_sv.get() == "Two Decays IRF":
+            pass
+
+        elif self.cb_model_sv.get() == "Two Decays Tail":
+            pass
+
+        elif self.cb_model_sv.get() == "Two Decays IRF A1 A2":
+            pass
+
+
+
+        elif self.cb_model_sv.get() == "IRF":
+            pass
+
+
 
 
 
@@ -194,7 +260,7 @@ class lifeTimeAnalyze_gui():
         #FIT
         # model_names -> cf core/lifetime.py
         self.gui_for_fit_operation = guiForFitOperation_Lifetime(self.frameMicro_fit, self.controller,
-                                                                 model_names=('One Decay IRF', 'One Decay Tail', 'Two Decays IRF', 'Two Decays Tail', 'IRF'), nb_param_fit=8,
+                                                                 model_names=('One Decay IRF', 'One Decay Tail', 'Two Decays IRF', 'Two Decays IRF A1 A2', 'Two Decays Tail', 'IRF'), nb_param_fit=8,
                                                                  is_burst_analysis=self.is_burst_analysis)
         self.gui_for_fit_operation.populate()
 

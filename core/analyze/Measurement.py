@@ -28,7 +28,7 @@ class Measurements:
 
         self.num_channel = num_channel
         self.nb_of_photon = 0
-        
+
         #Fit
         self.params = Parameters()
         self.modelName = ""
@@ -80,11 +80,8 @@ class Measurements:
         return self.idx_start, self.idx_end
 
 
-    def fit(self, params=None, mode="chi2"):
+    def fit(self, params=None):
         """
-
-        :param idx_start:
-        :param idx_end:
         :return:
         """
         if params is not None:
@@ -95,9 +92,13 @@ class Measurements:
 
         if self.is_error_bar_for_fit:
             error_bar = self.error_bar[self.idx_start:self.idx_end]
-            self.fit_results = self.model.fit(y, self.params, t=x, weights=error_bar)
         else:
-            self.fit_results = self.model.fit(y, self.params, t=x)
+            error_bar = None
+        self.fit_results = self.model.fit(y, self.params, t=x, weights=error_bar, method=fitting_method1)
+
+
+        if self.fitting_method2 != "None":
+            self.fit_results = self.model.fit(y, self.fit_results.params, weights=error_bar, t=x, method=fitting_method2)
 
         self.eval_y_axis = self.fit_results.best_fit
         self.eval_x_axis = self.fit_x = x
@@ -173,6 +174,9 @@ class Measurements:
         x_start, x_end = params_["lim_fit"]
         self.find_idx_of_fit_limit(x_start, x_end)
         self.is_error_bar_for_fit = params_["use_error_bar"]
+        self.fitting_method1 = params_["method1"]
+        self.fitting_method2 = params_["method2"]
+        self.qty_to_min = params_["qty_to_min"]
 
         for i, key in enumerate(self.params):
             self.params[key].set(value=params_["val"][i], min=params_["min"][i], max=params_["max"][i], vary=bool(params_["hold"][i]), brute_step=params_["brute_step"][i])
@@ -200,14 +204,49 @@ class Measurements:
         """
         pass
 
-    def export(self, file_path=None):
+    def export(self, mode="text", file_path=None, x_selec_min=0, x_selec_max=-1):
         """
         Export to an external text file
-        "Virtual" Method that has to be explicited in child classes
-
         :return:
         """
-        pass
+        x = self.time_axis
+        y = self.data
+        data_fit = self.eval_y_axis
+        data_residual = self.residuals
+        if mode == "text":
+            if data_fit is None:
+                data = np.column_stack((x, y))
+            else:
+                #FIXME index ?
+                x1 = np.searchsorted(x, x_selec_min)
+                x2 = np.searchsorted(x, x_selec_max)
+
+                x_selection_area = x[x1:x2]
+                y_selection_area = y[x1:x2]
+
+                export_size = min(x_selection_area.size, self.eval_y_axis.size)
+                data = np.column_stack((x_selection_area[0:export_size], y_selection_area[0:export_size], data_fit[0:export_size], data_residual[0:export_size]))
+            np.savetxt(file_path, data, header="x data fit residual")
+
+        elif mode == "script":
+            #TODO
+            f = open(file_path.name, "w")
+            header = "import matplotlib.pyplot as plt" \
+                     "import numpy as np"
+            f.writelines(header)
+
+            f.writelines("self.figure = plt.Figure(figsize=figsize, dpi=dpi")
+            f.writelines("self.ax = self.figure.add_axes([0.08, 0.3, 0.9, 0.65], xticklabels=[])")
+            f.writelines("self.axResidual = self.figure.add_axes([0.08, 0.1, 0.9, 0.25])")
+
+            # self.ax.tick_params(
+            #     axis='x',  # changes apply to the x-axis
+            #     which='both',  # both major and minor ticks are affected
+            #     bottom=False,  # ticks along the bottom edge are off
+            #     top=False,  # ticks along the top edge are off
+            #     labelbottom=False)  # labels along the bottom edge are off"
+
+            f.close()
 
     def get_info(self):
         """

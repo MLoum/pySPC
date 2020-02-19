@@ -9,7 +9,7 @@ import tkinter.scrolledtext as tkst
 
 import os.path
 from pylab import *
-from IPython import embed
+# from IPython import embed
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 #matplotlib.use("TkAgg")
 import matplotlib.patches as patches

@@ -5,7 +5,7 @@ from tkinter import ttk
 from tkinter import filedialog
 #from pylab import *
 import matplotlib.pyplot as plt
-from IPython import embed
+# from IPython import embed
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 # NavigationToolbar2TkAgg
 #matplotlib.use("TkAgg")
@@ -150,6 +150,17 @@ class Graph_Results:
                     # if measurement.model.non_convoluted_decay is not None:
                     #     self.ax[0].plot(measurement.time_axis, measurement.model.non_convoluted_decay, "r--", alpha=0.5)
 
+        elif self.type == "phosphorescence":
+            #TODO use canonic graph
+            self.ax[0].set_xlabel("Time µs")
+            self.ax[0].set_ylabel("Occurence")
+            self.ax[1].set_xlabel("Time µs")
+            self.ax[1].set_ylabel("Residual")
+
+            plt_function = self.ax[0].semilogy
+            plt_residual_fct = self.ax[1].plot
+            # plt_error_bar_fct = self.ax[0].semilogy
+
 
         elif self.type == "FCS":
             #TODO use canonic graph
@@ -269,38 +280,44 @@ class Graph_Results:
         self.plot(self.measurement)
 
     def export(self, mode, file_path):
-
-        if mode == "text":
-            if self.data_fit is None:
-                data = np.column_stack((self.data_x, self.data_y))
-            else:
-                #FIXME index ?
-                export_size = min(self.x_selection_area.size, self.data_fit.size)
-                data = np.column_stack((self.x_selection_area[0:export_size], self.y_selection_area[0:export_size], self.data_fit[0:export_size], self.data_residual[0:export_size]))
-            np.savetxt(file_path, data, header="x data fit residual")
-
-        elif mode == "script":
-            #TODO
-            f = open(file_path.name, "w")
-            header = "import matplotlib.pyplot as plt" \
-                     "import numpy as np"
-            f.writelines(header)
-
-            f.writelines("self.figure = plt.Figure(figsize=figsize, dpi=dpi")
-            f.writelines("self.ax = self.figure.add_axes([0.08, 0.3, 0.9, 0.65], xticklabels=[])")
-            f.writelines("self.axResidual = self.figure.add_axes([0.08, 0.1, 0.9, 0.25])")
-
-            # self.ax.tick_params(
-            #     axis='x',  # changes apply to the x-axis
-            #     which='both',  # both major and minor ticks are affected
-            #     bottom=False,  # ticks along the bottom edge are off
-            #     top=False,  # ticks along the top edge are off
-            #     labelbottom=False)  # labels along the bottom edge are off"
-
-            f.close()
-        elif mode == "image":
+        if mode == "image":
+            #FIXME DPI -> parameters set up
             self.figure.savefig(file_path, dpi=300)
             return True
+        else:
+            self.measurement.export(mode, file_path, self.x_selec_min, self.x_selec_max)
+
+        # if mode == "text":
+        #     if self.data_fit is None:
+        #         data = np.column_stack((self.data_x, self.data_y))
+        #     else:
+        #         #FIXME index ?
+        #         export_size = min(self.x_selection_area.size, self.data_fit.size)
+        #         data = np.column_stack((self.x_selection_area[0:export_size], self.y_selection_area[0:export_size], self.data_fit[0:export_size], self.data_residual[0:export_size]))
+        #     np.savetxt(file_path, data, header="x data fit residual")
+        #
+        # elif mode == "script":
+        #     #TODO
+        #     f = open(file_path.name, "w")
+        #     header = "import matplotlib.pyplot as plt" \
+        #              "import numpy as np"
+        #     f.writelines(header)
+        #
+        #     f.writelines("self.figure = plt.Figure(figsize=figsize, dpi=dpi")
+        #     f.writelines("self.ax = self.figure.add_axes([0.08, 0.3, 0.9, 0.65], xticklabels=[])")
+        #     f.writelines("self.axResidual = self.figure.add_axes([0.08, 0.1, 0.9, 0.25])")
+        #
+        #     # self.ax.tick_params(
+        #     #     axis='x',  # changes apply to the x-axis
+        #     #     which='both',  # both major and minor ticks are affected
+        #     #     bottom=False,  # ticks along the bottom edge are off
+        #     #     top=False,  # ticks along the top edge are off
+        #     #     labelbottom=False)  # labels along the bottom edge are off"
+        #
+        #     f.close()
+        # elif mode == "image":
+        #     self.figure.savefig(file_path, dpi=300)
+        #     return True
 
 
     def onSpanMove(self, xmin, xmax):

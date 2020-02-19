@@ -8,7 +8,8 @@ from core.importFormat import bhreader
 from core.importFormat import nist_fpga
 from core.importFormat import SimulatedData
 # from .analyze import bin
-
+import scipy
+import scipy.stats
 
 
 
@@ -36,6 +37,8 @@ class Data():
     """
     Contains the SPC raw data, and method to process them (file opening, noise generation, filtering).
     """
+
+    minimum_nb_of_tick_per_channel = 5
 
     def __init__(self, expParam):
 
@@ -96,7 +99,7 @@ class Data():
         numChannel = 0
         nbOfChannel = 0
         for value in unique:
-            if unique_counts[numChannel] > 50 and value >= 0:
+            if unique_counts[numChannel] > Data.minimum_nb_of_tick_per_channel and value >= 0:
                 nbOfChannel += 1
             numChannel += 1
 
@@ -110,7 +113,7 @@ class Data():
         for value in unique:
 
             # 50 is arbiratry, we do this to filter false count on some detector.
-            if unique_counts[numChannel] < 50:
+            if unique_counts[numChannel] < Data.minimum_nb_of_tick_per_channel or value < 0:
                 numChannel += 1
                 soft_channel_value += 1
                 continue
@@ -185,7 +188,7 @@ class Data():
             self._del_data()
             del self.channels[:]
 
-            self.expParam.nbOfMicrotimeChannel = 256
+
             # TODO ask user ?
             self.expParam.mAcrotime_clickEquivalentIn_second = 50E-9
             self.expParam.mIcrotime_clickEquivalentIn_second = 10E-12
@@ -200,7 +203,60 @@ class Data():
             photons = np.empty(np.size(timeStamps), self.photonDataType)
 
             photons['timestamps'] = timeStamps
-            photons['nanotimes'] = 0
+
+            tau1 = params[2]
+            a1 = params[3]
+            tau2 = params[4]
+            irf_time = params[5]
+
+            # Nanotimes
+
+            # photons['nanotimes'] = 0
+            self.expParam.nbOfMicrotimeChannel = 4096
+            time_step_s = (60e-9 / 4096)  # time step in seconds (S.I.)
+            time_step_ns = time_step_s * 1e9  # time step in nano-seconds
+            time_nbins = 4096  # number of time bins
+
+            time_idx = np.arange(time_nbins)  # time axis in index units
+            time_ns = time_idx * time_step_ns  # time axis in nano-seconds
+
+            #IRF
+
+            def irf_model(t, t_irf):
+                return t/t_irf*np.exp(-t/t_irf)
+
+            def exgauss(x, mu, sig, tau):
+                lam = 1. / tau
+                return 0.5 * lam * np.exp(0.5 * lam * (2 * mu + lam * (sig ** 2) - 2 * x)) * \
+                       scipy.special.erfc((mu + lam * (sig ** 2) - x) / (np.sqrt(2) * sig))
+
+
+            irf_t = 0.2
+
+            irf_sig = 0.033
+            irf_mu = 5 * irf_sig
+            irf_lam = 0.1
+            x_irf = np.arange(0, (irf_lam * 15 + irf_mu) / time_step_ns)
+            p_irf = exgauss(x_irf, irf_mu / time_step_ns, irf_sig / time_step_ns,
+                            irf_lam / time_step_ns)
+            irf = scipy.stats.rv_discrete(name='irf', values=(x_irf, p_irf))
+
+            irf = scipy.stats.rv_discrete(name='irf', values=(x_irf, p_irf))
+
+            num_samples = np.size(timeStamps)
+            tau = 2e-9
+            baseline_fraction = 0.03
+            offset = 2e-9
+
+            sample_decay = np.random.exponential(scale=tau / time_step_s,
+                                                 size=num_samples) + offset / time_step_s
+            sample_decay += irf.rvs(size=num_samples)
+            sample_baseline = np.random.randint(low=0, high=time_nbins,
+                                                size=baseline_fraction * num_samples)
+            sample_tot = np.hstack((sample_decay, sample_baseline))
+            decay_hist, bins = np.histogram(sample_tot, bins=np.arange(time_nbins + 1))
+
+
 
             c = Channel()
             c.photons = photons

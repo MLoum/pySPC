@@ -3,6 +3,13 @@ measurements should have a common calculate interface.
 
 Ecran d'attente -> ~OK
 
+
+DLS :
+    - Graphe avec droite pour voir µ2
+    - Brute force for ini
+    - See chi square space -> curseur avec le fit ?
+    - Prise en compte de l'ensemble avec MultiAngle_DLS theta0 comme paramètre de fit.
+
 Fill GUI with measurement param.
 
 Temps de vie en log

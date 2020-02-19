@@ -20,8 +20,10 @@ class guiForFitOperation_Phospho(guiForFitOperation):
 
         if self.cb_model_sv.get() == "One Decay Tail":
             self.list_label_string_variable_fit[0].set("t0")
-            self.list_label_string_variable_fit[1].set("tau")
-            self.enable_disable_ui(2)
+            self.list_label_string_variable_fit[1].set("amp")
+            self.list_label_string_variable_fit[2].set("tau")
+            self.list_label_string_variable_fit[3].set("cst")
+            self.enable_disable_ui(4)
             self.setFitFormula(r"cst + e^{-(t-t_0)/\tau}")
 
         elif self.cb_model_sv.get() == "Two Decays Tail":
@@ -68,19 +70,26 @@ class PhosphoAnalyze_gui():
 
         #Graph
         ttk.Label(self.frame_graph, text='channel Start :').grid(row=0, column=0)
-        self.num_channel_start_sv = tk.StringVar()
+        self.num_channel_start_sv = tk.StringVar(value="1") # 1 based
         ttk.Entry(self.frame_graph, textvariable=self.num_channel_start_sv, justify=tk.CENTER, width=7).grid(row=0, column=1)
-        self.num_channel_start_sv.set('1')  # 1 based
 
-        ttk.Label(self.frame_graph, text='channel Stop :').grid(row=1, column=0)
-        self.num_channel_stop_sv = tk.StringVar()
-        ttk.Entry(self.frame_graph, textvariable=self.num_channel_stop_sv, justify=tk.CENTER, width=7).grid(row=1, column=1)
-        self.num_channel_stop_sv.set('2')
+        ttk.Label(self.frame_graph, text='channel Stop :').grid(row=0, column=2)
+        self.num_channel_stop_sv = tk.StringVar(value="2")
+        ttk.Entry(self.frame_graph, textvariable=self.num_channel_stop_sv, justify=tk.CENTER, width=7).grid(row=0, column=3)
 
-        ttk.Label(self.frame_graph, text='Time step (µs) :').grid(row=2, column=0)
-        self.time_step_micros_sv = tk.StringVar()
-        ttk.Entry(self.frame_graph, textvariable=self.time_step_micros_sv, justify=tk.CENTER, width=7).grid(row=2, column=1)
-        self.time_step_micros_sv.set('10')
+
+        ttk.Label(self.frame_graph, text='Time step (µs) :').grid(row=1, column=0)
+        self.time_step_micros_sv = tk.StringVar(value="10")
+        ttk.Entry(self.frame_graph, textvariable=self.time_step_micros_sv, justify=tk.CENTER, width=7).grid(row=1, column=1)
+
+        ttk.Label(self.frame_graph, text='Start time (µs) :').grid(row=2, column=0)
+        self.min_time_micros_sv = tk.StringVar(value="1")
+        ttk.Entry(self.frame_graph, textvariable=self.min_time_micros_sv, justify=tk.CENTER, width=7).grid(row=2, column=1)
+
+
+        ttk.Label(self.frame_graph, text='Max Time (ms) :').grid(row=2, column=2)
+        self.max_time_ms_sv = tk.StringVar(value="5000")
+        ttk.Entry(self.frame_graph, textvariable=self.max_time_ms_sv, justify=tk.CENTER, width=7).grid(row=2, column=3)
 
         self.is_semi_log = tk.IntVar()
         ttk.Checkbutton(self.frame_graph, text="SemiLog ?", variable=self.is_semi_log, command=self.update_analyze).grid(row=3, column=0)
