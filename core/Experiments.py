@@ -20,10 +20,10 @@ class Experiments(object):
         self.irf = {}
         self.logger = None
 
-    def add_new_exp(self, mode, params):
+    def add_new_exp(self, mode, params_dict):
         #TODO test if creation of exp is successfull
 
-        exp = Experiment.Experiment(mode, params, exps=self)
+        exp = Experiment.Experiment(mode, params_dict, exps=self)
         self.experiments[exp.file_name] = exp
         return exp
 

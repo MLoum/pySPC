@@ -271,6 +271,7 @@ class lifeTimeAnalyze_gui():
         file_name = self.controller.open_and_set_IRF_file(file_path)
 
         if file_name not in self.cb_IRF['values']:
+            # Remove
             self.cb_IRF['values'] += (file_name,)
             self.cb_IRF.set(file_name)
             self.select_IR(None)

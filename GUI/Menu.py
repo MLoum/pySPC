@@ -93,9 +93,9 @@ class Menu():
     def ask_generate_poissonian_noise(self):
         d = generatePoissonianDialog(self.master, title="Generate Poissonian Noise")
         if d.result is not None:
-            time_s, count_per_secound = d.result
+            params_dict = d.result
 
-            self.controller.generate_poisson_noise_file(time_s, count_per_secound)
+            self.controller.generate_poisson_noise_file(params_dict)
 
 
     def save_state(self):

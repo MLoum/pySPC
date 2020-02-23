@@ -115,6 +115,7 @@ class OneExpDecay_tail(lifetimeModelClass):
         self.observed_count = (bckgnd_corrected_data).sum()
         # self.observed_count = (self.data - self.data_bckgnd).sum()
         self.non_convoluted_decay = np.exp(-(t-t0) / tau)
+        self.non_convoluted_decay[t < t0] = 0
         # t_0 is in the shift
 
         self.non_convoluted_decay /= self.non_convoluted_decay.sum()
@@ -210,6 +211,7 @@ class TwoExpDecay_a1a2(lifetimeModelClass):
 
         if self.IRF is not None:
             IR = shift_scipy(self.IRF.processed_data, shift, mode='wrap')
+            self.IR /= self.IR.sum()
             conv = np.convolve(self.non_convoluted_decay, IR)[0:np.size(self.non_convoluted_decay)]
             return conv + self.data_bckgnd
         else:
@@ -721,6 +723,25 @@ class IRF:
         if file_path is not None:
             self.get_data(file_path)
 
+    def generate(self, params_dict, algo="Becker"):
+        if algo == "Becker":
+            tau = params_dict["tau"]
+            t0 = params_dict["t0"]
+            irf_shift = params_dict["irf_shift"]
+
+            time_step_ns = params_dict["time_step_ns"]
+            time_nbins = params_dict["nb_of_microtime_channel"]  # number of time bins
+
+            time_idx = np.arange(time_nbins)  # time axis in index units
+            self.time_axis = time_idx * time_step_ns  # time axis in nano-seconds
+
+            non_zero_cst = 0.01
+            self.raw_data = (self.time_axis - t0) / tau * np.exp(-(self.time_axis - t0) / tau) + non_zero_cst
+            self.raw_data = shift_scipy(self.raw_data, irf_shift, mode='wrap')
+            self.name = "generated Becker tau=" + str(tau)
+            self.process()
+            return self
+
     def get_data(self, file_path):
         self.name, self.raw_data, self.time_axis = self.exps.get_IRF_from_file(file_path)
 
@@ -740,19 +761,26 @@ class IRF:
         """
         Shift in nb of microtime channel
         """
-        idx_begin = int(self.start/100.0 * self.exp_param.nb_of_microtime_channel)
-        idx_end = int(self.end/100.0 * self.exp_param.nb_of_microtime_channel)
+
         # shift = int(self.shift/100.0 * self.exp_param.nb_of_microtime_channel)
         # self.IR_processed = np.roll(self.IR_raw[idx_begin:idx_end], int(self.IR_shift/100.0*self.exp_param.nb_of_microtime_channel))
         if self.raw_data is not None:
-            self.processed_data = self.raw_data[idx_begin:idx_end].astype(np.float64)
+            if self.start is not None and self.end is not None :
+                idx_begin = int(self.start / 100.0 * self.exp_param.nb_of_microtime_channel)
+                idx_end = int(self.end / 100.0 * self.exp_param.nb_of_microtime_channel)
+                self.processed_data = self.raw_data[idx_begin:idx_end].astype(np.float64)
+                self.time_axis_processed = self.time_axis[idx_begin:idx_end]
+            else:
+                self.processed_data = self.raw_data.astype(np.float64)
+
+
             # background removal
             self.processed_data -= self.bckgnd
             self.processed_data[self.processed_data < 0] = 0
 
             # We divide by the sum of the IR so that the convolution doesn't change the amplitude of the signal.
             self.processed_data /= float(self.processed_data.sum())
-            self.time_axis_processed = self.time_axis[idx_begin:idx_end]
+
             return "OK"
         else:
             return "No IR was loaded"

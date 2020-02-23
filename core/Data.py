@@ -7,9 +7,11 @@ from core.importFormat import pqreader
 from core.importFormat import bhreader
 from core.importFormat import nist_fpga
 from core.importFormat import SimulatedData
+from core.analyze.lifetime import IRF
+from scipy.stats import rv_discrete
+from scipy.ndimage.interpolation import shift as shift_scipy
 # from .analyze import bin
-import scipy
-import scipy.stats
+
 
 
 
@@ -40,7 +42,7 @@ class Data():
 
     minimum_nb_of_tick_per_channel = 5
 
-    def __init__(self, expParam):
+    def __init__(self, exp):
 
         # Ici cela serait du Data-Oriented Design
         # http://gamesfromwithin.com/data-oriented-design
@@ -54,8 +56,9 @@ class Data():
         self.isFiltered = []
 
         self.channels = []
+        self.exp = exp
 
-        self.expParam = expParam
+        self.exp_param = self.exp.exp_param
 
     def _del_data(self):
         del self.timestamps[:]
@@ -77,19 +80,19 @@ class Data():
         if file_extension == ".spc":
             timestamps, detectors, nanotimes, timestamps_unit, meta = self.loadSPC_Bh_File(file_path)
             # Done inside the loadSPC_Bh_File function
-            self.expParam.fill_with_SPC_meta_data(meta, timestamps_unit)
+            self.exp_param.fill_with_SPC_meta_data(meta, timestamps_unit)
 
         elif file_extension == ".pt3":
             timestamps, detectors, nanotimes, meta = pqreader.load_pt3(file_path)
-            self.expParam.fill_with_pt3_meta_data(meta)
+            self.exp_param.fill_with_pt3_meta_data(meta)
 
         elif file_extension == ".ttt":
             timestamps, detectors, nanotimes, timestamps_unit, meta = nist_fpga.load_ttt(file_path)
-            self.expParam.fill_with_ttt_meta_data(meta)
+            self.exp_param.fill_with_ttt_meta_data(meta)
 
         elif file_extension == ".ptn":
             timestamps, detectors, nanotimes, timestamps_unit, meta = SimulatedData.load_ptn(file_path)
-            self.expParam.fill_with_ttt_meta_data(meta)
+            self.exp_param.fill_with_ttt_meta_data(meta)
 
 
         # Les photons ne sont pas triès par detecteur, il le sont par ordre d'arrivée
@@ -103,7 +106,7 @@ class Data():
                 nbOfChannel += 1
             numChannel += 1
 
-        self.expParam.nbOfChannel = nbOfChannel
+        self.exp_param.nbOfChannel = nbOfChannel
 
         self._del_data()
         del self.channels[:]
@@ -151,7 +154,7 @@ class Data():
 
             c = Channel()
             c.photons = photons
-            c.update(self.expParam.mAcrotime_clickEquivalentIn_second)
+            c.update(self.exp_param.mAcrotime_clickEquivalentIn_second)
             self.channels.append(c)
             # self.results.add_channel()
             # TODO  ???
@@ -177,7 +180,7 @@ class Data():
 
         return "OK"
 
-    def new_generated_exp(self, type, params):
+    def new_generated_exp(self, type, params_dict):
         """
 
         :param type:
@@ -190,29 +193,36 @@ class Data():
 
 
             # TODO ask user ?
-            self.expParam.mAcrotime_clickEquivalentIn_second = 50E-9
-            self.expParam.mIcrotime_clickEquivalentIn_second = 10E-12
+            self.exp_param.mAcrotime_clickEquivalentIn_second = 50E-9
+            self.exp_param.mIcrotime_clickEquivalentIn_second = 10E-12
 
-            time_s = params[0]
-            time_tick = time_s / self.expParam.mAcrotime_clickEquivalentIn_second
+            time_s = params_dict["time"]
+            time_tick = time_s / self.exp_param.mAcrotime_clickEquivalentIn_second
 
-            count_per_second_s = params[1]
-            count_per_tick = count_per_second_s * self.expParam.mAcrotime_clickEquivalentIn_second
+            count_per_second_s = params_dict["cps"]
+            count_per_tick = count_per_second_s * self.exp_param.mAcrotime_clickEquivalentIn_second
 
             timeStamps = self.generate_poisson_noise(count_per_tick, 0, time_tick)
-            photons = np.empty(np.size(timeStamps), self.photonDataType)
+            nb_of_generated_photon = np.size(timeStamps)
+            photons = np.empty(nb_of_generated_photon, self.photonDataType)
 
             photons['timestamps'] = timeStamps
 
-            tau1 = params[2]
-            a1 = params[3]
-            tau2 = params[4]
-            irf_time = params[5]
+            a1 = params_dict["a1"]
+            tau1 = params_dict["tau1"]
+            a2 = params_dict["a2"]
+            tau2 = params_dict["tau2"]
+            t0 = params_dict["t0"]
+            tau_irf = params_dict["tau_irf"]
+            irf_shift = params_dict["irf_shift"]
+            noise = params_dict["noise"]
 
             # Nanotimes
 
             # photons['nanotimes'] = 0
-            self.expParam.nbOfMicrotimeChannel = 4096
+            # FIXME user values ?
+            self.exp_param.nb_of_microtime_channel = 4096
+            self.exp.exp_param.nb_of_microtime_channel = 4096
             time_step_s = (60e-9 / 4096)  # time step in seconds (S.I.)
             time_step_ns = time_step_s * 1e9  # time step in nano-seconds
             time_nbins = 4096  # number of time bins
@@ -220,58 +230,59 @@ class Data():
             time_idx = np.arange(time_nbins)  # time axis in index units
             time_ns = time_idx * time_step_ns  # time axis in nano-seconds
 
-            #IRF
+            C = 1 / (a1 * tau1 + a2 * tau2)
+            decay = C * (a1 * np.exp(-(time_ns - t0) / tau1) + a2 * np.exp(-(time_ns - t0) / tau2))
+            decay[time_ns < t0] = 0
+            decay /= decay.sum()
 
-            def irf_model(t, t_irf):
-                return t/t_irf*np.exp(-t/t_irf)
+            def generate(self, params_dict, algo="Becker"):
+                if algo == "Becker":
+                    tau = params_dict["t_irf"]
+                    t0 = params_dict["t0"]
+                    irf_shift = params_dict["irf_shift"]
 
-            def exgauss(x, mu, sig, tau):
-                lam = 1. / tau
-                return 0.5 * lam * np.exp(0.5 * lam * (2 * mu + lam * (sig ** 2) - 2 * x)) * \
-                       scipy.special.erfc((mu + lam * (sig ** 2) - x) / (np.sqrt(2) * sig))
+                    time_step_ns = params_dict["time_step_ns"]
+                    time_nbins = params_dict["nb_of_microtime_channel"]  # number of time bins
 
+            params_dict_generate = {}
+            params_dict_generate["tau"] = tau_irf
+            params_dict_generate["irf_shift"] = irf_shift
+            params_dict_generate["t0"] = t0
 
-            irf_t = 0.2
+            params_dict_generate["time_step_ns"] = time_step_ns
+            params_dict_generate["nb_of_microtime_channel"] = self.exp_param.nb_of_microtime_channel
 
-            irf_sig = 0.033
-            irf_mu = 5 * irf_sig
-            irf_lam = 0.1
-            x_irf = np.arange(0, (irf_lam * 15 + irf_mu) / time_step_ns)
-            p_irf = exgauss(x_irf, irf_mu / time_step_ns, irf_sig / time_step_ns,
-                            irf_lam / time_step_ns)
-            irf = scipy.stats.rv_discrete(name='irf', values=(x_irf, p_irf))
+            irf_obj = IRF(self.exp.exps, self.exp)
+            irf_obj.generate(params_dict_generate, algo="Becker")
+            self.exp.exps.add_irf(irf_obj)
 
-            irf = scipy.stats.rv_discrete(name='irf', values=(x_irf, p_irf))
+            decay_conv = np.convolve(decay, irf_obj.processed_data)[0:np.size(decay)]
+            decay_conv /= decay_conv.sum()
 
-            num_samples = np.size(timeStamps)
-            tau = 2e-9
-            baseline_fraction = 0.03
-            offset = 2e-9
-
-            sample_decay = np.random.exponential(scale=tau / time_step_s,
-                                                 size=num_samples) + offset / time_step_s
-            sample_decay += irf.rvs(size=num_samples)
-            sample_baseline = np.random.randint(low=0, high=time_nbins,
-                                                size=baseline_fraction * num_samples)
-            sample_tot = np.hstack((sample_decay, sample_baseline))
-            decay_hist, bins = np.histogram(sample_tot, bins=np.arange(time_nbins + 1))
+            decay_conv_bruit = decay_conv + np.random.random(decay_conv.size)*noise
+            decay_conv_bruit /= decay_conv_bruit.sum()
 
 
+            # decay_obj = rv_discrete(name='biexp', values=(time_idx, decay))
+            decay_obj = rv_discrete(name='biexpconv', values=(time_idx, decay_conv_bruit))
+
+            photons['nanotimes'] = decay_obj.rvs(size=nb_of_generated_photon)
 
             c = Channel()
             c.photons = photons
             c.start_tick = c.photons['timestamps'][0]
             c.end_tick = c.photons['timestamps'][-1]
             c.nb_of_tick = c.photons['timestamps'].size
-            c.CPS = float(c.nb_of_tick) / (c.end_tick - c.start_tick) / self.expParam.mAcrotime_clickEquivalentIn_second
+            c.CPS = float(c.nb_of_tick) / (c.end_tick - c.start_tick) / self.exp_param.mAcrotime_clickEquivalentIn_second
             self.channels.append(c)
+
 
     def loadSPC_Bh_File(self, filePath):
         # find associate set
         path_set = os.path.splitext(filePath)[0] + '.set'
         if (os.path.isfile(path_set)):
             meta = bhreader.load_set(path_set)
-            self.expParam.fill_with_SPC_meta_data(meta, None)
+            self.exp_param.fill_with_SPC_meta_data(meta, None)
         else:
             return "default set File missing"
 
@@ -337,7 +348,7 @@ class Data():
 
         elif replacement_mode == "poissonian_noise":
             # Strategy, put artificial poisson noise at the end of the photons list and sort the photon list
-            old_cps_per_tick = self.channels[num_channel].CPS * self.expParam.mAcrotime_clickEquivalentIn_second
+            old_cps_per_tick = self.channels[num_channel].CPS * self.exp_param.mAcrotime_clickEquivalentIn_second
 
             self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                            idx_photons_to_filter)
@@ -349,7 +360,7 @@ class Data():
                 photons_poisson = np.empty(np.size(poisson_signal), self.photonDataType)
 
                 photons_poisson['timestamps'] = poisson_signal
-                photons_poisson['nanotimes'] = np.random.rand(poisson_signal.size) * self.expParam.nb_of_microtime_channel
+                photons_poisson['nanotimes'] = np.random.rand(poisson_signal.size) * self.exp_param.nb_of_microtime_channel
 
                 list_poisson_photons.append(photons_poisson)
 
@@ -384,7 +395,7 @@ class Data():
 
         elif replacement_mode == "poissonian_noise":
             if is_keep:
-                old_cps_per_tick = self.channels[num_channel].CPS * self.expParam.mAcrotime_clickEquivalentIn_second
+                old_cps_per_tick = self.channels[num_channel].CPS * self.exp_param.mAcrotime_clickEquivalentIn_second
                 self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                                idx_photons_to_be_filtered)
                 # Before t_1
@@ -392,7 +403,7 @@ class Data():
                 photons_poisson_t1 = np.empty(np.size(poisson_signal_t1), self.photonDataType)
 
                 photons_poisson_t1['timestamps'] = poisson_signal_t1
-                photons_poisson_t1['nanotimes'] = np.random.rand(poisson_signal_t1.size) * self.expParam.nb_of_microtime_channel
+                photons_poisson_t1['nanotimes'] = np.random.rand(poisson_signal_t1.size) * self.exp_param.nb_of_microtime_channel
                 self.channels[num_channel].photons = np.insert(self.channels[num_channel].photons, obj=0, values=photons_poisson_t1)
 
                 # After t_2
@@ -400,13 +411,13 @@ class Data():
                 photons_poisson_t2 = np.empty(np.size(poisson_signal_t2), self.photonDataType)
 
                 photons_poisson_t2['timestamps'] = poisson_signal_t2
-                photons_poisson_t2['nanotimes'] = np.random.rand(poisson_signal_t2.size) * self.expParam.nb_of_microtime_channel
+                photons_poisson_t2['nanotimes'] = np.random.rand(poisson_signal_t2.size) * self.exp_param.nb_of_microtime_channel
                 self.channels[num_channel].photons = np.append(self.channels[num_channel].photons, values=photons_poisson_t2)
 
                 np.sort(self.channels[num_channel].photons, order='timestamps')
 
             if is_keep is False:
-                old_cps_per_tick = self.channels[num_channel].CPS * self.expParam.mAcrotime_clickEquivalentIn_second
+                old_cps_per_tick = self.channels[num_channel].CPS * self.exp_param.mAcrotime_clickEquivalentIn_second
                 idx_t1_tick = np.searchsorted(time_stamps, t1_tick)
                 self.channels[num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                                idx_photons_to_be_filtered)
@@ -414,11 +425,11 @@ class Data():
                 photons_poisson = np.empty(np.size(poisson_signal), self.photonDataType)
 
                 photons_poisson['timestamps'] = poisson_signal
-                photons_poisson['nanotimes'] = np.random.rand(photons_poisson.size) * self.expParam.nb_of_microtime_channel
+                photons_poisson['nanotimes'] = np.random.rand(photons_poisson.size) * self.exp_param.nb_of_microtime_channel
                 self.channels[num_channel].photons = np.insert(self.channels[num_channel].photons, obj=idx_t1_tick, values=photons_poisson)
                 np.sort(self.channels[num_channel].photons, order='timestamps')
 
-        self.channels[num_channel].update(self.expParam.mAcrotime_clickEquivalentIn_second)
+        self.channels[num_channel].update(self.exp_param.mAcrotime_clickEquivalentIn_second)
 
     def filter_micro_time(self, num_channel, micro_t1, micro_t2, is_keep=True, replacement_mode="nothing"):
         """
@@ -464,7 +475,7 @@ class Data():
             self.channels[burst_detection_measurement.num_channel].photons = np.delete(self.channels[num_channel].photons,
                                                            idx_photons_to_filter)
 
-        self.channels[num_channel].update(self.expParam.mAcrotime_clickEquivalentIn_second)
+        self.channels[num_channel].update(self.exp_param.mAcrotime_clickEquivalentIn_second)
 
     def filter_based_on_photon_score(self, num_channel, scores, params, is_keep=True, mode="sigma", replacement_mode="nothing"):
 

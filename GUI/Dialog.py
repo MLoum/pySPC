@@ -11,26 +11,78 @@ class generatePoissonianDialog(simpledialog.Dialog):
 
     def body(self, master):
 
-        ttk.Label(master, text="Time (s):").grid(row=0)
-        ttk.Label(master, text="Count Per Second:").grid(row=1)
+        frame_Poisson = ttk.LabelFrame(master, text="Poisonnian Noise")
+        frame_Poisson.pack()
+        ttk.Label(frame_Poisson, text="Time (s):").grid(row=0)
+        ttk.Label(frame_Poisson, text="Count Per Second:").grid(row=1)
 
-        self.e1 = ttk.Entry(master)
-        self.e2 = ttk.Entry(master)
+        frame_lifetime = ttk.LabelFrame(master, text="Lifetime")
+        frame_lifetime.pack()
+        ttk.Label(frame_lifetime, text="a1 :").grid(row=2)
+        ttk.Label(frame_lifetime, text="tau1 (ns) :").grid(row=3)
+        ttk.Label(frame_lifetime, text="a2 :").grid(row=4)
+        ttk.Label(frame_lifetime, text="tau2 (ns) :").grid(row=5)
+        ttk.Label(frame_lifetime, text="t0 (ns) :").grid(row=6)
+        ttk.Label(frame_lifetime, text="noise").grid(row=7)
+
+        frame_irf = ttk.LabelFrame(master, text="IRF")
+        frame_irf.pack()
+        ttk.Label(frame_irf, text="t irf (ns) :").grid(row=8)
+        ttk.Label(frame_irf, text="shift (ns) :").grid(row=9)
+
+
+        self.e1 = ttk.Entry(frame_Poisson)
+        self.e2 = ttk.Entry(frame_Poisson)
+
+        self.e3 = ttk.Entry(frame_lifetime)
+        self.e4 = ttk.Entry(frame_lifetime)
+        self.e5 = ttk.Entry(frame_lifetime)
+        self.e6 = ttk.Entry(frame_lifetime)
+        self.e7 = ttk.Entry(frame_lifetime)
+        self.e8 = ttk.Entry(frame_lifetime)
+
+        self.e9 = ttk.Entry(frame_irf)
+        self.e10 = ttk.Entry(frame_irf)
 
         #default value
         self.e1.insert(tk.END, '10.0')
-        self.e2.insert(tk.END, '1000.0')
+        self.e2.insert(tk.END, '10000.0')
+        self.e3.insert(tk.END, '100.0')
+        self.e4.insert(tk.END, '1.0')
+        self.e5.insert(tk.END, '50.0')
+        self.e6.insert(tk.END, '3.0')
+        self.e7.insert(tk.END, '4.0')
+        self.e8.insert(tk.END, '0.0000001')
+        self.e9.insert(tk.END, '0.5')
+        self.e10.insert(tk.END, '0')
 
         self.e1.grid(row=0, column=1)
         self.e2.grid(row=1, column=1)
+        self.e3.grid(row=2, column=1)
+        self.e4.grid(row=3, column=1)
+        self.e5.grid(row=4, column=1)
+        self.e6.grid(row=5, column=1)
+        self.e7.grid(row=6, column=1)
+        self.e8.grid(row=7, column=1)
+        self.e9.grid(row=8, column=1)
+        self.e10.grid(row=9, column=1)
 
         self.result = None
         return self.e1 # initial focus
 
     def apply(self):
-        first = float(self.e1.get())
-        second = float(self.e2.get())
-        self.result =  first, second
+        self.result = {}
+        self.result["time"] = float(self.e1.get())
+        self.result["cps"] = float(self.e2.get())
+        self.result["a1"] = float(self.e3.get())
+        self.result["tau1"] = float(self.e4.get())
+        self.result["a2"] = float(self.e5.get())
+        self.result["tau2"] = float(self.e6.get())
+        self.result["t0"] = float(self.e7.get())
+        self.result["noise"] = float(self.e8.get())
+        self.result["tau_irf"] = float(self.e9.get())
+        self.result["irf_shift"] = float(self.e10.get())
+
 
 class exploreChiSqaureDialog(simpledialog.Dialog):
 

@@ -23,14 +23,12 @@ class Experiment(object):
     - save_state/load_state
     """
 
-    def __init__(self, mode, params, exps=None):
+    def __init__(self, mode, params_dict, exps=None):
         self.exps = exps
         self.exp_param = ExpParam.Experiment_param()
         # self.results = Results.Results()
         self.measurements = {}
-        self.data = Data.Data(self.exp_param)
-
-
+        self.data = Data.Data(self)
 
         self.navigation_chronograms = None
         self.time_zoom_chronograms = None
@@ -42,7 +40,7 @@ class Experiment(object):
 
         self.defaultBinSize_s = 0.01  # default : 10ms
 
-        self.new_exp(mode, params)
+        self.new_exp(mode, params_dict)
 
 
     # TODO put convert function where it belongs
@@ -52,7 +50,7 @@ class Experiment(object):
     def convert_seconds_in_ticks(self, seconds):
         return seconds / self.exp_param.mAcrotime_clickEquivalentIn_second
 
-    def new_exp(self, mode, params):
+    def new_exp(self, mode, params_dict):
         """
         Create a new experiment from a file or from simulated data.
 
@@ -60,17 +58,12 @@ class Experiment(object):
             - "file" : a recorded file spc or pt3 file
             - "generate" : Poissonian Noise
             - "simulation" : Not Implemented Yet.
-        :param params: params passed to the function based on the mode :
-            - for "file mode :
-                - params[0] = filePath
-            - for "generate" :
-                - params[0] = filePath
-                - params[1] = time_s
-                - params[2] = count_per_second_s
+        :param params_dict: params dictionnary passed to the function based on the mode :
+
         :return:
         """
         if mode == "file":
-            filePath = params[0]
+            filePath = params_dict["file_path"]
             result = self.data.load_from_file(filePath)
             if result is not "OK":
                 return
@@ -78,10 +71,12 @@ class Experiment(object):
             head, self.file_name = os.path.split(filePath)
 
         elif mode == "generate":
-            type = params[0]
-            time_s = params[1]
-            count_per_second_s = params[2]
-            self.data.new_generated_exp(type, [time_s, count_per_second_s])
+            type = params_dict["type"]
+            time_s = params_dict["time"]
+            count_per_second_s = params_dict["cps"]
+            #FIXME could change
+            self.exp_param.nbOfChannel = 1
+            self.data.new_generated_exp(type, params_dict)
             self.file_name = "Generated Poisson Noise - count per second : %f" % count_per_second_s
         elif mode == "simulation":
             pass

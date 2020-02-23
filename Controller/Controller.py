@@ -58,7 +58,9 @@ class Controller:
     def open_SPC_File(self, file_path):
         # filePath = self.view.menu.askOpenFile('Choose the SPC file to analyse (.spc, .pt3, .ttt, ...')
         # TODO test extension
-        exp = self.model.add_new_exp("file", [file_path])
+        param_dict = {}
+        param_dict["file_path"] = file_path
+        exp = self.model.add_new_exp("file", param_dict)
         self.current_exp = self.model.experiments[exp.file_name]
         self.current_exp.create_navigation_chronograms(0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
 
@@ -76,8 +78,9 @@ class Controller:
 
         self.update_all()
 
-    def generate_poisson_noise_file(self, time_s, count_per_secound):
-        exp = self.model.add_new_exp("generate", ["Poisson", time_s, count_per_secound])
+    def generate_poisson_noise_file(self, params_dict):
+        params_dict["type"] = "Poisson"
+        exp = self.model.add_new_exp("generate", params_dict)
         self.current_exp = self.model.experiments[exp.file_name]
         self.current_exp.create_navigation_chronograms(0, self.current_exp.data.channels[0].end_tick, self.current_exp.convert_seconds_in_ticks(self.current_exp.defaultBinSize_s))
 
