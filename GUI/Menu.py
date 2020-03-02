@@ -21,7 +21,7 @@ class Menu():
         # FILE#############
         self.menu_file = tk.Menu(self.menuSystem, tearoff=0)
 
-
+        #ffdfg
         # self.menuFile_open = tk.Menu(self.menuFile)
         #
         # self.menuFile.add_cascade(label="Open", menu=self.menuFile_open)
