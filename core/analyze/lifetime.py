@@ -162,6 +162,7 @@ class TwoExpDecay(lifetimeModelClass):
         if self.IRF is not None:
             IR = shift_scipy(self.IRF.processed_data, shift, mode='wrap')
             # IR = np.roll(self.IR, shift)
+            IR /= IR.sum()
             conv = np.convolve(self.non_convoluted_decay, IR)[0:np.size(self.non_convoluted_decay)]
             # transform count to probability
             conv /= conv.sum()
@@ -211,7 +212,7 @@ class TwoExpDecay_a1a2(lifetimeModelClass):
 
         if self.IRF is not None:
             IR = shift_scipy(self.IRF.processed_data, shift, mode='wrap')
-            self.IR /= self.IR.sum()
+            IR /= IR.sum()
             conv = np.convolve(self.non_convoluted_decay, IR)[0:np.size(self.non_convoluted_decay)]
             return conv + self.data_bckgnd
         else:
@@ -227,6 +228,90 @@ class TwoExpDecay_a1a2(lifetimeModelClass):
         params.add(name="shift", value=0, min=-np.inf, max=np.inf, brute_step=0.1)
         params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
         return params
+
+class TwoExpDecay_tail(lifetimeModelClass):
+    """A normalized exponential two decays with a shift in time, with two Parameters ``tau``, ''shift, and a fixed ``bckgnd``.
+
+    Defined as:
+
+    .. math::
+
+        f(t; , tau, t0, bckgnd) =  exp(-(t-t0) / tau) + bckgnd
+
+    The area under the decay curves obtained from the observed counts Cexp and from the predicted counts Ĉtheo must be
+    conserved during optimization of the fitting parameters. Hence, the exponential does'nt have a amplitude parameter
+    """
+
+    def __init__(self, IRF=None):
+        super().__init__(IRF)
+
+    def guess(self):
+        pass
+
+    def eval(self, t,  params):
+        tau1 = params['tau'].value
+        a1 = params['a1'].value
+        t0 = params['t0'].value
+        self.data_bckgnd = params['bckgnd'].value
+        bckgnd_corrected_data = self.data - self.data_bckgnd
+        bckgnd_corrected_data[bckgnd_corrected_data < 0] = 0
+        self.observed_count = (bckgnd_corrected_data).sum()
+        # self.observed_count = (self.data - self.data_bckgnd).sum()
+        self.non_convoluted_decay = np.exp(-(t-t0) / tau)
+        self.non_convoluted_decay[t < t0] = 0
+        # t_0 is in the shift
+
+        self.non_convoluted_decay /= self.non_convoluted_decay.sum()
+        return self.observed_count*self.non_convoluted_decay + self.data_bckgnd
+
+    def make_params(self):
+        params = Parameters()
+        params.add(name="tau", value=1, min=0.01, max=np.inf, brute_step=0.1)
+        params.add(name="t0", value=0, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
+        return params
+
+class TwoExpDecay_tail_a1a2(lifetimeModelClass):
+    """A normalized exponential two decays with a shift in time, with two Parameters ``tau``, ''shift, and a fixed ``bckgnd``.
+
+    Defined as:
+
+    .. math::
+
+        f(t; , tau, t0, bckgnd) =  a1*exp(-(t-t0) / tau1) + a2*exp(-(t-t0) / tau2) + bckgnd
+
+    The area under the decay curves obtained from the observed counts Cexp and from the predicted counts Ĉtheo must be
+    conserved during optimization of the fitting parameters. Hence, the exponential does'nt have a amplitude parameter
+    """
+
+    def __init__(self, IRF=None):
+        super().__init__(IRF)
+
+    def guess(self):
+        pass
+
+    def eval(self, t,  params):
+        tau1 = params['tau1'].value
+        a1 = params['a1'].value
+        tau2 = params['tau2'].value
+        a2 = params['a2'].value
+        t0 = params['t0'].value
+        self.data_bckgnd = params['bckgnd'].value
+        self.non_convoluted_decay = a1*np.exp(-(t-t0) / tau1) + a2*np.exp(-(t-t0) / tau2)
+        self.non_convoluted_decay[t < t0] = 0
+
+        return self.non_convoluted_decay + self.data_bckgnd
+
+    def make_params(self):
+        params = Parameters()
+        params.add(name="tau1", value=1, min=0.01, max=np.inf, brute_step=0.1)
+        params.add(name="a1", value=0.5, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="tau2", value=3, min=0.01, max=np.inf, brute_step=0.1)
+        params.add(name="a2", value=0.5, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="t0", value=0, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
+        return params
+
 
 class IRF_GaAs(Model):
     """This function is used the IRF.
@@ -377,9 +462,10 @@ class lifeTimeMeasurements(Measurements):
         else :
             qty_to_min = self.qty_to_min
 
-
+        #FIXME
+        self.use_IR = True
         if self.use_IR:
-            self.set_params(params)
+            # self.set_params(params)
 
             def residuals(params, x, y):
                 """
@@ -390,7 +476,8 @@ class lifeTimeMeasurements(Measurements):
 
             def weighted_residuals(params, x, y, weights):
                 """
-                Returns the array of residuals for the current parameters.
+                Returns the array of weighted residuals for the current parameters.
+                The weight is sqrt(N).
                 """
                 ymodel = self.model.eval(x, params)
                 return (y[self.idx_start:self.idx_end] - ymodel[self.idx_start:self.idx_end])/weights[self.idx_start:self.idx_end]
@@ -702,9 +789,14 @@ class lifeTimeMeasurements(Measurements):
             self.params = self.model.make_params()
 
         elif model_name == "Two Decays Tail":
-            # print (modelName)
             self.modelName = model_name
             self.model = TwoExpDecay()
+            self.params = self.model.make_params()
+
+        elif model_name == "Two Decays Tail A1 A2":
+            self.modelName = model_name
+            self.model = TwoExpDecay_tail_a1a2()
+            self.params = self.model.make_params()
 
         self.model.use_IR = self.use_IR
         self.model.IR = self.IRF
@@ -735,9 +827,18 @@ class IRF:
             time_idx = np.arange(time_nbins)  # time axis in index units
             self.time_axis = time_idx * time_step_ns  # time axis in nano-seconds
 
-            non_zero_cst = 0.01
+            non_zero_cst = 0.001
+            non_zero_cst = 0
             self.raw_data = (self.time_axis - t0) / tau * np.exp(-(self.time_axis - t0) / tau) + non_zero_cst
+            self.raw_data[self.raw_data < 0] = 0
             self.raw_data = shift_scipy(self.raw_data, irf_shift, mode='wrap')
+
+            self.raw_data /= self.raw_data.sum()
+            #FIXME
+            nb_of_photon_irf = 1e6
+
+            self.raw_data *= nb_of_photon_irf
+            self.raw_data[self.raw_data < 0.1] = 0.1
             self.name = "generated Becker tau=" + str(tau)
             self.process()
             return self

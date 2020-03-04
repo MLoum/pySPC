@@ -87,6 +87,21 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
                                              maxs=[10, 1, 2, 1, 50, 200], brute_steps=[0.3, 0.1, 0.3, 0.1, 1, 5],
                                              fixeds=[0, 0, 0, 0, 0, 0])
 
+        elif self.cb_model_sv.get() == "Two Decays Tail A1 A2":
+            self.list_label_string_variable_fit[0].set("tau1")
+            self.list_label_string_variable_fit[1].set("a1")
+            self.list_label_string_variable_fit[2].set("tau2")
+            self.list_label_string_variable_fit[3].set("a2")
+            self.list_label_string_variable_fit[4].set("t0")
+            self.list_label_string_variable_fit[5].set("bckgnd")
+            self.enable_disable_ui(6)
+
+            self.setFitFormula(r"  (a1.e^{-(t-t0)/\tau_1} + a2.e^{-(t-t0)/\tau_2}) + bckgnd")
+
+            self.set_min_max_bruteStep_fixed(mins=[2, 0, 0, 0, -50, 0], values=[3, 0.5, 1, 0.5, 0, 40],
+                                             maxs=[10, 1, 2, 1, 50, 200], brute_steps=[0.3, 0.1, 0.3, 0.1, 1, 5],
+                                             fixeds=[0, 0, 0, 0, 0, 0])
+
 
         elif self.cb_model_sv.get() == "IRF":
             self.list_label_string_variable_fit[0].set("mu")
@@ -260,7 +275,7 @@ class lifeTimeAnalyze_gui():
         #FIT
         # model_names -> cf core/lifetime.py
         self.gui_for_fit_operation = guiForFitOperation_Lifetime(self.frameMicro_fit, self.controller,
-                                                                 model_names=('One Decay IRF', 'One Decay Tail', 'Two Decays IRF', 'Two Decays IRF A1 A2', 'Two Decays Tail', 'IRF'), nb_param_fit=8,
+                                                                 model_names=('One Decay IRF', 'One Decay Tail', 'Two Decays IRF', 'Two Decays IRF A1 A2', 'Two Decays Tail', 'Two Decays Tail A1 A2', 'IRF'), nb_param_fit=8,
                                                                  is_burst_analysis=self.is_burst_analysis)
         self.gui_for_fit_operation.populate()
 

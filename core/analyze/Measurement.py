@@ -94,11 +94,11 @@ class Measurements:
             error_bar = self.error_bar[self.idx_start:self.idx_end]
         else:
             error_bar = None
-        self.fit_results = self.model.fit(y, self.params, t=x, weights=error_bar, method=fitting_method1)
+        self.fit_results = self.model.fit(y, self.params, t=x, weights=error_bar, method=self.fitting_method1)
 
 
         if self.fitting_method2 != "None":
-            self.fit_results = self.model.fit(y, self.fit_results.params, weights=error_bar, t=x, method=fitting_method2)
+            self.fit_results = self.model.fit(y, self.fit_results.params, weights=error_bar, t=x, method=self.fitting_method2)
 
         self.eval_y_axis = self.fit_results.best_fit
         self.eval_x_axis = self.fit_x = x

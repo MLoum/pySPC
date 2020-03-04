@@ -224,6 +224,7 @@ class Data():
             self.exp_param.nb_of_microtime_channel = 4096
             self.exp.exp_param.nb_of_microtime_channel = 4096
             time_step_s = (60e-9 / 4096)  # time step in seconds (S.I.)
+            self.exp.exp_param.mIcrotime_clickEquivalentIn_second = time_step_s
             time_step_ns = time_step_s * 1e9  # time step in nano-seconds
             time_nbins = 4096  # number of time bins
 
@@ -265,6 +266,7 @@ class Data():
 
             # decay_obj = rv_discrete(name='biexp', values=(time_idx, decay))
             decay_obj = rv_discrete(name='biexpconv', values=(time_idx, decay_conv_bruit))
+
 
             photons['nanotimes'] = decay_obj.rvs(size=nb_of_generated_photon)
 
