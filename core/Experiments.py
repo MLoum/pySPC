@@ -85,7 +85,9 @@ class Experiments(object):
             # TODO IRF from ascii FIle
             raw = np.loadtxt(file_path)
             pass
-        ir_exp = Experiment.Experiment("file", [file_path])
+        dict_param = {}
+        dict_param["file_path"] = file_path
+        ir_exp = Experiment.Experiment("file", dict_param)
         measurement_ir = ir_exp.create_measurement(0, 0, -1,"lifetime", "", "")
         measurement_ir.calculate()
         # ir_exp.calculate_life_time(measurement_ir)
