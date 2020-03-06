@@ -428,6 +428,16 @@ class Controller:
         self.current_measurement.IRF = irf
         return irf.name
 
+    def generate_IRF(self, params_dict):
+        #TODO merge with open and set IRF
+        irf = IRF(self.model, self.current_exp)
+        #FIXME algo et ajout dans param_dict
+        params_dict["irf_shift"] = 0
+        irf.generate(params_dict, algo="Becker")
+        self.model.add_irf(irf)
+        self.current_measurement.IRF = irf
+        return irf.name
+
     def set_IRF(self, irf_name):
         self.current_measurement.IRF = self.model.irf[irf_name]
 

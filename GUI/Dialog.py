@@ -84,6 +84,36 @@ class generatePoissonianDialog(simpledialog.Dialog):
         self.result["irf_shift"] = float(self.e10.get())
 
 
+
+class generateIRFDialog(simpledialog.Dialog):
+
+    def body(self, master):
+
+        ttk.Label(master, text="tau IRF (ns):").grid(row=0)
+        ttk.Label(master, text="t0 (ns)").grid(row=1)
+        ttk.Label(master, text="Algo (TODO)").grid(row=2)
+
+
+        self.e1 = ttk.Entry(master)
+        self.e2 = ttk.Entry(master)
+
+        #default value
+        self.e1.insert(tk.END, '0.5')
+        self.e2.insert(tk.END, '0')
+
+
+        self.e1.grid(row=0, column=1)
+        self.e2.grid(row=1, column=1)
+
+        self.result = None
+        return self.e1 # initial focus
+
+    def apply(self):
+        self.result = {}
+        self.result["tau"] = float(self.e1.get())
+        self.result["t0"] = float(self.e2.get())
+
+
 class exploreChiSqaureDialog(simpledialog.Dialog):
 
     def body(self, master):

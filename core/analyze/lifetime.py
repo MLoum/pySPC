@@ -249,15 +249,17 @@ class TwoExpDecay_tail(lifetimeModelClass):
         pass
 
     def eval(self, t,  params):
-        tau1 = params['tau'].value
+        tau1 = params['tau1'].value
+        tau2 = params['tau2'].value
         a1 = params['a1'].value
+        a1 = params['a2'].value
         t0 = params['t0'].value
         self.data_bckgnd = params['bckgnd'].value
         bckgnd_corrected_data = self.data - self.data_bckgnd
         bckgnd_corrected_data[bckgnd_corrected_data < 0] = 0
         self.observed_count = (bckgnd_corrected_data).sum()
         # self.observed_count = (self.data - self.data_bckgnd).sum()
-        self.non_convoluted_decay = np.exp(-(t-t0) / tau)
+        self.non_convoluted_decay = a1*np.exp(-t/tau1) + (1-a1)*np.exp(-t/tau2)
         self.non_convoluted_decay[t < t0] = 0
         # t_0 is in the shift
 
@@ -266,7 +268,9 @@ class TwoExpDecay_tail(lifetimeModelClass):
 
     def make_params(self):
         params = Parameters()
-        params.add(name="tau", value=1, min=0.01, max=np.inf, brute_step=0.1)
+        params.add(name="tau1", value=1, min=0.01, max=np.inf, brute_step=0.1)
+        params.add(name="tau2", value=1, min=0.01, max=np.inf, brute_step=0.1)
+        params.add(name="a1", value=0.5, min=0, max=1, brute_step=0.1)
         params.add(name="t0", value=0, min=0, max=np.inf, brute_step=0.1)
         params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
         return params
@@ -821,8 +825,14 @@ class IRF:
             t0 = params_dict["t0"]
             irf_shift = params_dict["irf_shift"]
 
-            time_step_ns = params_dict["time_step_ns"]
-            time_nbins = params_dict["nb_of_microtime_channel"]  # number of time bins
+            if "time_step_ns" in params_dict:
+                time_step_ns = params_dict["time_step_ns"]
+            else:
+                time_step_ns = self.exp_param.mIcrotime_clickEquivalentIn_second * 1E9
+            if "nb_of_microtime_channel" in params_dict:
+                time_nbins = params_dict["nb_of_microtime_channel"]  # number of time bins
+            else:
+                time_nbins = self.exp_param.nb_of_microtime_channel
 
             time_idx = np.arange(time_nbins)  # time axis in index units
             self.time_axis = time_idx * time_step_ns  # time axis in nano-seconds

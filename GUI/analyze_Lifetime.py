@@ -6,7 +6,7 @@ from core import Experiment
 
 from tkinter import filedialog, messagebox, simpledialog
 
-from .Dialog import fitIRFDialog
+from .Dialog import fitIRFDialog, generateIRFDialog
 
 
 
@@ -148,7 +148,7 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
 
 class lifeTimeAnalyze_gui():
     def __init__(self, masterFrame, controller, appearenceParam, measurement, is_burst_analysis=False):
-        self.masterFrame = masterFrame
+        self.master_frame = masterFrame
         self.controller = controller
         self.appearenceParam = appearenceParam
         self.measurement = measurement
@@ -158,18 +158,18 @@ class lifeTimeAnalyze_gui():
         # self.is_graph_x_ns = True
 
     def populate(self):
-        self.frameMicro_graph = tk.LabelFrame(self.masterFrame, text="Graph",
-                                         borderwidth=self.appearenceParam.frameLabelBorderWidth)
-        self.frameMicro_filter = tk.LabelFrame(self.masterFrame, text="Filter",
-                                         borderwidth=self.appearenceParam.frameLabelBorderWidth)
-        self.frameMicro_IR_signal = tk.LabelFrame(self.masterFrame, text="Static param fit",
-                                         borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frameMicro_graph = tk.LabelFrame(self.master_frame, text="Graph",
+                                              borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frameMicro_filter = tk.LabelFrame(self.master_frame, text="Filter",
+                                               borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frameMicro_IR_signal = tk.LabelFrame(self.master_frame, text="Static param fit",
+                                                  borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameMicro_IR = tk.LabelFrame(self.frameMicro_IR_signal, text="IR",
                                          borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameMicro_Signal = tk.LabelFrame(self.frameMicro_IR_signal, text="Signal",
                                          borderwidth=self.appearenceParam.frameLabelBorderWidth)
-        self.frameMicro_fit = tk.LabelFrame(self.masterFrame, text="Fit",
-                                         borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frameMicro_fit = tk.LabelFrame(self.master_frame, text="Fit",
+                                            borderwidth=self.appearenceParam.frameLabelBorderWidth)
 
         self.frameMicro_graph.pack(side="left", fill="both", expand=True)
         self.frameMicro_filter.pack(side="left", fill="both", expand=True)
@@ -310,29 +310,24 @@ class lifeTimeAnalyze_gui():
         self.controller.update_analyze()
 
     def fit_IR(self):
-        d = fitIRFDialog(self.masterFrame, title="Initial fit parameters")
+        d = fitIRFDialog(self.master_frame, title="Initial fit parameters")
         if d.result is not None:
             iniParams = d.result
             self.controller.fit_IR(iniParams)
 
     def generateIR_file(self):
-        pass
-        # #TODO Custom Dialog !
-        # answer = simpledialog.askfloat("Main IR width in picoSeconds", initialvalue=50.0, minvalue = 1.0)
-        # if answer != None:
-        #     mainWidth = answer
-        #     answer2 = simpledialog.askfloat("Secondary IR width in picoSeconds", initialvalue=100.0, minvalue=1.0)
-        #     if answer2 != None:
-        #         secondaryWidth = answer2
-        #         answer3 = simpledialog.askfloat("Secondary IR relative intensity (between 0 and 1", initialvalue=0.05, minvalue=1.0, maxvalue=1.0)
-        #         if answer3 != None:
-        #             secondaryAmplitude = answer3
-        #             answer4 = simpledialog.askfloat("Secondary IR relative intensity (between 0 and 1",
-        #                                             initialvalue=0.05, minvalue=1.0, maxvalue=1.0)
-        #             if answer4 != None:
-        #                 timeOffset = answer4
-        #                 self.controller.generate_artificial_IR(mainWidth, secondaryWidth, secondaryAmplitude, timeOffset)
-        #                 self.ir_name_sv.set("artificial " + str(mainWidth) + " " +  str(secondaryWidth))
+        d = generateIRFDialog(self.master_frame, title="Generate IRF")
+        if d.result is not None:
+            params_dict = d.result
+            file_name = self.controller.generate_IRF(params_dict)
+
+            if file_name not in self.cb_IRF['values']:
+                # Remove
+                self.cb_IRF['values'] += (file_name,)
+                self.cb_IRF.set(file_name)
+                self.select_IR(None)
+
+            self.controller.update_analyze()
 
 
 
