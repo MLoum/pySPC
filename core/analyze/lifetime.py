@@ -252,7 +252,6 @@ class TwoExpDecay_tail(lifetimeModelClass):
         tau1 = params['tau1'].value
         tau2 = params['tau2'].value
         a1 = params['a1'].value
-        a1 = params['a2'].value
         t0 = params['t0'].value
         self.data_bckgnd = params['bckgnd'].value
         bckgnd_corrected_data = self.data - self.data_bckgnd
@@ -268,10 +267,10 @@ class TwoExpDecay_tail(lifetimeModelClass):
 
     def make_params(self):
         params = Parameters()
-        params.add(name="tau1", value=1, min=0.01, max=np.inf, brute_step=0.1)
-        params.add(name="tau2", value=1, min=0.01, max=np.inf, brute_step=0.1)
-        params.add(name="a1", value=0.5, min=0, max=1, brute_step=0.1)
         params.add(name="t0", value=0, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="tau1", value=1, min=0.01, max=np.inf, brute_step=0.1)
+        params.add(name="a1", value=0.5, min=0, max=1, brute_step=0.1)
+        params.add(name="tau2", value=1, min=0.01, max=np.inf, brute_step=0.1)
         params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
         return params
 
@@ -467,8 +466,8 @@ class lifeTimeMeasurements(Measurements):
             qty_to_min = self.qty_to_min
 
         #FIXME
-        self.use_IR = True
-        if self.use_IR:
+        # if self.use_IR:
+        if True:
             # self.set_params(params)
 
             def residuals(params, x, y):
@@ -794,7 +793,7 @@ class lifeTimeMeasurements(Measurements):
 
         elif model_name == "Two Decays Tail":
             self.modelName = model_name
-            self.model = TwoExpDecay()
+            self.model = TwoExpDecay_tail()
             self.params = self.model.make_params()
 
         elif model_name == "Two Decays Tail A1 A2":
