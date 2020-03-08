@@ -8,9 +8,9 @@ class guiForFitOperation_DLS(guiForFitOperation):
     def __init__(self, master_frame, controller, model_names, nb_param_fit):
         super().__init__(master_frame, controller, model_names, nb_param_fit, fitModeName="DLS")
 
-    def changeModel(self, event):
+    def change_model(self, event):
         # Methode virtuelle, voir les classes dérivées.
-        nbFitParam = self.nb_param_fit
+        nbFitParam = self.nb_max_param_fit
         if self.cb_model_sv.get() == "Cumulant":
             self.list_label_string_variable_fit[0].set("B")
             self.list_label_string_variable_fit[1].set("beta")
@@ -27,7 +27,7 @@ class guiForFitOperation_DLS(guiForFitOperation):
                 self.list_entry_param_fit[i].state(['disabled'])
 
 
-            self.setFitFormula(r"B + \beta e^{-t/\tau} (1 + \frac{\mu_2}{2!} \frac{t^2}{tau^2} + \frac{\mu_3}{3!} \frac{t^3}{tau^3}+ \frac{\mu_3}{4!} \frac{t^4}{tau^4})^2,  \tau=1/2\Gamma " )
+            self.set_fit_formula(r"B + \beta e^{-t/\tau} (1 + \frac{\mu_2}{2!} \frac{t^2}{tau^2} + \frac{\mu_3}{3!} \frac{t^3}{tau^3}+ \frac{\mu_3}{4!} \frac{t^4}{tau^4})^2,  \tau=1/2\Gamma ")
 
         elif self.cb_model_sv.get() == "Inv TL":
             for i in range(nbFitParam) :

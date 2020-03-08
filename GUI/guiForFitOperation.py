@@ -7,11 +7,6 @@ from matplotlib.colors import LogNorm
 
 class guiForFitOperation():
 
-    #NB class variable shared by all instance.
-    # idx_lim_for_fit_min = 0
-    # idx_lim_for_fit_max = -1
-    # idx_lim_for_fit_min_sv = tk.StringVar()
-    # idx_lim_for_fit_max_sv = tk.StringVar()
 
     def __init__(self, master_frame, controller, model_names, nb_param_fit=8, fitModeName="", is_burst_analysis=False):
         self.master_frame = master_frame
@@ -22,47 +17,15 @@ class guiForFitOperation():
         self.measurement = controller.current_measurement
 
         self.list_label_param_fit = []
-        self.list_label_string_variable_fit = []
-        self.list_entry_param_fit = []
-        self.list_entry_string_variable_fit = []
-        self.list_entry_param_fit_min = []
-        self.list_entry_string_variable_fit_min = []
-        self.list_entry_param_fit_max = []
-        self.list_entry_string_variable_fit_max = []
-        self.list_checkbox_int_variable_is_fixed = []
-        self.list_param_is_fixed = []
-        self.list_button_plus =[]
-        self.list_button_minus = []
-        self.list_brute_step_sv = []
-        self.list_entry_brute_step = []
-
-        self.dict_label_param_fit = {}
-        self.dict_label_string_variable_fit = {}
-        self.dict_entry_param_fit = {}
-        self.dict_entry_string_variable_fit = {}
-        self.dict_entry_param_fit_min = {}
-        self.dict_entry_string_variable_fit_min = {}
-        self.dict_entry_param_fit_max = {}
-        self.dict_entry_string_variable_fit_max = {}
-        self.dict_checkbox_int_variable_is_fixed = {}
-        self.dict_param_is_fixed = {}
-        self.dict_button_plus = {}
-        self.dict_button_minus = {}
-        self.dict_brute_step_sv = {}
-        self.dict_entry_brute_step = {}
-
-
-
 
         self.is_burst_analysis = is_burst_analysis
 
         self.fit_mode_name = fitModeName
 
-        self.nb_param_fit = nb_param_fit
+        self.nb_max_param_fit = nb_param_fit
 
     def populate(self):
         # cmd
-
         self.cmd_frame = ttk.Frame(self.master_frame)
 
         label = ttk.Label(self.cmd_frame, text='Model')
@@ -71,7 +34,7 @@ class guiForFitOperation():
         self.cb_model_sv = tk.StringVar()
         cb = ttk.Combobox(self.cmd_frame, width=15, justify=tk.CENTER, textvariable=self.cb_model_sv,
                           values='', state='readonly')
-        cb.bind('<<ComboboxSelected>>', self.changeModel)
+        cb.bind('<<ComboboxSelected>>', self.change_model)
         cb['values'] = self.model_names
         self.cb_model_sv.set(self.model_names[0])
         cb.set(self.model_names[0])
@@ -80,16 +43,6 @@ class guiForFitOperation():
         ttk.Button(self.cmd_frame, text="IniGuess", command=self.ini_guess_fit).grid(row=1, column=0)
         ttk.Button(self.cmd_frame, text="Eval", command=self.eval_fit).grid(row=1, column=1)
         ttk.Button(self.cmd_frame, text="Fit", command=self.fit).grid(row=1, column=2)
-
-        # Additional Params that are non fitted but needs to be known
-        # i = 0
-        # for param in self.list_additional_param:
-        #     ttk.Label(self.cmd_frame, text='list_additional_param').grid(row=2, column=i)
-        #
-        # self.list_additional_param_sv.append(tk.StringVar())
-        # ttk.Entry(self.cmd_frame, textvariable=self.list_additional_param_sv[i], justify=tk.CENTER, width=8).grid(row=2, column=i+1)
-        # ttk.Button(self.cmd_frame, text="Set with cursor", command=self.set_bckgnd_cursor).grid(row=2, column=2)
-
 
         # Formula
         self.formulaFrame = tk.Frame(master=self.cmd_frame)
@@ -100,8 +53,6 @@ class guiForFitOperation():
 
         self.axTex.axis('off')
 
-        # self.axTex.get_xaxis().set_visible(False)
-        # self.axTex.get_yaxis().set_visible(False)
 
         self.canvasTk = FigureCanvasTkAgg(self.figTex, master=self.formulaFrame)
         self.canvasTk.get_tk_widget().pack(side='top', fill='both', expand=1)
@@ -133,9 +84,9 @@ class guiForFitOperation():
         cb = ttk.Combobox(self.cmd_frame, width=15, justify=tk.CENTER, textvariable=self.cb_method1_sv,
                           values='', state='readonly')
         cb.bind('<<ComboboxSelected>>', self.change_method1)
-        cb['values'] = ["leastsq", "least_squares", "differential_evolution", "brute", "basinhopping", "ampgo", "nelder", "lbfgsb", "powell", "cg", "newton", "cobyla", "bfgs", "tnc", "trust-ncg", "trust-exact", "trust-krylov", "trust-constr", "dogleg", "slsqp", "emcee", "shgo", "dual_annealing"]
-        self.cb_method1_sv.set("leastsq")
-        cb.set("leastsq")
+        cb['values'] = ["least_squares", "leastsq", "differential_evolution", "brute", "basinhopping", "ampgo", "nelder", "lbfgsb", "powell", "cg", "newton", "cobyla", "bfgs", "tnc", "trust-ncg", "trust-exact", "trust-krylov", "trust-constr", "dogleg", "slsqp", "emcee", "shgo", "dual_annealing"]
+        self.cb_method1_sv.set("least_squares")
+        cb.set("least_squares")
         cb.grid(row=6, column=1)
 
         ttk.Label(self.cmd_frame, text='Method 2').grid(row=6, column=2)
@@ -167,115 +118,22 @@ class guiForFitOperation():
         ttk.Label(self.param_frame, text='min').grid(row=0, column=4)
         ttk.Label(self.param_frame, text='max').grid(row=0, column=5)
         ttk.Label(self.param_frame, text='b step').grid(row=0, column=6)
-        ttk.Label(self.param_frame, text='hold').grid(row=0, column=7)
+        ttk.Label(self.param_frame, text='vary').grid(row=0, column=7)
 
-        entry_text_size = 10
+        # Labels for parameters
+        self.list_label_sv_param = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
+        for i in range(self.nb_max_param_fit):
+            ttk.Label(self.param_frame, text="", textvariable=self.list_label_sv_param[i]).grid(row=1+i, column=0)
 
-        # self.changeModel(None)
-
-        # i = 0
-        # for key in self.measurement.params.keys():
-        #     # TODO validate that entries are numeric value (cf method in GUI_root)
-        #
-        #     # param name (e.g. tau1)
-        #     self.dict_label_string_variable_fit[key] = "p"
-        #     self.dict_label_param_fit[key] = ttk.Label(self.param_frame, text=str(key), textvariable=self.dict_label_string_variable_fit[key])
-        #     self.dict_label_param_fit[key].grid(row=1+i, column=0)
-        #
-        #     # value
-        #     self.dict_entry_string_variable_fit[key] = tk.StringVar()
-        #     self.dict_entry_param_fit[key] = ttk.Entry(self.param_frame, textvariable=self.dict_entry_string_variable_fit[key], justify=tk.CENTER,
-        #                   width=entry_text_size, state=tk.DISABLED)
-        #     self.dict_entry_param_fit[key].grid(row=1+i, column=1)
-        #
-        #     # + button
-        #     self.dict_button_plus[key] = tk.Button(master=self.param_frame, text='+', command=lambda: self.value_plus(self.dict_entry_string_variable_fit[key]))
-        #     self.dict_button_plus[key].grid(row=1+i, column=2)
-        #
-        #     # - button
-        #     self.dict_button_minus[key] = tk.Button(master=self.param_frame, text='-', command=lambda: self.value_minus(self.dict_entry_string_variable_fit[key]))
-        #     self.dict_button_minus[key].grid(row=1+i, column=3)
-        #
-        #     # min fit value constraint
-        #     self.dict_entry_string_variable_fit_min[key] = tk.StringVar()
-        #     self.dict_entry_param_fit_min[key] = ttk.Entry(self.param_frame, textvariable=self.dict_entry_string_variable_fit_min[i], justify=tk.CENTER,
-        #                   width=entry_text_size, state=tk.DISABLED)
-        #     self.dict_entry_param_fit_min[key].grid(row=1+i, column=4)
-        #
-        #     # max fit value constraint
-        #     self.dict_entry_string_variable_fit_max[key] = tk.StringVar()
-        #     self.dict_entry_param_fit_max[key] =ttk.Entry(self.param_frame, textvariable=self.dict_entry_string_variable_fit_max[key], justify=tk.CENTER,
-        #                   width=entry_text_size, state=tk.DISABLED)
-        #     self.dict_entry_param_fit_max[key].grid(row=1+i, column=5)
-        #
-        #     # hold check button
-        #     self.dict_brute_step_sv[key] = tk.StringVar()
-        #     self.dict_entry_brute_step[key] = ttk.Entry(self.param_frame, textvariable=self.dict_brute_step_sv[key], justify=tk.CENTER,
-        #                   width=entry_text_size, state=tk.DISABLED)
-        #     self.dict_entry_brute_step[key].grid(row=1+i, column=6)
-        #
-        #
-        #     # hold check button
-        #     self.dict_checkbox_int_variable_is_fixed[key] = tk.IntVar()
-        #     self.dict_param_is_fixed[key] = ttk.Checkbutton(self.param_frame, variable=self.dict_checkbox_int_variable_is_fixed[key], state=tk.DISABLED)
-        #     self.dict_param_is_fixed[key].grid(row=1+i, column=7)
+        self.entry_text_size = 10
 
 
-        for i in range(self.nb_param_fit):
-            # TODO validate that entries are numeric value (cf method in GUI_root)
+        # model_name = self.cb_model_sv.get()
+        # self.measurement.set_model(model_name)
+        # self.create_gui_from_measurement_params()
+        self.change_model(None)
 
-            # param name (e.g. tau1)
-            self.list_label_string_variable_fit.append(tk.StringVar())
-            txt = "p" + str(i)
-            self.list_label_param_fit.append(
-                ttk.Label(self.param_frame, text=txt, textvariable=self.list_label_string_variable_fit[i]))
-            self.list_label_param_fit[i].grid(row=1+i, column=0)
-
-            # value
-            self.list_entry_string_variable_fit.append(tk.StringVar())
-            self.list_entry_param_fit.append(
-                ttk.Entry(self.param_frame, textvariable=self.list_entry_string_variable_fit[i], justify=tk.CENTER,
-                          width=entry_text_size, state=tk.DISABLED))
-            self.list_entry_param_fit[i].grid(row=1+i, column=1)
-
-            # + button
-            self.list_button_plus.append(tk.Button(master=self.param_frame, text='+', command=lambda: self.value_plus(self.list_entry_string_variable_fit[i])))
-            self.list_button_plus[i].grid(row=1+i, column=2)
-
-            # - button
-            self.list_button_minus.append(tk.Button(master=self.param_frame, text='-', command=lambda: self.value_minus(self.list_entry_string_variable_fit[i])))
-            self.list_button_minus[i].grid(row=1+i, column=3)
-
-            # min fit value constraint
-            self.list_entry_string_variable_fit_min.append(tk.StringVar())
-            self.list_entry_param_fit_min.append(
-                ttk.Entry(self.param_frame, textvariable=self.list_entry_string_variable_fit_min[i], justify=tk.CENTER,
-                          width=entry_text_size, state=tk.DISABLED))
-            self.list_entry_param_fit_min[i].grid(row=1+i, column=4)
-
-            # max fit value constraint
-            self.list_entry_string_variable_fit_max.append(tk.StringVar())
-            self.list_entry_param_fit_max.append(
-                ttk.Entry(self.param_frame, textvariable=self.list_entry_string_variable_fit_max[i], justify=tk.CENTER,
-                          width=entry_text_size, state=tk.DISABLED))
-            self.list_entry_param_fit_max[i].grid(row=1+i, column=5)
-
-            # hold check button
-            self.list_brute_step_sv.append(tk.StringVar())
-            self.list_entry_brute_step.append(ttk.Entry(self.param_frame, textvariable=self.list_brute_step_sv[i], justify=tk.CENTER,
-                          width=entry_text_size, state=tk.DISABLED))
-            self.list_entry_brute_step[i].grid(row=1+i, column=6)
-
-
-            # hold check button
-            self.list_checkbox_int_variable_is_fixed.append(tk.IntVar())
-            self.list_param_is_fixed.append(
-                ttk.Checkbutton(self.param_frame, variable=self.list_checkbox_int_variable_is_fixed[i], state=tk.DISABLED))
-            self.list_param_is_fixed[i].grid(row=1+i, column=7)
-
-        ttk.Button(self.param_frame, text="Copy from fit", width=15, command=self.copy_param_from_fit).grid(row=self.nb_param_fit + 1, column=0, columnspan=7)
-
-
+        ttk.Button(self.param_frame, text="Copy from fit", width=15, command=self.copy_param_from_fit).grid(row=self.nb_max_param_fit + 1, column=0, columnspan=7)
 
         self.param_frame.pack(side="left", fill="both", expand=True)
 
@@ -289,8 +147,8 @@ class guiForFitOperation():
             self.list_entry_brute_step[i].config(state="normal")
             self.list_param_is_fixed[i].config(state="normal")
 
-        for i in range(num_end, self.nb_param_fit):
-            self.list_label_string_variable_fit[i].set("")
+        for i in range(num_end, self.nb_max_param_fit):
+            self.list_label_sv_param[i].set("")
             self.list_entry_param_fit[i].state(['disabled'])
             self.list_entry_param_fit_min[i].state(['disabled'])
             self.list_entry_param_fit_max[i].state(['disabled'])
@@ -299,38 +157,80 @@ class guiForFitOperation():
             self.list_entry_brute_step[i].state(['disabled'])
             self.list_param_is_fixed[i].config(state=tk.DISABLED)
 
-    def setFitFormula(self, formula, fontsize=40):
+    def set_fit_formula(self, formula, fontsize=40):
         formula = "$" + formula + "$"
 
         self.axTex.clear()
         self.axTex.text(0, 0.2, formula, fontsize=fontsize)
         self.canvasTk.draw()
 
+    def create_gui_from_measurement_params(self):
+        self.gui_param_dict = {}
+        self.gui_param_widget_dict = {}
+        # self.changeModel(None)
+        i = 0
+        for key in self.measurement.params.keys():
+            # Set label for param name
+            self.list_label_sv_param[i].set(key)
 
-    def set_min_max_bruteStep_fixed(self, mins, values, maxs, brute_steps,fixeds):
-        for i,min_ in enumerate(mins):
-            self.list_entry_string_variable_fit_min[i].set(str(min_))
+            # Set current characteritics of the parameter
+            param = self.measurement.params[key]
+            # value, min, max, b step, hold
+            self.gui_param_dict[key] = {}
+            self.gui_param_dict[key]["value"] = tk.StringVar(value=str(param.value))
+            self.gui_param_dict[key]["min"] = tk.StringVar(value=str(param.min))
+            self.gui_param_dict[key]["max"] = tk.StringVar(value=str(param.max))
+            self.gui_param_dict[key]["b_step"] = tk.StringVar(value=str(param.brute_step))
+            self.gui_param_dict[key]["vary"] = tk.IntVar(value=int(param.vary))
 
-        for i,val in enumerate(values):
-            self.list_entry_string_variable_fit[i].set(str(val))
+            # Create corresponding widget (entry/button/checkbox)
+            self.gui_param_widget_dict[key] = {}
+            e = ttk.Entry(self.param_frame, textvariable=self.gui_param_dict[key]["value"], justify=tk.CENTER,
+                      width=self.entry_text_size)
+            e.grid(row=1 + i, column=1)
+            self.gui_param_widget_dict[key]["e_value"] = e
 
-        for i,max_ in enumerate(maxs):
-            self.list_entry_string_variable_fit_max[i].set(str(max_))
+            e = ttk.Entry(self.param_frame, textvariable=self.gui_param_dict[key]["min"], justify=tk.CENTER,
+                      width=self.entry_text_size)
+            e.grid(row=1 + i, column=4)
+            self.gui_param_widget_dict[key]["e_min"] = e
 
-        for i,brute_step in enumerate(brute_steps):
-            self.list_brute_step_sv[i].set(str(brute_step))
+            e = ttk.Entry(self.param_frame, textvariable=self.gui_param_dict[key]["max"], justify=tk.CENTER,
+                      width=self.entry_text_size)
+            e.grid(row=1 + i, column=5)
+            self.gui_param_widget_dict[key]["e_max"] = e
 
-        for i, fixed in enumerate(fixeds):
-            self.list_checkbox_int_variable_is_fixed[0].set(fixed)
+            e = ttk.Entry(self.param_frame, textvariable=self.gui_param_dict[key]["b_step"], justify=tk.CENTER,
+                      width=self.entry_text_size)
+            e.grid(row=1 + i, column=6)
+            self.gui_param_widget_dict[key]["e_b_step"] = e
 
+            # hold check button
+            cb = ttk.Checkbutton(self.param_frame, variable=self.gui_param_dict[key]["vary"])
+            cb.grid(row=1 + i, column=7)
+            self.gui_param_widget_dict[key]["cb_vary"] = cb
 
-    def changeModel(self, event):
-        # Methode virtuelle, voir les classes dérivées.
-        raise NotImplementedError()
+            # Set button + and -
+            b = tk.Button(master=self.param_frame, text='+', command=lambda: self.value_plus(self.gui_param_dict[key]["value"]))
+            b.grid(row=1 + i, column=2)
+            self.gui_param_widget_dict[key]["b_plus"] = b
+            b = tk.Button(master=self.param_frame, text='-', command=lambda: self.value_minus(self.gui_param_dict[key]["value"]))
+            b.grid(row=1 + i, column=3)
+            self.gui_param_widget_dict[key]["b_minus"] = b
+
+            i += 1
+
+    def change_model(self, event):
+        model_name = self.cb_model_sv.get()
+
+        self.measurement.set_model(model_name)
+        self.create_gui_from_measurement_params()
+        self.set_fit_formula(self.measurement.model.fit_formula)
 
     def copy_param_from_fit(self):
-        raise NotImplementedError()
-        self.measurement.fit_results.params
+        #TODO
+        pass
+
 
     def change_method1(self, event):
         pass
@@ -378,13 +278,10 @@ class guiForFitOperation():
     def value_minus(self, tk_string_var):
         #FIXME
         tk_string_var.set(str(float(tk_string_var.get())*0.9))
+        value = float(tk_string_var.get())
+        value /= 1.1
+        tk_string_var.set(str(value))
 
-
-    def setParamsFromFit(self, params):
-        i = 0
-        for paramName, param in params.items():
-            self.list_entry_string_variable_fit[i].set(str(param.value))
-            i += 1
 
     def get_lim_for_fit(self):
         if self.idx_lim_for_fit_min_sv.get() == "":
@@ -398,61 +295,41 @@ class guiForFitOperation():
             xlim_max_fit = float(self.idx_lim_for_fit_max_sv.get())
         return (xlim_min_fit, xlim_max_fit)
 
-    def get_params_values(self):
-        params_value = []
-        for sv in self.list_entry_string_variable_fit:
-            strValue = sv.get()
-            if strValue == "":
-                params_value.append(0)
-            else:
-                params_value.append(float(sv.get()))
-        return params_value
+    # def get_params_values(self):
+    #     params_value = []
+    #     for sv in self.list_entry_string_variable_fit:
+    #         strValue = sv.get()
+    #         if strValue == "":
+    #             params_value.append(0)
+    #         else:
+    #             params_value.append(float(sv.get()))
+    #     return params_value
+    #
+    # def get_params_min(self):
+    #     params_min = []
+    #     for sv in self.list_entry_string_variable_fit_min:
+    #         strValue = sv.get()
+    #         if strValue == "":
+    #             # FIXME np.inf cause problems
+    #             # params_min.append(-np.inf)
+    #             params_min.append(-1E12)
+    #         else:
+    #             params_min.append(float(sv.get()))
+    #     return params_min
+    #
+    # def get_params_max(self):
+    #     params_max = []
+    #     for sv in self.list_entry_string_variable_fit_max:
+    #         strValue = sv.get()
+    #         if strValue == "":
+    #             # FIXME np.inf cause problems
+    #             # params_max.append(np.inf)
+    #             params_max.append(1E12)
+    #         else:
+    #             params_max.append(float(sv.get()))
+    #     return params_max
 
-    def get_params_min(self):
-        params_min = []
-        for sv in self.list_entry_string_variable_fit_min:
-            strValue = sv.get()
-            if strValue == "":
-                # FIXME np.inf cause problems
-                # params_min.append(-np.inf)
-                params_min.append(-1E12)
-            else:
-                params_min.append(float(sv.get()))
-        return params_min
 
-    def get_params_max(self):
-        params_max = []
-        for sv in self.list_entry_string_variable_fit_max:
-            strValue = sv.get()
-            if strValue == "":
-                # FIXME np.inf cause problems
-                # params_max.append(np.inf)
-                params_max.append(1E12)
-            else:
-                params_max.append(float(sv.get()))
-        return params_max
-
-    def get_params_hold(self):
-        params_hold = []
-        for iv in self.list_checkbox_int_variable_is_fixed:
-            int_value = iv.get()
-            if int_value == 0:
-                params_hold.append(True)
-            else:
-                params_hold.append(False)
-        return params_hold
-
-    def get_brute_step(self):
-        params_brute_step = []
-        for sv in self.list_brute_step_sv:
-            strValue = sv.get()
-            if strValue == "":
-                # FIXME np.inf cause problems
-                # params_max.append(np.inf)
-                params_brute_step.append(None)
-            else:
-                params_brute_step.append(float(sv.get()))
-        return params_brute_step
 
     def get_fit_params(self):
         params = {}
@@ -460,12 +337,21 @@ class guiForFitOperation():
         params["method1"] = self.cb_method1_sv.get()
         params["method2"] = self.cb_method2_sv.get()
         params["qty_to_min"] = self.cb_minqty_to_min_sv.get()
-        params["val"] = self.get_params_values()
-        params["min"] = self.get_params_min()
-        params["max"] = self.get_params_max()
-        params["hold"] = self.get_params_hold()
+
+        for key in self.measurement.params.keys():
+            params[key] = {}
+            params[key]["value"] = float(self.gui_param_dict[key]["value"].get())
+            params[key]["min"] = float(self.gui_param_dict[key]["min"].get())
+            params[key]["max"] = float(self.gui_param_dict[key]["max"].get())
+            params[key]["b_step"] = float(self.gui_param_dict[key]["b_step"].get())
+            params[key]["vary"] = bool(self.gui_param_dict[key]["vary"].get())
+
+        # params["val"] = self.get_params_values()
+        # params["min"] = self.get_params_min()
+        # params["max"] = self.get_params_max()
+        # params["hold"] = self.get_params_hold()
         params["lim_fit"] = self.get_lim_for_fit()
-        params["brute_step"] = self.get_brute_step()
+        # params["brute_step"] = self.get_brute_step()
         params["use_error_bar"] = self.use_error_bar()
         return params
 

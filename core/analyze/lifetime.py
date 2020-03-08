@@ -316,6 +316,78 @@ class TwoExpDecay_tail_a1a2(lifetimeModelClass):
         return params
 
 
+class IRF_Becker(lifetimeModelClass):
+    """This function is used the IRF.
+
+    Defined as:
+
+    .. math::
+
+        f(x;\mu,\sigma,\lambda) = \frac{\lambda}{2} e^{\frac{\lambda}{2} (2 \mu + \lambda \sigma^2 - 2 x)} \operatorname{erfc} (\frac{\mu + \lambda \sigma^2 - x}{ \sqrt{2} \sigma})
+
+    """
+    def __init__(self, IRF=None):
+        super().__init__(IRF)
+
+    def guess(self):
+        pass
+
+    def eval(self, t,  params):
+        t_irf = params['tau_irf'].value
+        t0 = params['t0'].value
+        amp = params['amp'].value
+        bckgnd = params['bckgnd'].value
+        irf = amp*(t-t0)/t_irf*np.exp(-(t-t0)/t_irf) + bckgnd
+        irf[t < t0] = 0
+        return irf
+
+    def make_params(self):
+        params = Parameters()
+        params.add(name="tau_irf", value=0.5, min=0.001, max=np.inf, brute_step=0.1)
+        params.add(name="t0", value=0, min=-100, max=100, brute_step=0.1)
+        params.add(name="amp", value=3000, min=0, max=np.inf, brute_step=10)
+        params.add(name="bckgnd", value=5, min=0, max=np.inf, brute_step=1)
+        return params
+
+class MonoExp_for_IRF(lifetimeModelClass):
+    """This function is used the IRF.
+
+    Defined as:
+
+    .. math::
+
+        f(x;\mu,\sigma,\lambda) = \frac{\lambda}{2} e^{\frac{\lambda}{2} (2 \mu + \lambda \sigma^2 - 2 x)} \operatorname{erfc} (\frac{\mu + \lambda \sigma^2 - x}{ \sqrt{2} \sigma})
+
+    """
+    def __init__(self, IRF=None):
+        super().__init__(IRF)
+
+    def guess(self):
+        pass
+
+    def eval(self, t,  params):
+        tau = params['tau'].value
+        amp = params['amp'].value
+        t0 = params['t0'].value
+        t_irf = params['tau_irf'].value
+        bckgnd = params['bckgnd'].value
+        decay = amp * np.exp(-(t-t0)/tau)
+        irf = (t-t0)/t_irf*np.exp(-(t-t0)/t_irf)
+        irf[t < t0] = 0
+        irf /= irf.sum()
+        conv = np.convolve(decay, irf)[0:np.size(decay)]
+        return conv + bckgnd
+
+    def make_params(self):
+        params = Parameters()
+        params.add(name="tau", value=3, min=0.001, max=np.inf, brute_step=0.1)
+        params.add(name="amp", value=3000, min=0, max=np.inf, brute_step=10)
+        params.add(name="t0", value=0, min=-100, max=100, brute_step=0.1)
+        params.add(name="tau_irf", value=0.5, min=0.001, max=np.inf, brute_step=0.1)
+        params.add(name="bckgnd", value=5, min=0, max=np.inf, brute_step=1)
+        return params
+
+
 class IRF_GaAs(Model):
     """This function is used the IRF.
 
@@ -388,6 +460,7 @@ class lifeTimeMeasurements(Measurements):
     def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
         super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment)
         self.IRF = None
+        self.is_plot_log = True
         self.use_IR = False
 
     def set_additional_param_for_calculation(self, params):
@@ -775,31 +848,50 @@ class lifeTimeMeasurements(Measurements):
             self.modelName = model_name
             self.model = OneExpDecay(self.IRF)
             self.params = self.model.make_params()
+            self.model.fit_formula = r"f(t; \tau, shift) = IRF(shift) \times (e^{-t/\tau}) + bckgnd"
 
         elif model_name == "One Decay Tail":
             self.modelName = model_name
             self.model = OneExpDecay_tail()
             self.params = self.model.make_params()
+            self.model.fit_formula = r"e^{-(t-t_0)/\tau} + bckgnd"
 
         elif model_name == "Two Decays IRF":
             self.modelName = model_name
             self.model = TwoExpDecay(self.IRF)
             self.params = self.model.make_params()
+            self.model.fit_formula = r"IRF(shift) \times  (a1 . e^{-t/\tau_1} + (1-a_1).e^{-t/\tau_2}) + bckgnd"
 
         elif model_name == "Two Decays IRF A1 A2":
             self.modelName = model_name
             self.model = TwoExpDecay_a1a2(self.IRF)
             self.params = self.model.make_params()
+            self.model.fit_formula = r"e^{-(t-t_0)/\tau} + bckgnd"
 
         elif model_name == "Two Decays Tail":
             self.modelName = model_name
             self.model = TwoExpDecay_tail()
             self.params = self.model.make_params()
+            self.model.fit_formula = r"a1 . e^{-(t-t_0)/\tau_1} + (1-a_1).e^{-(t-t_0)/\tau_2}) + bckgnd"
 
         elif model_name == "Two Decays Tail A1 A2":
             self.modelName = model_name
             self.model = TwoExpDecay_tail_a1a2()
             self.params = self.model.make_params()
+            self.model.fit_formula = r"IRF(shift) \times  (a1.e^{-t/\tau_1} + a2.e^{-t/\tau_2}) + bckgnd"
+
+        elif model_name == "IRF Becker":
+            self.modelName = model_name
+            self.model = IRF_Becker()
+            self.params = self.model.make_params()
+            self.model.fit_formula = r"amp.(t-t0)/tau_irf e^{-(t-t0)/tau_irf}"
+
+        elif model_name == "MonoExp for IRF":
+            self.modelName = model_name
+            self.model = MonoExp_for_IRF()
+            self.params = self.model.make_params()
+            self.model.fit_formula = r"((t-t0)/tau_irf e^{-(t-t0)/tau_irf}) \times amp . (e^{-(t-t0)/\tau}) + bckgnd"
+
 
         self.model.use_IR = self.use_IR
         self.model.IR = self.IRF

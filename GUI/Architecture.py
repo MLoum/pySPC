@@ -51,8 +51,10 @@ class Architecture():
         self.top_level_analyze = tk.Toplevel(self.master)
         self.top_level_analyze.bind("<Key>", self.mainGUI.pressed_key_shortcut)
         self.top_level_analyze.title("Analysis")
-        self.frame_analyze = tk.LabelFrame(self.top_level_analyze, text="Analyze", borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        # self.frame_analyze = tk.LabelFrame(self.top_level_analyze, text="Analyze", borderwidth=self.appearenceParam.frameLabelBorderWidth)
+        self.frame_analyze = ToggledFrame(self.top_level_analyze, text='Analyze', relief="raised", borderwidth=1)
         self.analyze_area = Analyze_area(self.frame_analyze, self.mainGUI, self.controller, self.appearenceParam)
+        self.frame_analyze.sub_frame = self.analyze_area
         self.analyze_area.populate()
         self.frame_analyze.pack(side="top", fill="both", expand=True)
         # self.topLevelAnalyze.withdraw()
@@ -65,7 +67,36 @@ class Architecture():
         self.log_area.populate()
         self.frame_log.pack(side="top", fill="both", expand=True)
 
+class ToggledFrame(tk.Frame):
 
+    def __init__(self, parent, text="", *args, **options):
+        tk.Frame.__init__(self, parent, *args, **options)
+
+        self.show = tk.IntVar()
+        self.show.set(0)
+
+        self.title_frame = ttk.Frame(self)
+        self.title_frame.pack(fill="x", expand=1)
+
+        ttk.Label(self.title_frame, text=text).pack(side="left", fill="x", expand=1)
+
+        self.toggle_button = ttk.Checkbutton(self.title_frame, width=2, text='+', command=self.toggle,
+                                            variable=self.show, style='Toolbutton')
+        self.toggle_button.pack(side="left")
+
+        self.sub_frame = tk.Frame(self, relief="sunken", borderwidth=1)
+
+    def toggle(self):
+        if bool(self.show.get()):
+            self.sub_frame.frame_selection.pack(fill="x", expand=1)
+            self.sub_frame.frame_operation.pack(fill="x", expand=1)
+
+            self.toggle_button.configure(text='-')
+        else:
+            self.sub_frame.frame_selection.forget()
+            self.sub_frame.frame_operation.forget()
+
+            self.toggle_button.configure(text='+')
 
 """
     def createDockedArchitecture(self):

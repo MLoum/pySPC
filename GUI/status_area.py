@@ -266,17 +266,21 @@ class Status_area():
         item_name_mes = selected_item["values"][2]
         item_name_burst = selected_item["values"][1]
 
-        if item_name_exp in self.controller.model.experiments:
-            # this is an experiment
+        if item_name_exp in self.controller.model.experiments and item_name_mes == "":
+            # this is an experiment, the user has selected a root exp without measurement
             exp = self.controller.set_current_exp(item_name_exp)
-            if item_name_mes == "":
-                # the user has selected a root exp without measurement
-                # self.controller.set_current_measurement(None)
-                self.controller.view.archi.analyze_area.display_measurement(None)
-                # self.controller.update_all(is_full_update=True)
-                return
-        elif item_name_mes in self.controller.current_exp.measurements:
+            self.controller.view.archi.analyze_area.display_measurement(None)
+            # self.controller.update_all(is_full_update=True)
+            return
+        elif item_name_exp == "" and item_name_mes in self.controller.current_exp.measurements:
             # this is a measurement
+            # get associated experiment and set it as current
+            parent_iid = self.tree_view.parent(id_selected_item)
+            parent_selected_item = self.tree_view.item(parent_iid)
+            parent_item_name_exp = parent_selected_item["values"][0]
+            if parent_item_name_exp in self.controller.model.experiments:
+                exp = self.controller.set_current_exp(parent_item_name_exp)
+
             measurement = self.controller.set_current_measurement(item_name_mes)
             self.controller.view.archi.analyze_area.display_measurement(measurement)
             self.controller.display_measurement(measurement.name)
@@ -287,11 +291,11 @@ class Status_area():
                 num_burst = int(item_name_burst[2:])
                 self.controller.display_burst(measurement.bursts[num_burst], measurement)
 
-        elif item_name_mes in self.controller.current_exp.measurements:
-            # this is a measurement
-            measurement = self.controller.set_current_measurement(item_name_mes)
-            self.controller.view.archi.analyze_area.display_measurement(measurement)
-            self.controller.display_measurement(measurement.name)
+        # elif item_name_mes in self.controller.current_exp.measurements:
+        #     # this is a measurement
+        #     measurement = self.controller.set_current_measurement(item_name_mes)
+        #     self.controller.view.archi.analyze_area.display_measurement(measurement)
+        #     self.controller.display_measurement(measurement.name)
 
 
 #https://stackoverflow.com/questions/673174/file-dialogs-of-tkinter-in-python-3

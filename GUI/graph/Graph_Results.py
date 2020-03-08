@@ -139,7 +139,10 @@ class Graph_Results:
             self.ax[1].tick_params(axis='both', which='major', labelsize=20)
             self.ax[1].tick_params(axis='both', which='minor', labelsize=8)
 
-            plt_function = self.ax[0].semilogy
+            if self.measurement.is_plot_log:
+                plt_function = self.ax[0].semilogy
+            else:
+                plt_function = self.ax[0].plot
             plt_residual_fct = self.ax[1].plot
 
             if measurement.use_IR:
@@ -265,6 +268,12 @@ class Graph_Results:
             )
 
         self.figure.canvas.draw()
+
+    def clear(self):
+        self.ax[0].clear()
+        self.ax[1].clear()
+        self.figure.canvas.draw()
+
 
     def replot(self, is_zoom_x_selec=False, is_autoscale=False):
         self.plot(self.measurement)

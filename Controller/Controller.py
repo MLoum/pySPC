@@ -411,7 +411,7 @@ class Controller:
             elif mode == "fit":
                 fit_report = measurement.fit(params)
                 # TODO set option to tell if user want fit results exported to fit params
-                gui.setParamsFromFit(measurement.params)
+                # gui.setParamsFromFit(measurement.params)
                 # self.view.archi.analyze_area.resultArea_gui.setTextResult(fitResults.fit_report())
                 self.view.archi.analyze_area.resultArea_gui.setTextResult(fit_report)
 

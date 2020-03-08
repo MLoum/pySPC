@@ -8,16 +8,16 @@ class guiForFitOperation_FCS(guiForFitOperation):
     def __init__(self, master_frame, controller, model_names, nb_param_fit):
         super().__init__(master_frame, controller, model_names, nb_param_fit, fitModeName="FCS")
 
-    def changeModel(self, event):
+    def change_model(self, event):
         # Methode virtuelle, voir les classes dérivées.
-        nbFitParam = self.nb_param_fit
+        nbFitParam = self.nb_max_param_fit
         if self.cb_model_sv.get() == "1 Diff":
             self.list_label_string_variable_fit[0].set("G0")
             self.list_label_string_variable_fit[1].set("tdiff")
             self.list_label_string_variable_fit[2].set("r")
             self.list_label_string_variable_fit[3].set("cst")
             self.enable_disable_ui(4)
-            self.setFitFormula(r"G_0 \frac{1}{1+t/tdiff}*\frac{1}{\sqrt{1+r*t/tdiff}} + cst")
+            self.set_fit_formula(r"G_0 \frac{1}{1+t/tdiff}*\frac{1}{\sqrt{1+r*t/tdiff}} + cst")
 
         elif self.cb_model_sv.get() == "2 Diff":
             self.list_label_string_variable_fit[0].set("G0a")
@@ -27,7 +27,7 @@ class guiForFitOperation_FCS(guiForFitOperation):
             self.list_label_string_variable_fit[4].set("G0b")
             self.list_label_string_variable_fit[5].set("tdiffb")
             self.enable_disable_ui(6)
-            self.setFitFormula(r"G_0a \frac{1}{1+t/tdiffa}*\frac{1}{\sqrt{1+r*t/tdiff}} + G_0b \frac{1}{1+t/tdiffb}*\frac{1}{\sqrt{1+r*t/tdiff}} + cst")
+            self.set_fit_formula(r"G_0a \frac{1}{1+t/tdiffa}*\frac{1}{\sqrt{1+r*t/tdiff}} + G_0b \frac{1}{1+t/tdiffb}*\frac{1}{\sqrt{1+r*t/tdiff}} + cst")
 
         else:
             for i in range(nbFitParam) :

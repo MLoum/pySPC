@@ -25,9 +25,9 @@ class Results_area():
         # self.frame_result_text.grid(row=0, column=0)
         self.frame_result_text.pack(side=tk.TOP, fill="both", expand=True)
 
-        self.resultFitTextArea = tkst.ScrolledText(self.frame_result_text, wrap=tk.WORD, width=45, height=20)
-        self.resultFitTextArea.pack(side=tk.LEFT, fill="both", expand=True)
-        self.resultFitTextArea.insert(tk.INSERT, "Gimme Results !")
+        self.result_fit_text_area = tkst.ScrolledText(self.frame_result_text, wrap=tk.WORD, width=45, height=20)
+        self.result_fit_text_area.pack(side=tk.LEFT, fill="both", expand=True)
+        self.result_fit_text_area.insert(tk.INSERT, "Gimme Results !")
 
         # Command Graph
         self.frame_cmd_graph = tk.LabelFrame(self.frame_left, text="Cmd graph",
@@ -74,12 +74,17 @@ class Results_area():
         self.frame_right.pack(side=tk.LEFT, fill="both", expand=True)
 
 
-
-
+    def clear(self):
+        """
+        Reomve current result graph and text result if any
+        :return:
+        """
+        self.graph_results.clear()
+        self.result_fit_text_area.delete('1.0', tk.END)
 
     def setTextResult(self, text):
-        self.resultFitTextArea.delete('1.0', tk.END)
-        self.resultFitTextArea.insert(tk.INSERT, text)
+        self.result_fit_text_area.delete('1.0', tk.END)
+        self.result_fit_text_area.insert(tk.INSERT, text)
 
     def set_xy_cursor_position(self, x, y):
         if x is not None:

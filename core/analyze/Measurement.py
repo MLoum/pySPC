@@ -46,6 +46,7 @@ class Measurements:
 
         self.fit_x = None
         self.residual_x = None
+        self.fit_results_method1, self.fit_results = None, None
 
 
         self.canonic_fig, self.canonic_fig_ax = None, None
@@ -94,7 +95,7 @@ class Measurements:
             error_bar = self.error_bar[self.idx_start:self.idx_end]
         else:
             error_bar = None
-        self.fit_results = self.model.fit(y, self.params, t=x, weights=error_bar, method=self.fitting_method1)
+        self.fit_results_method1 = self.fit_results = self.model.fit(y, self.params, t=x, weights=error_bar, method=self.fitting_method1)
 
 
         if self.fitting_method2 != "None":
@@ -179,7 +180,8 @@ class Measurements:
         self.qty_to_min = params_["qty_to_min"]
 
         for i, key in enumerate(self.params):
-            self.params[key].set(value=params_["val"][i], min=params_["min"][i], max=params_["max"][i], vary=bool(params_["hold"][i]), brute_step=params_["brute_step"][i])
+            # self.params[key].set(value=params_["val"][i], min=params_["min"][i], max=params_["max"][i], vary=bool(params_["hold"][i]), brute_step=params_["brute_step"][i])
+            self.params[key].set(value=params_[key]["value"], min=params_[key]["min"], max=params_[key]["max"], vary=bool(params_[key]["value"]), brute_step=params_[key]["b_step"])
 
 
     # def set_hold_params(self, params_hold):
@@ -223,9 +225,14 @@ class Measurements:
 
                 x_selection_area = x[x1:x2]
                 y_selection_area = y[x1:x2]
+                data_fit_selection_area = data_fit[x1:x2]
+                data_residual_selection_area = data_residual
 
-                export_size = min(x_selection_area.size, self.eval_y_axis.size)
-                data = np.column_stack((x_selection_area[0:export_size], y_selection_area[0:export_size], data_fit[0:export_size], data_residual[0:export_size]))
+                # export_size = min(x_selection_area.size, self.eval_y_axis.size)
+                # data = np.column_stack((x_selection_area[0:export_size], y_selection_area[0:export_size], data_fit[0:export_size], data_residual[0:export_size]))
+                data = np.column_stack((x_selection_area, y_selection_area,
+                                        data_fit_selection_area, data_residual_selection_area))
+
             np.savetxt(file_path, data, header="x data fit residual")
 
         elif mode == "script":

@@ -65,6 +65,8 @@ class Analyze_area():
         self.resultArea_gui.populate()
 
 
+    def clear_result_area(self):
+        self.resultArea_gui.clear()
 
     def display_measurement(self, measurement):
         for child in self.frame_operation.winfo_children():
@@ -72,6 +74,7 @@ class Analyze_area():
 
         if measurement is None:
             self.gui_for_fit_operation = None
+            self.clear_result_area()
             return
 
         if measurement.type == "FCS":
@@ -134,6 +137,10 @@ class Analyze_area():
             return None
 
         self.controller.export_graph_result(mode="text", file_path=file_path)
+
+
+
+
 
 
 # #https://stackoverflow.com/questions/673174/file-dialogs-of-tkinter-in-python-3
