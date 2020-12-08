@@ -42,6 +42,9 @@ class Controller:
         self.current_measurement = None
         self.current_burst = None
         self.view = View.View(self.root, self)
+
+        # alias
+        self.graph_results = self.view.archi.analyze_area.resultArea_gui.graph_results
         # self.model.logger = self.view.logger
 
         self.root.protocol("WM_DELETE_WINDOW",
@@ -293,7 +296,7 @@ class Controller:
         elif measurement.type == "phosphorescence":
             num_channel_start = int(gui.num_channel_start_sv.get()) - 1
             num_channel_stop = int(gui.num_channel_stop_sv.get()) - 1
-            time_step_micros = int(gui.time_step_micros_sv.get())
+            time_step_micros = float(gui.time_step_micros_sv.get())
             min_time_micros = float(gui.min_time_micros_sv.get())
             max_time_ms = float(gui.max_time_ms_sv.get())
             params = [num_channel_start, num_channel_stop, time_step_micros, min_time_micros, max_time_ms]
@@ -523,10 +526,9 @@ class Controller:
         self.shelf = shelve.open(savefile_path, 'n')  # n for new
         self.model.save_state(self.shelf)
 
-
         # save in the controller
         self.shelf['current_exo_name'] = self.current_exp.file_name
-        if  self.current_measurement is None :
+        if self.current_measurement is None :
             self.shelf['current_measurement_name'] = "None"
         else:
             self.shelf['current_measurement_name'] = self.current_measurement.name

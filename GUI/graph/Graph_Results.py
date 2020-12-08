@@ -61,6 +61,10 @@ class Graph_Results:
         self.is_zoom_x_selec = False
         self.is_plot_fit = True
 
+        # When displyaing lifetime, low count of photn like 1 or 2 tends to expand to much and shrink the relevant data
+        self.low_limit_log_lifetime = 0.5
+        self.autoscale_max_overhead_factor = 1.1
+
 
         self.frame = tk.Frame(self.masterFrame)
         self.frame.pack(side="top", fill="both", expand=True)
@@ -202,6 +206,14 @@ class Graph_Results:
                 plt_residual_fct(residual_x, residuals_y, self.appearanceParam.line_type_residual)
                 ym = np.abs(residuals_y).max()
                 self.ax[1].set_ylim(-ym, ym)
+
+            # y axis scaling
+            if self.type == "lifetime" and self.measurement.is_plot_log:
+                # FIXME limit pour le log sachant qu'il peu y avoir un photon.
+                self.ax[0].set_ylim(self.low_limit_log_lifetime, np.max(y)*self.autoscale_max_overhead_factor)
+            else:
+                self.ax[0].set_ylim(np.min(y), np.max(y))
+
         else:
             # There is three areas for the plot :
             # - outside the time selection at the left
@@ -219,12 +231,18 @@ class Graph_Results:
                 self.ax[0].set_xlim(x[x1], x[x2])
                 self.ax[1].set_xlim(x[x1], x[x2])
 
+                # Autoscale
                 self.ax[0].set_ylim(np.min(self.y_selection_area), np.max(self.y_selection_area))
                 if residuals_y is not None :
                     self.ax[1].set_ylim(np.min(residuals_y[x1:x2]), np.max(residuals_y[x1:x2]))
 
             elif self.is_autoscale:
-                self.ax[0].set_ylim(np.min(y), np.max(y))
+                if self.type == "lifetime" and self.measurement.is_plot_log:
+                    # FIXME limit pour le log sachant qu'il peu y avoir un photon.
+                    # FIXME +10% of the max ?
+                    self.ax[0].set_ylim(self.low_limit_log_lifetime, np.max(y)*self.autoscale_max_overhead_factor)
+                else:
+                    self.ax[0].set_ylim(np.min(y), np.max(y))
                 self.ax[1].set_ylim(np.min(residuals_y), np.max(residuals_y))
 
             # outside the time selection at the left
@@ -237,10 +255,18 @@ class Graph_Results:
             plt_residual_fct(x, np.zeros(np.size(y)), self.appearanceParam.line_type_residual)
 
             # Plot Fit
-            if self.is_plot_fit:
+            if self.is_plot_fit and fit_y is not None:
                 # The fit data are usually inside the time selection area
                 plt_function(fit_x, fit_y, self.appearanceParam.line_type_fit, label="fit")
                 plt_residual_fct(residual_x, residuals_y, self.appearanceParam.line_type_residual)
+
+            # y scaling
+            if self.type == "lifetime" and self.measurement.is_plot_log:
+                # FIXME limit pour le log sachant qu'il peu y avoir un photon. -> auto ?
+                # FIXME +10% of the max ?
+                self.ax[0].set_ylim(self.low_limit_log_lifetime, np.max(y)*self.autoscale_max_overhead_factor)
+            else:
+                self.ax[0].set_ylim(np.min(y), np.max(y))
 
         # Error Bar
         if self.is_plot_error_bar and error_bar is not None:

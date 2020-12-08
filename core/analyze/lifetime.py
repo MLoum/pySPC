@@ -8,6 +8,7 @@ from scipy.special import erfc
 from scipy.ndimage.interpolation import shift as shift_scipy
 
 from .Measurement import Measurements
+from scipy.integrate import cumtrapz
 import copy
 from .histogram import histogram
 
@@ -32,7 +33,9 @@ class lifetimeModelClass():
         # self.t0 = None
         self.data_bckgnd = None
 
-    def guess(self):
+        self.ini_params = {}
+
+    def guess(self, t, params):
         pass
 
     def eval(self, t, params):
@@ -53,8 +56,32 @@ class OneExpDecay(lifetimeModelClass):
     def __init__(self, IRF=None):
         super().__init__(IRF)
 
-    def guess(self):
-        pass
+    def guess(self, t, params):
+
+        # if x is not None:
+        # cst is the background and is taken, as a first guess, as the minimum of the lifetime curve
+        # We trim the last point because the TAC tipycally has some problem here.
+        # cst = np.min(self.data[np.nonzero(data[:-10])])
+        amp = np.max(self.data)
+
+        # if we don't take into account the IR, t0 is simply the max of the lifetime curve
+        idx_t0 = idx_max = np.argmax(self.data)
+
+        t0 = t[idx_t0]
+
+        # Searching for position where amp is divided by e=2.71
+        subarray = self.data[idx_max:]
+        x_subarray = t[idx_max:]
+        # tau = np.where(subarray < amp/np.exp(1))[0]
+        idx_tau = np.argmax(subarray < (float)(amp) / np.exp(1))
+        params['tau'].value = x_subarray[idx_tau] - t0
+        self.ini_params['tau'] = params['tau'].value
+
+        # Mean
+        dt = t[1] - t[0]
+        tau = np.sum(subarray)/amp*dt
+        params['tau'].value = tau
+        self.ini_params['tau'] = tau
 
     def eval(self, t,  params):
         tau = params['tau'].value
@@ -103,8 +130,32 @@ class OneExpDecay_tail(lifetimeModelClass):
     def __init__(self, IRF=None):
         super().__init__(IRF)
 
-    def guess(self):
-        pass
+    def guess(self, t, params):
+        # Trouver t0 de manière algorithmique
+
+        # Integrer la courbe pour obtenir Amp*tau
+
+        # Le décalage t0 max connaissant le temps de l'irf permet d'en deduire la vraie amplitude.
+        amp = np.max(self.data)
+
+        # if we don't take into account the IR, t0 is simply the max of the lifetime curve
+        idx_t0 = idx_max = np.argmax(self.data)
+
+        t0 = t[idx_t0]
+
+
+        # Searching for position where amp is divided by e=2.71
+        subarray = self.data[idx_max:]
+        x_subarray = t[idx_max:]
+        # tau = np.where(subarray < amp/np.exp(1))[0]
+        idx_tau = np.argmax(subarray < (float)(amp) / np.exp(1))
+        params['tau'].value = x_subarray[idx_tau] - t0
+        self.ini_params['tau'] = params['tau'].value
+
+        dt = t[1] - t[0]
+        tau = np.sum(subarray) / amp * dt
+        params['tau'].value = tau
+        self.ini_params['tau'] = tau
 
     def eval(self, t,  params):
         tau = params['tau'].value
@@ -196,7 +247,7 @@ class TwoExpDecay_a1a2(lifetimeModelClass):
     def __init__(self, IRF=None):
         super().__init__(IRF)
 
-    def guess(self):
+    def guess(self, t, params):
         pass
 
     def eval(self, t,  params):
@@ -245,8 +296,10 @@ class TwoExpDecay_tail(lifetimeModelClass):
     def __init__(self, IRF=None):
         super().__init__(IRF)
 
-    def guess(self):
+    def guess(self, t, params):
         pass
+
+
 
     def eval(self, t,  params):
         tau1 = params['tau1'].value
@@ -274,6 +327,83 @@ class TwoExpDecay_tail(lifetimeModelClass):
         params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
         return params
 
+class ThreeExpDecay_tail_a1a2a3(lifetimeModelClass):
+    """A normalized exponential two decays with a shift in time, with two Parameters ``tau``, ''shift, and a fixed ``bckgnd``.
+
+    Defined as:
+
+    .. math::
+
+        f(t; , tau, t0, bckgnd) =  a1*exp(-(t-t0) / tau1) + a2*exp(-(t-t0) / tau2) + bckgnd
+
+    The area under the decay curves obtained from the observed counts Cexp and from the predicted counts Ĉtheo must be
+    conserved during optimization of the fitting parameters. Hence, the exponential does'nt have a amplitude parameter
+    """
+
+    def __init__(self, IRF=None):
+        super().__init__(IRF)
+
+    def guess(self, t, params):
+        x = t
+        y = self.data
+        #TODO better (?) integration (simpson, smoothed gaussian quadrature https://austingwalters.com/gaussian-quadrature/)
+        # Use Lagrange polynomial to approximate noisy data with a smooth function.
+        # Integrate these smooth function with a Gauss-Legendre quadrature, which guarantee to obtain exact integral of smooth approximation.
+
+        iy1 = np.empty_like(y)
+        iy1[0] = 0
+        iy1[1:] = np.cumsum(0.5 * (y[1:] + y[:-1]) * np.diff(x))
+
+        iy2 = np.empty_like(y)
+        iy2[0] = 0
+        iy2[1:] = np.cumsum(0.5 * (iy1[1:] + iy1[:-1]) * np.diff(x))
+
+        Y = np.array([iy1, iy2, x**2, x, np.ones(x.size)])
+        Y = np.transpose(Y)
+
+        A = np.dot(np.linalg.pinv(Y), y)
+
+        A_tranfer = np.array([[A[0], A[1]], [1, 0]])
+
+        lambdas = np.linalg.eig(A_tranfer)[0]
+
+        X = [np.ones(x.size), np.exp(lambdas[0] * x), np.exp(lambdas[1] * x)]
+        X = np.transpose(X)
+        P = np.dot(np.linalg.pinv(X), y)
+
+        params['tau1'].value = lambdas[0]
+        params['tau2'].value = lambdas[1]
+        params['bckgnd'].value = P[0]
+        params['a1'].value = P[1]
+        params['a2'].value = P[2]
+
+    def eval(self, t,  params):
+        tau1 = params['tau1'].value
+        a1 = params['a1'].value
+        tau2 = params['tau2'].value
+        a2 = params['a2'].value
+        tau3 = params['tau3a'].value
+        a3 = params['a3'].value
+        t0 = params['t0'].value
+        self.data_bckgnd = params['bckgnd'].value
+        self.non_convoluted_decay = a1*np.exp(-(t-t0) / tau1) + a2*np.exp(-(t-t0) / tau2) + a3*np.exp(-(t-t0) / tau3)
+        self.non_convoluted_decay[t < t0] = 0
+
+        return self.non_convoluted_decay + self.data_bckgnd
+
+    def make_params(self):
+        params = Parameters()
+        params.add(name="tau1", value=1, min=0.01, max=np.inf, brute_step=0.1)
+        params.add(name="a1", value=0.5, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="tau2", value=3, min=0.01, max=np.inf, brute_step=0.1)
+        params.add(name="a2", value=0.5, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="tau3", value=5, min=0.01, max=np.inf, brute_step=0.1)
+        params.add(name="a3", value=0.5, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="t0", value=0, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
+        return params
+
+
 class TwoExpDecay_tail_a1a2(lifetimeModelClass):
     """A normalized exponential two decays with a shift in time, with two Parameters ``tau``, ''shift, and a fixed ``bckgnd``.
 
@@ -290,8 +420,39 @@ class TwoExpDecay_tail_a1a2(lifetimeModelClass):
     def __init__(self, IRF=None):
         super().__init__(IRF)
 
-    def guess(self):
-        pass
+    def guess(self, t, params):
+        x = t
+        y = self.data
+        #TODO better (?) integration (simpson, smoothed gaussian quadrature https://austingwalters.com/gaussian-quadrature/)
+        # Use Lagrange polynomial to approximate noisy data with a smooth function.
+        # Integrate these smooth function with a Gauss-Legendre quadrature, which guarantee to obtain exact integral of smooth approximation.
+
+        iy1 = np.empty_like(y)
+        iy1[0] = 0
+        iy1[1:] = np.cumsum(0.5 * (y[1:] + y[:-1]) * np.diff(x))
+
+        iy2 = np.empty_like(y)
+        iy2[0] = 0
+        iy2[1:] = np.cumsum(0.5 * (iy1[1:] + iy1[:-1]) * np.diff(x))
+
+        Y = np.array([iy1, iy2, x**2, x, np.ones(x.size)])
+        Y = np.transpose(Y)
+
+        A = np.dot(np.linalg.pinv(Y), y)
+
+        A_tranfer = np.array([[A[0], A[1]], [1, 0]])
+
+        lambdas = np.linalg.eig(A_tranfer)[0]
+
+        X = [np.ones(x.size), np.exp(lambdas[0] * x), np.exp(lambdas[1] * x)]
+        X = np.transpose(X)
+        P = np.dot(np.linalg.pinv(X), y)
+
+        params['tau1'].value = lambdas[0]
+        params['tau2'].value = lambdas[1]
+        params['bckgnd'].value = P[0]
+        params['a1'].value = P[1]
+        params['a2'].value = P[2]
 
     def eval(self, t,  params):
         tau1 = params['tau1'].value
@@ -314,7 +475,6 @@ class TwoExpDecay_tail_a1a2(lifetimeModelClass):
         params.add(name="t0", value=0, min=0, max=np.inf, brute_step=0.1)
         params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
         return params
-
 
 class IRF_Becker(lifetimeModelClass):
     """This function is used the IRF.
@@ -457,7 +617,7 @@ class ExpConvGauss(Model):
 #TODO creer une classe mère pour les analyses.
 class lifeTimeMeasurements(Measurements):
 
-    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
+    def __init__(self, exps=None, exp=None, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
         super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment)
         self.IRF = None
         self.is_plot_log = True
@@ -531,11 +691,11 @@ class lifeTimeMeasurements(Measurements):
         threshold_MLE = 5
 
         if self.qty_to_min == "auto":
-            if min(y_eval_range) < threshold_MLE:
+            if max(y_eval_range) < threshold_MLE:
                 qty_to_min = "max. likelyhood (MLE)"
             else:
                 qty_to_min = "chi2"
-        else :
+        else:
             qty_to_min = self.qty_to_min
 
         #FIXME
@@ -744,6 +904,48 @@ class lifeTimeMeasurements(Measurements):
         self.residual_x = x
         self.eval_x_axis = self.fit_x = x
 
+
+    def estimate_nb_of_exp(self, params_):
+        # get data
+        if params_ is not None:
+            self.set_params(params_)
+
+        y = self.data[self.idx_start:self.idx_end]
+        x = self.time_axis[self.idx_start:self.idx_end]
+
+        # Max nb of exp
+        n = 4
+
+        # TODO calculate integral trapeze
+        iy1 = np.empty_like(y)
+        iy1[0] = 0
+        iy1[1:] = np.cumsum(0.5 * (y[1:] + y[:-1]) * np.diff(x))
+
+        iy2 = np.empty_like(y)
+        iy2[0] = 0
+        iy2[1:] = np.cumsum(0.5 * (iy1[1:] + iy1[:-1]) * np.diff(x))
+
+        iy3 = np.empty_like(y)
+        iy3[0] = 0
+        iy3[1:] = np.cumsum(0.5 * (iy2[1:] + iy2[:-1]) * np.diff(x))
+
+        iy4 = np.empty_like(y)
+        iy4[0] = 0
+        iy4[1:] = np.cumsum(0.5 * (iy3[1:] + iy3[:-1]) * np.diff(x))
+
+        # get exponentials lambdas
+        Y = np.array([iy1, iy2, iy3, iy4, np.ones(x.size), x, x ** 2, x ** 3])
+        Y = np.transpose(Y)
+
+        for i in range(len(Y)):
+            for j in range(len(Y[i])):
+                print('{:.2}'.format(Y[i][j]), end=' ')
+            print()
+
+        u, s, vh = np.linalg.svd(Y)
+        ysv_scaled = 100 * s / np.sum(s)
+        print("s :", s)
+
     def explore_chi2_surf(self, params_):
         self.set_model(params_["model_name"])
         self.params = self.model.make_params()
@@ -878,7 +1080,7 @@ class lifeTimeMeasurements(Measurements):
             self.modelName = model_name
             self.model = TwoExpDecay_tail_a1a2()
             self.params = self.model.make_params()
-            self.model.fit_formula = r"IRF(shift) \times  (a1.e^{-t/\tau_1} + a2.e^{-t/\tau_2}) + bckgnd"
+            self.model.fit_formula = r" a1.e^{-(t-t_0)/\tau_1} + a2.e^{-(t-t_0)/\tau_2} + bckgnd"
 
         elif model_name == "IRF Becker":
             self.modelName = model_name
@@ -893,15 +1095,26 @@ class lifeTimeMeasurements(Measurements):
             self.model.fit_formula = r"((t-t0)/tau_irf e^{-(t-t0)/tau_irf}) \times amp . (e^{-(t-t0)/\tau}) + bckgnd"
 
 
+        elif model_name == "Three Decays Tail A1 A2 A3":
+            self.modelName = model_name
+            self.model = ThreeExpDecay_tail_a1a2a3()
+            self.params = self.model.make_params()
+            self.model.fit_formula = r"a1.e^{-(t-t_0)/\tau_1} + a2.e^{-(t-t_0)/\tau_2} + a3.e^{-(t-t_0)/\tau_3} + bckgnd"
+
+
+
         self.model.use_IR = self.use_IR
         self.model.IR = self.IRF
 
 
 class IRF:
-    def __init__(self, exps, exp, file_path=None):
+    def __init__(self, exps=None, exp=None, file_path=None):
         self.exps = exps
         self.exp = exp
-        self.exp_param = exp.exp_param
+        if exp is not None:
+            self.exp_param = exp.exp_param
+        else:
+            self.exp_param = None
         self.raw_data, self.processed_data, self.name = None, None, None
         self.start, self.end = None, None
         self.bckgnd = 0
@@ -932,7 +1145,8 @@ class IRF:
             non_zero_cst = 0
             self.raw_data = (self.time_axis - t0) / tau * np.exp(-(self.time_axis - t0) / tau) + non_zero_cst
             self.raw_data[self.raw_data < 0] = 0
-            self.raw_data = shift_scipy(self.raw_data, irf_shift, mode='wrap')
+            if irf_shift is not None:
+                self.raw_data = shift_scipy(self.raw_data, irf_shift, mode='wrap')
 
             self.raw_data /= self.raw_data.sum()
             #FIXME

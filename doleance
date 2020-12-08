@@ -1,9 +1,18 @@
 nb of channel dans le treeview
 measurements should have a common calculate interface.
 
+- Multi proc for open file
+
+Garder les parametres d'affichage de chaque expérience/measurement
+    - Bornes temporelles de zoom. Pour l'instant stokée dans View. Faire un dictionnaire avec le nom de l'expérience ?
+    - Paramètre d'affichage
+    - Zone de fit. Pour l'instant stockée dans le graphe
+    - modele de fit, algo, param, etc <-> les stocker dans measurement.
+
+
 Cases restantes dans le fit
 Formule centrée ? dans le fit
-
+open multiple file
 
 Ecran d'attente -> ~OK
 
@@ -16,7 +25,7 @@ DLS :
 
 Fill GUI with measurement param.
 
-Temps de vie en log
+Temps de vie en log. Avec borne inférieur
 
 Restore IR parameter in state file.
 

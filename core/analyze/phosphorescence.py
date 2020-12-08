@@ -11,6 +11,8 @@ from scipy.ndimage.interpolation import shift as shift_scipy
 from .Measurement import Measurements
 from .histogram import histogram
 
+import numba
+
 def update_param_vals(pars, prefix, **kwargs):
     """Update parameter values with keyword arguments."""
     for key, val in kwargs.items():
@@ -54,6 +56,19 @@ class OneExpDecay(Model):
     guess.__doc__ = "TODO"
 
 
+@numba.jit(nopython=True, nogil=True)
+def calculate_delay(timestamps_start, timestamps_stop):
+    cpt_stop = 0
+    max_cpt_stop = len(timestamps_stop)
+    cpt_delays = 0
+    delays = np.zeros(timestamps_stop.size)
+    for cpt_start in range(len(timestamps_start) - 1):
+        while cpt_stop < max_cpt_stop and timestamps_stop[cpt_stop] < timestamps_start[cpt_start + 1]:
+            delays[cpt_delays] = timestamps_stop[cpt_stop] - timestamps_start[cpt_start]
+            cpt_delays += 1
+            cpt_stop += 1
+    return delays
+
 
 class PhosphoMeasurements(Measurements):
 
@@ -70,8 +85,6 @@ class PhosphoMeasurements(Measurements):
         # We need two start and end tick, one for the start detector and one for the stop detector.
         start_tick_start = start_tick_stop = self.start_tick
         end_tick_start = end_tick_stop = self.end_tick
-
-
 
         timestamps_start = self.exp.data.channels[self.num_start].photons['timestamps']
         timestamps_stop = self.exp.data.channels[self.num_stop].photons['timestamps']
@@ -120,12 +133,14 @@ class PhosphoMeasurements(Measurements):
         idx_strange_delay = np.abs(delay_start - delay_start.mean()) > 3*delay_start.std()
         strange_delay = delay_start[idx_strange_delay]
 
+        """
         timestamps_stop = np.copy(timestamps_stop)
         idx_start_exp = np.searchsorted(timestamps_stop, timestamps_start, side='left')
 
         # Nbre de photon par expériences.
         mean_nb_photon_per_experiment = np.mean(np.diff(idx_start_exp))
         std_dev_nb_photon_per_experiment = np.std(np.diff(idx_start_exp))
+        """
 
         """
         # Nouvel Algo
@@ -163,16 +178,20 @@ class PhosphoMeasurements(Measurements):
         self.time_axis = np.arange(0, self.data.size) * binning_factor * self.exp_param.mAcrotime_clickEquivalentIn_second * 1E6   # in µs
         """
 
-
+        """
         # Ancien Algo
         single_exp_array = np.split(timestamps_stop, idx_start_exp)
 
         # we discard the first experiment since it very improbable that the measurement started on a start tick. Consequently has no start and is  incomplete.
         single_exp_array = single_exp_array[1:]
 
+
+
         # For each single experiment, we reset the starting time at zero by removing the time offset timestamps_start[i]
-        for i, exp in enumerate(single_exp_array):
+        i = 0
+        for exp in range(len(single_exp_array)-1):  #-1 because we have removed the first one.
             exp -= timestamps_start[i]
+            i += 1
 
         # The macro time clock is around 25ns which is very very short compared to a phosophorescence decay (1ms - 10s)
         # Consequently we have to bin the data
@@ -187,61 +206,69 @@ class PhosphoMeasurements(Measurements):
         single_exp_array_concatenated = np.concatenate(single_exp_array)
 
         # Then, we create the phosphorescence decay curve by adding all the sub experiment curve. We need to know
-        max_time_bin = 0
-        for exp in single_exp_array:
-            if exp[-1] > max_time_bin:
-                max_time_bin = exp[-1]
 
+
+        # # Remove empty experiment if any
+        # single_exp_array = [x for x in single_exp_array if x.size != 0]
+        #
+        # max_time_bin = 0
+        # for exp in single_exp_array:
+        #     if exp[-1] > max_time_bin:
+        #         max_time_bin = exp[-1]
+
+        
         # Finally, we compute
         single_exp_array_concatenated = np.asarray(single_exp_array_concatenated, dtype=np.int64)
+        max_delay = np.max(single_exp_array_concatenated)
+        min_delay = np.min(single_exp_array_concatenated)
         self.data = np.bincount(single_exp_array_concatenated)
-        self.time_axis = np.arange(0, self.data.size) * binning_factor * self.exp_param.mAcrotime_clickEquivalentIn_second * 1E-6   # in µs
+        nb_photon = np.sum(self.data)
+        self.time_axis = np.arange(0, self.data.size) * binning_factor * self.exp_param.mAcrotime_clickEquivalentIn_second * 1E6   # in µs
+        idx_start = np.searchsorted(self.time_axis, self.min_time_histo_micros)
+        idx_end = np.searchsorted(self.time_axis, self.max_time_histo_ms*1000)
+        self.time_axis = self.time_axis[idx_start:idx_end]
+        self.data = self.data[idx_start:idx_end]
+        """
+
+        idx_first_start_in_stop = np.searchsorted(timestamps_stop, timestamps_start[0])
+        timestamps_stop = timestamps_stop[idx_first_start_in_stop:]
+
+        """
+        cpt_start = 0
+        cpt_stop = 0
+        cpt_delays = 0
+        delays = np.zeros(timestamps_stop.size)
+        for cpt_start in range(len(timestamps_start) - 1):
+            while timestamps_stop[cpt_stop] < timestamps_start[cpt_start + 1]:
+                delays[cpt_delays] = timestamps_stop[cpt_stop] - timestamps_start[cpt_start]
+                cpt_delays += 1
+                cpt_stop += 1
+        """
+        #TODO vectorize (numba is fine ?)
+        delays = calculate_delay(timestamps_start, timestamps_stop)
+
+        # The macro time clock is around 25ns which is very very short compared to a phosophorescence decay (1ms - 10s)
+        # Consequently we have to bin the data
+        binning_factor = int(time_step_micros*1E-6/self.exp_param.mAcrotime_clickEquivalentIn_second)
+        if binning_factor == 0:
+            binning_factor = 1
+
+        delays //= binning_factor
+
+        delays = np.asarray(delays, dtype=np.int64)
+        self.data = np.bincount(delays)
+
+        nb_photon = np.sum(self.data)
+        self.time_axis = np.arange(0, self.data.size) * binning_factor * self.exp_param.mAcrotime_clickEquivalentIn_second * 1E6   # in µs
+        idx_start = np.searchsorted(self.time_axis, self.min_time_histo_micros)
+        idx_end = np.searchsorted(self.time_axis, self.max_time_histo_ms*1000)
+        self.time_axis = self.time_axis[idx_start:idx_end]
+        self.data = self.data[idx_start:idx_end]
 
 
 
     def create_canonic_graph(self, is_plot_error_bar=False, is_plot_text=False):
-        self.canonic_fig, self.canonic_fig_ax = plt.subplots(2, 1, figsize=(10, 8), sharex=True,
-                               gridspec_kw={'height_ratios': [3, 1]})
-        plt.subplots_adjust(hspace=0)
-        ax = self.canonic_fig_ax
-        ax[0].semilogy(self.time_axis, self.data, "ro", alpha=0.5)
-        for a in ax:
-            a.grid(True)
-            a.grid(True, which='minor', lw=0.3)
-
-
-        if self.fit_results is not None:
-            ax[0].semilogy(self.time_axis, self.fit_results.best_fit, "b-", linewidth=3)
-        if self.residuals is not None:
-            ax[1].plot(self.time_axis, self.fit_results.residual, 'k')
-            ym = np.abs(self.fit_results.residual).max()
-            ax[1].set_ylim(-ym, ym)
-
-        if is_plot_text:
-            pass
-            # TODO Changer le texte selon les modeles
-            if self.modelName == "One Decay":
-                pass
-            elif self.modelName == "Two Decays":
-                msg = ((r'$\tau_1$ = {tau1:.2f} ns' + '\n' + r'$\tau_2$ = {tau2:.0f} ns' + '\n' + r'$A_1$ = {A1:.0f}' + '\n' + r'$A_2$ = {A2:.0f}')
-                       .format(tau1=self.fit_results.values['tau1'], tau2=self.fit_results.values['tau2'], A1=self.fit_results.values['amp1'],
-                               A2=self.fit_results.values['amp2']))
-            # ax[0].text(.75, .9, msg,
-            #            va='top', ha='left', transform=ax[0].transAxes, fontsize=18)
-
-        ax[0].set_ylabel('Occurence', fontsize=40)
-        ax[1].set_ylabel('residuals', fontsize=20)
-        ax[1].set_xlabel('time (ns)', fontsize=40)
-
-        ax[0].tick_params(axis='both', which='major', labelsize=20)
-        ax[0].tick_params(axis='both', which='minor', labelsize=8)
-
-        ax[1].tick_params(axis='x', which='major', labelsize=20)
-        ax[1].tick_params(axis='x', which='minor', labelsize=8)
-        ax[1].tick_params(axis='x', which='major', labelsize=20)
-        ax[1].tick_params(axis='x', which='minor', labelsize=8)
-
-        return self.canonic_fig
+        pass
 
     def set_model(self, model_name):
 
@@ -249,13 +276,12 @@ class PhosphoMeasurements(Measurements):
             self.modelName = model_name
             self.model = OneExpDecay()
             self.params = self.model.make_params(t0=0, amp=1, tau=1, cst=0)
+            self.model.fit_formula = r"f(t; amp, \tau, t0, cst) = amp (e^{-(t-t0)/\tau}) + cst"
 
         # elif model_name == "Two Decays Tail":
         #     # print (modelName)
         #     self.modelName = model_name
         #     self.model = TwoExpDecay()
-        #
-        # self.model.use_IR = self.use_IR
-        # self.model.IR = self.IRF
+
 
 

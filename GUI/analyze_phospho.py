@@ -14,35 +14,35 @@ class guiForFitOperation_Phospho(guiForFitOperation):
     def __init__(self, master_frame, controller, model_names, nb_param_fit, is_burst_analysis=False):
         super().__init__(master_frame, controller, model_names, nb_param_fit, fitModeName="lifetime", is_burst_analysis=is_burst_analysis)
 
-    def change_model(self, event):
-        # Methode virtuelle, voir les classes dérivées.
-        nbFitParam = self.nb_max_param_fit
-
-        if self.cb_model_sv.get() == "One Decay Tail":
-            self.list_label_string_variable_fit[0].set("t0")
-            self.list_label_string_variable_fit[1].set("amp")
-            self.list_label_string_variable_fit[2].set("tau")
-            self.list_label_string_variable_fit[3].set("cst")
-            self.enable_disable_ui(4)
-            self.set_fit_formula(r"cst + e^{-(t-t_0)/\tau}")
-
-        elif self.cb_model_sv.get() == "Two Decays Tail":
-            self.list_label_string_variable_fit[0].set("tau1")
-            self.list_label_string_variable_fit[1].set("a1")
-            self.list_label_string_variable_fit[2].set("tau2")
-            self.list_label_string_variable_fit[3].set("bckgnd")
-            self.enable_disable_ui(5)
-            self.set_fit_formula(r" a1 . e^{-t/\tau_1} + (1-a_1) \times e^{-t/\tau_2}) + bckgnd")
-
-            self.list_entry_string_variable_fit_min[0].set("0")
-            self.list_entry_string_variable_fit_min[1].set("0")
-            self.list_entry_string_variable_fit_min[2].set("0")
-            self.list_entry_string_variable_fit_min[4].set("0")
-
-        else:
-            for i in range(nbFitParam) :
-                self.list_label_string_variable_fit[i].set("")
-                self.enable_disable_ui(0)
+    # def change_model(self, event):
+    #     # Methode virtuelle, voir les classes dérivées.
+    #     nbFitParam = self.nb_max_param_fit
+    #
+    #     if self.cb_model_sv.get() == "One Decay Tail":
+    #         self.list_label_string_variable_fit[0].set("t0")
+    #         self.list_label_string_variable_fit[1].set("amp")
+    #         self.list_label_string_variable_fit[2].set("tau")
+    #         self.list_label_string_variable_fit[3].set("cst")
+    #         self.enable_disable_ui(4)
+    #         self.set_fit_formula(r"cst + e^{-(t-t_0)/\tau}")
+    #
+    #     elif self.cb_model_sv.get() == "Two Decays Tail":
+    #         self.list_label_string_variable_fit[0].set("tau1")
+    #         self.list_label_string_variable_fit[1].set("a1")
+    #         self.list_label_string_variable_fit[2].set("tau2")
+    #         self.list_label_string_variable_fit[3].set("bckgnd")
+    #         self.enable_disable_ui(5)
+    #         self.set_fit_formula(r" a1 . e^{-t/\tau_1} + (1-a_1) \times e^{-t/\tau_2}) + bckgnd")
+    #
+    #         self.list_entry_string_variable_fit_min[0].set("0")
+    #         self.list_entry_string_variable_fit_min[1].set("0")
+    #         self.list_entry_string_variable_fit_min[2].set("0")
+    #         self.list_entry_string_variable_fit_min[4].set("0")
+    #
+    #     else:
+    #         for i in range(nbFitParam) :
+    #             self.list_label_string_variable_fit[i].set("")
+    #             self.enable_disable_ui(0)
 
 
 
@@ -112,10 +112,6 @@ class PhosphoAnalyze_gui():
 
     def update_analyze(self):
         self.controller.update_analyze()
-
-
-
-
 
     def launch_phospho_histo(self):
         #FIXME

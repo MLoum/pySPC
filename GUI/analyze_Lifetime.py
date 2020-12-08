@@ -16,6 +16,10 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
     def __init__(self, master_frame, controller, model_names, nb_param_fit, is_burst_analysis=False):
         super().__init__(master_frame, controller, model_names, nb_param_fit, fitModeName="lifetime", is_burst_analysis=is_burst_analysis)
 
+        # TODO
+        # ttk.Button(self.cmd_frame, text="Estimate nb of exp", command=self.estimate_nb_of_exp).grid(row=9, column=0)
+
+
     # def changeModel(self, event):
     #     # Methode virtuelle, voir les classes dérivées.
     #     model_name = self.cb_model_sv.get()
@@ -36,6 +40,11 @@ class guiForFitOperation_Lifetime(guiForFitOperation):
     #     # self.measurement.fit_results.params
     #     # TODO
     #     pass
+
+    def estimate_nb_of_exp(self):
+        params = self.get_fit_params()
+        result = self.measurement.estimate_nb_of_exp(params)
+        # self.plot_results_brute(result)
 
 
 class lifeTimeAnalyze_gui():
@@ -90,6 +99,13 @@ class lifeTimeAnalyze_gui():
 
         self.is_overlay_on_time_zoom = tk.IntVar()
         ttk.Checkbutton(self.frameMicro_graph, text="Overlay on time zoom", variable=self.is_overlay_on_time_zoom, command=self.update_navigation).grid(row=2, column=0, columnspan=2)
+
+        ttk.Label(self.frameMicro_graph, text='ymin for log graph').grid(row=3, column=0)
+        self.low_y_log_graph_sv = tk.StringVar()
+        e = ttk.Entry(self.frameMicro_graph, textvariable=self.low_y_log_graph_sv, justify=tk.CENTER, width=7)
+        e.grid(row=3, column=1)
+        e.bind('<Return>', self.change_low_y_log_graph)
+        self.low_y_log_graph_sv.set('10')
 
         #Filter
         self.toggle_button = ttk.Button(self.frameMicro_filter, text="Keep selection", width=15, command=self.toggle_filter_mode)
@@ -168,7 +184,7 @@ class lifeTimeAnalyze_gui():
         #FIT
         # model_names -> cf core/lifetime.py
         self.gui_for_fit_operation = guiForFitOperation_Lifetime(self.frameMicro_fit, self.controller,
-                                                                 model_names=('One Decay IRF', 'One Decay Tail', 'Two Decays IRF', 'Two Decays IRF A1 A2', 'Two Decays Tail', 'Two Decays Tail A1 A2', 'IRF Becker', "MonoExp for IRF"), nb_param_fit=8,
+                                                                 model_names=('One Decay IRF', 'One Decay Tail', 'Two Decays IRF', 'Two Decays IRF A1 A2', 'Two Decays Tail', 'Two Decays Tail A1 A2', 'IRF Becker', "MonoExp for IRF", "Three Decays Tail A1 A2 A3"), nb_param_fit=8,
                                                                  is_burst_analysis=self.is_burst_analysis)
         self.gui_for_fit_operation.populate()
 
@@ -222,6 +238,10 @@ class lifeTimeAnalyze_gui():
 
             self.controller.update_analyze()
 
+    def change_low_y_log_graph(self, e):
+        low_y_log_graph = int(self.low_y_log_graph_sv.get())
+        self.controller.graph_results.low_limit_log_lifetime = low_y_log_graph
+        self.launch_micro_time_histo()
 
 
     def auto_bckgnd(self):
@@ -252,6 +272,8 @@ class lifeTimeAnalyze_gui():
 
     def launch_micro_time_histo(self):
         #FIXME
+        low_y_log_graph = int(self.low_y_log_graph_sv.get())
+        self.controller.graph_results.low_limit_log_lifetime = low_y_log_graph
         self.controller.calculate_measurement()
         self.controller.graph_measurement()
         # self.mainGUI.controller.drawMicroTimeHisto(self.mainGUI.currentChannel, self.mainGUI.currentTimeWindow[0], self.mainGUI.currentTimeWindow[1])

@@ -13,7 +13,7 @@ def update_param_vals(pars, prefix, **kwargs):
 
 
 class Measurements:
-    def __init__(self, exps, exp, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="", name="", comment=""):
+    def __init__(self, exps=None, exp=None, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type="", name="", comment=""):
         #FIXME exp_param from exp
         self.exp_param = exp_param
         self.exps = exps
@@ -181,7 +181,7 @@ class Measurements:
 
         for i, key in enumerate(self.params):
             # self.params[key].set(value=params_["val"][i], min=params_["min"][i], max=params_["max"][i], vary=bool(params_["hold"][i]), brute_step=params_["brute_step"][i])
-            self.params[key].set(value=params_[key]["value"], min=params_[key]["min"], max=params_[key]["max"], vary=bool(params_[key]["value"]), brute_step=params_[key]["b_step"])
+            self.params[key].set(value=params_[key]["value"], min=params_[key]["min"], max=params_[key]["max"], vary=params_[key]["vary"], brute_step=params_[key]["b_step"])
 
 
     # def set_hold_params(self, params_hold):
