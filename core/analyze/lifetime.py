@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 from scipy.special import erfc
 from scipy.ndimage.interpolation import shift as shift_scipy
+from scipy.linalg import lstsq
 
 from .Measurement import Measurements
 from scipy.integrate import cumtrapz
@@ -421,12 +422,11 @@ class TwoExpDecay_tail_a1a2(lifetimeModelClass):
         super().__init__(IRF)
 
     def guess(self, t, params):
-        x = t
-        y = self.data
         #TODO better (?) integration (simpson, smoothed gaussian quadrature https://austingwalters.com/gaussian-quadrature/)
         # Use Lagrange polynomial to approximate noisy data with a smooth function.
         # Integrate these smooth function with a Gauss-Legendre quadrature, which guarantee to obtain exact integral of smooth approximation.
 
+        """
         iy1 = np.empty_like(y)
         iy1[0] = 0
         iy1[1:] = np.cumsum(0.5 * (y[1:] + y[:-1]) * np.diff(x))
@@ -447,12 +447,107 @@ class TwoExpDecay_tail_a1a2(lifetimeModelClass):
         X = [np.ones(x.size), np.exp(lambdas[0] * x), np.exp(lambdas[1] * x)]
         X = np.transpose(X)
         P = np.dot(np.linalg.pinv(X), y)
+        """
 
-        params['tau1'].value = lambdas[0]
-        params['tau2'].value = lambdas[1]
-        params['bckgnd'].value = P[0]
-        params['a1'].value = P[1]
-        params['a2'].value = P[2]
+
+
+
+
+        x = np.array(t)
+
+
+        y = np.array(self.data, dtype=np.float64)
+        max_y = np.max(y)
+        y /= y.sum()
+
+        # find t0 (crudely) Starting from the maximum, we go back microtime per microtime until the previous microtime is smaller than the precedent
+        pos_max = np.argmax(y)
+        pos_t0 = pos_max
+        while y[pos_t0] - y[pos_t0-1] > 0:
+            pos_t0 -= 1
+        if pos_t0 < 0:
+            pos_t0 = 0
+
+        x -= x[pos_t0]
+        x = x[pos_t0:]
+        y = y[pos_t0:]
+
+        # plt.plot(x, y)
+        # plt.show()
+
+        S = np.empty_like(y)
+        S[0] = 0
+        S[1:] = np.cumsum(0.5 * (y[1:] + y[:-1]) * np.diff(x))
+
+        # plt.plot(x, S)
+        # plt.show()
+
+        SS = np.empty_like(y)
+        SS[0] = 0
+        SS[1:] = np.cumsum(0.5 * (S[1:] + S[:-1]) * np.diff(x))
+
+        # plt.plot(x, SS)
+        # plt.show()
+
+        x2 = x * x
+        x3 = x2 * x
+        x4 = x2 * x2
+
+        M = [[sum(SS * SS), sum(SS * S), sum(SS * x2), sum(SS * x), sum(SS)],
+             [sum(SS * S), sum(S * S), sum(S * x2), sum(S * x), sum(S)],
+             [sum(SS * x2), sum(S * x2), sum(x4), sum(x3), sum(x2)],
+             [sum(SS * x), sum(S * x), sum(x3), sum(x2), sum(x)],
+             [sum(SS), sum(S), sum(x2), sum(x), len(x)]]
+
+        Ycol = np.array([sum(SS * y), sum(S * y), sum(x2 * y), sum(x * y), sum(y)])
+
+        (A, B, C, D, E), residues, rank, singulars = list(lstsq(M, Ycol))
+
+        '''
+        Minv = np.linalg.inv(M)    
+        A,B,C,D,E = list( np.matmul(Minv,Ycol) )
+        '''
+        if B*B + 4*A > 0:
+            p = (1 / 2.) * (B + np.sqrt(B * B + 4 * A))
+            q = (1 / 2.) * (B - np.sqrt(B * B + 4 * A))
+        else:
+            return None
+
+        beta = np.exp(p * x)
+        eta = np.exp(q * x)
+
+        betaeta = beta * eta
+
+        L = [[len(x), sum(beta), sum(eta)],
+             [sum(beta), sum(beta * beta), sum(betaeta)],
+             [sum(eta), sum(betaeta), sum(eta * eta)]]
+
+        Ycol = np.array([sum(y), sum(beta * y), sum(eta * y)])
+
+        (a, b, c), residues, rank, singulars = list(lstsq(L, Ycol))
+
+        '''
+        Linv = np.linalg.inv(L)
+        a,b,c = list( np.matmul( Linv, Ycol ) )
+        '''
+
+        # sort in ascending order (fastest negative rate first)
+        (b, p), (c, q) = sorted([[b, p], [c, q]], key=lambda x: x[1])
+
+        #return a, b, c, p, q
+
+        ratio = b/c
+        b = max_y / (1/ratio + 1)
+        c = max_y / (ratio + 1)
+
+
+        params['tau1']["value"]= -1.0/p
+        params['tau2']["value"]= -1.0/q
+        params['bckgnd']["value"] = a
+        params['a1']["value"] = b
+        params['a2']["value"] = c
+
+        return params
 
     def eval(self, t,  params):
         tau1 = params['tau1'].value
@@ -863,20 +958,24 @@ class lifeTimeMeasurements(Measurements):
             self.error_bar = np.sqrt(self.data + 1)
             return super().fit(params)
 
-    def guess(self, idx_start=0, idx_end=-1):
+    def guess(self, params_=None):
+
+        self.set_params(params_)
+
         if self.model is not None:
             self.model.data = self.data
 
-        if self.use_IR:
-            self.find_idx_of_fit_limit(idx_start, idx_end)
+        # y = self.data[self.idx_start:self.idx_end]
+        # x_eval_range = self.time_axis[self.idx_start:self.idx_end]
 
-            # y = self.data[self.idx_start:self.idx_end]
-            # x_eval_range = self.time_axis[self.idx_start:self.idx_end]
+        result= self.model.guess(params=params_, t=self.time_axis)
 
-            self.params = self.model.guess(self.data, self.time_axis)
-            self.eval(idx_start, idx_end)
-        else:
-            super().guess(idx_start, idx_end)
+        if result is not None:
+            self.set_params(result)
+            self.eval(params_)
+
+
+
 
     def eval(self, params_=None):
 

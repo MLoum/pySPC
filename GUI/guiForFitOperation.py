@@ -227,9 +227,14 @@ class guiForFitOperation():
         self.create_gui_from_measurement_params()
         self.set_fit_formula(self.measurement.model.fit_formula)
 
-    def copy_param_from_fit(self):
-        #TODO
-        pass
+    def copy_param_from_fit(self, params=None):
+        if params is None:
+            params = self.measurement.params
+
+        for key in params.keys():
+            param = params[key]
+            self.gui_param_dict[key]["value"].set(param.value)
+
 
 
     def change_method1(self, event):

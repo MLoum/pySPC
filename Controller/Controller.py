@@ -409,7 +409,7 @@ class Controller:
 
             elif mode == "guess":
                 measurement.guess(params)
-                gui.setParamsFromFit(measurement.params)
+                gui.copy_param_from_fit(measurement.params)
 
             elif mode == "fit":
                 fit_report = measurement.fit(params)

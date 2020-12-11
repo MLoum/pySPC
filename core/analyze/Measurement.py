@@ -131,9 +131,6 @@ class Measurements:
     def guess(self, params=None):
         """
         Guess the parameters using the guess method of the lmfit Model class instance  (i.e. the member self.model)
-
-        :param idx_start:
-        :param idx_end:
         :return:
         """
         if params is not None:
