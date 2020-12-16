@@ -49,7 +49,9 @@ class Graph_miniPCH(InteractiveGraph):
             self.ax.semilogx(pch.data, pch.time_axis)
 
         if self.threshold is not None:
-            self.ax.hlines(self.threshold, 0, PCHs.data.max(), linewidth=4)
+            #FIXME numchannel is fixed to 0
+            pch = PCHs[0]
+            self.ax.hlines(self.threshold, 0, pch.data.max(), linewidth=4)
 
         self.figure.canvas.draw()
 

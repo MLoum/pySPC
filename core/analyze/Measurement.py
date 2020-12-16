@@ -181,19 +181,6 @@ class Measurements:
             self.params[key].set(value=params_[key]["value"], min=params_[key]["min"], max=params_[key]["max"], vary=params_[key]["vary"], brute_step=params_[key]["b_step"])
 
 
-    # def set_hold_params(self, params_hold):
-    #     for i, key in enumerate(self.params):
-    #         self.params[key].set(vary=params_hold[i])
-    #
-    # def set_params_min(self, params_min):
-    #     for i, key in enumerate(self.params):
-    #         self.params[key].set(min=params_min[i])
-    #
-    # def set_params_max(self, params_max):
-    #     for i, key in enumerate(self.params):
-    #         self.params[key].set(max=params_max[i])
-
-
     def set_model(self, model_name):
         """
         "Virtual" Method that has to be explicited in child classes

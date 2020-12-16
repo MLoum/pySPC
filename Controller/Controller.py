@@ -190,10 +190,12 @@ class Controller:
 
         if is_draw_burst:
             self.view.archi.navigation_area.graph_navigation.bursts = bursts
-            self.view.archi.navigation_area.graph_navigation.plot(self.current_exp.navigation_chronogram,
+            #FIXME num channel is arbitrary set to zero
+            self.view.archi.navigation_area.graph_navigation.plot(self.current_exp.navigation_chronograms,
                                                               self.view.currentTimeWindow[0],
                                                               self.view.currentTimeWindow[1], is_draw_burst=True)
         else:
+            #FIXME num channel is arbitrary set to zero
             self.view.archi.navigation_area.graph_navigation.plot(self.current_exp.navigation_chronograms,
                                                               self.view.currentTimeWindow[0],
                                                               self.view.currentTimeWindow[1])

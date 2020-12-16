@@ -202,8 +202,10 @@ class Experiment(object):
         """
 
         #FIXME check if the channel actually has data in the time bin.
-        if self.time_zoom_chronograms is None:
-            self.time_zoom_chronograms = []
+        # if self.time_zoom_chronograms is None:
+        #     self.time_zoom_chronograms = []
+
+        self.time_zoom_chronograms = []
         for i in range(self.exp_param.nbOfChannel):
             self.time_zoom_chronograms.append(self.create_measurement(i, t1_tick, t2_tick, type_="chronogram", name="dont_store", comment="", is_store=False))
             self.time_zoom_chronograms[i].num_channel = i

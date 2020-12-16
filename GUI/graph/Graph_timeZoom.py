@@ -136,10 +136,14 @@ class Graph_timeZoom():
         self.ax.tick_params(axis='both', which='minor', labelsize=8)
 
         if self.threshold is not None:
-            self.ax.hlines(self.threshold, chronos.time_axis[0], chronos.time_axis.max(), linewidth=4)
+            #FIXME nb channel assumed to be 0
+            chrono = chronos[0]
+            self.ax.hlines(self.threshold, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
 
         if self.threshold_flank is not None:
-            self.ax.hlines(self.threshold_flank, chronos.time_axis[0], chronos.time_axis.max(), linewidth=4)
+            #FIXME nb channel assumed to be 0
+            chrono = chronos[0]
+            self.ax.hlines(self.threshold_flank, chrono.time_axis[0], chrono.time_axis.max(), linewidth=4)
 
         if self.view.current_time_zoom_window != [0, 0]:
             self.ax.add_patch(

@@ -49,9 +49,7 @@ class BurstAnalysis_gui():
         self.frame_chronogram = tk.LabelFrame(self.frame_detection, text="a) chronogramm", borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_chronogram.pack(side="top", fill="both", expand=True)
 
-        label = ttk.Label(self.frame_chronogram, text='bin size (ms)').grid(row=0, column=0)
-
-
+        ttk.Label(self.frame_chronogram, text='bin size (ms)').grid(row=0, column=0)
         self.binsize_sv = tk.StringVar()
         e = ttk.Entry(self.frame_chronogram, textvariable=self.binsize_sv, justify=tk.CENTER, width=12)
         e.grid(row=0, column=1)
@@ -74,23 +72,19 @@ class BurstAnalysis_gui():
         e = ttk.Entry(self.frame_threshold, textvariable=self.threshold_burst_sv, justify=tk.CENTER, width=12)
         e.grid(row=0, column=1)
 
-        label = ttk.Label(self.frame_threshold, text='Threshold Flank')
-        label.grid(row=0, column=2)
-
+        ttk.Label(self.frame_threshold, text='Threshold Flank').grid(row=0, column=2)
         self.threshold_flank_sv = tk.StringVar()
         e = ttk.Entry(self.frame_threshold, textvariable=self.threshold_flank_sv, justify=tk.CENTER, width=12)
         e.grid(row=0, column=3)
 
-        label = ttk.Label(self.frame_threshold, text='% False Negative')
-        label.grid(row=0, column=4)
+        ttk.Label(self.frame_threshold, text='% False Negative').grid(row=0, column=4)
 
         self.false_negative_sv = tk.StringVar()
         e = ttk.Entry(self.frame_threshold, textvariable=self.false_negative_sv, justify=tk.CENTER, width=12)
         e.grid(row=0, column=5)
         self.false_negative_sv.set("1")
 
-        b = ttk.Button(self.frame_threshold, text="Auto Threshold", command=self.auto_threshold)
-        b.grid(row=0, column=6)
+        ttk.Button(self.frame_threshold, text="Auto Threshold", command=self.auto_threshold).grid(row=0, column=6)
 
         self.frame_graph_trh_grid = tk.Frame(self.frame_threshold)
         self.frame_graph_trh_grid.grid(row=1, column=0, columnspan=7)
@@ -107,43 +101,29 @@ class BurstAnalysis_gui():
                                              borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_burst_param.pack(side="top", fill="both", expand=True)
 
-        label = ttk.Label(self.frame_burst_param, text='Minimum nb of successive bins')
-        label.grid(row=0, column=0)
-
+        ttk.Label(self.frame_burst_param, text='Minimum nb of successive bins').grid(row=0, column=0)
         self.min_succesive_bin_sv = tk.StringVar()
         e = ttk.Entry(self.frame_burst_param, textvariable=self.min_succesive_bin_sv, justify=tk.CENTER, width=12)
         e.grid(row=0, column=1)
         self.min_succesive_bin_sv.set("2")
 
-        label = ttk.Label(self.frame_burst_param, text='Maxixum nb of successive NOISE bins')
-        label.grid(row=0, column=2)
-
+        ttk.Label(self.frame_burst_param, text='Maxixum nb of successive NOISE bins').grid(row=0, column=2)
         self.max_succesive_noise_bin_sv = tk.StringVar()
         e = ttk.Entry(self.frame_burst_param, textvariable=self.max_succesive_noise_bin_sv, justify=tk.CENTER, width=12)
         e.grid(row=0, column=3)
         self.max_succesive_noise_bin_sv.set("1")
 
-        label = ttk.Label(self.frame_burst_param, text='Min nb of photons in burst')
-        label.grid(row=0, column=4)
-
+        ttk.Label(self.frame_burst_param, text='Min nb of photons in burst').grid(row=0, column=4)
         self.min_nb_photon_sv = tk.StringVar()
         e = ttk.Entry(self.frame_burst_param, textvariable=self.min_nb_photon_sv, justify=tk.CENTER, width=12)
         e.grid(row=0, column=5)
         self.min_nb_photon_sv.set("100")
 
-
-        b = ttk.Button(self.frame_burst_param, text="Launch Detection", command=self.launch_detection)
-        b.grid(row=0, column=6)
-
+        ttk.Button(self.frame_burst_param, text="Launch Detection", command=self.launch_detection).grid(row=0, column=6)
 
         self.frame_operation = tk.LabelFrame(self.frame_detection, text="d) What to do",
                                              borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_operation.pack(side="top", fill="both", expand=True)
-
-
-
-
-
 
         # Statistics
         ##############
@@ -152,24 +132,19 @@ class BurstAnalysis_gui():
                                              borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_statistics.pack(side="top", fill="both", expand=True)
 
-        label = ttk.Label(self.frame_statistics, text='nb of burst')
-        label.grid(row=0, column=0)
-
+        ttk.Label(self.frame_statistics, text='nb of burst').grid(row=0, column=0)
         self.nb_of_burst_sv = tk.StringVar()
         e = ttk.Entry(self.frame_statistics, textvariable=self.nb_of_burst_sv, justify=tk.CENTER, width=12)
         e.grid(row=0, column=1)
         self.nb_of_burst_sv.set("0")
 
-        label = ttk.Label(self.frame_statistics, text='nb of rejected short burst')
-        label.grid(row=0, column=2)
-
+        ttk.Label(self.frame_statistics, text='nb of rejected short burst').grid(row=0, column=2)
         self.nb_of_short_burst_sv = tk.StringVar()
         e = ttk.Entry(self.frame_statistics, textvariable=self.nb_of_short_burst_sv, justify=tk.CENTER, width=12)
         e.grid(row=0, column=3)
         self.nb_of_short_burst_sv.set("0")
 
         # Noise
-
         self.frame_graph_Noise_CPS_grid = tk.Frame(self.frame_statistics)
         self.frame_graph_Noise_CPS_grid.grid(row=1, column=0)
 
@@ -214,8 +189,6 @@ class BurstAnalysis_gui():
         self.burst_CPS_graph = Graph_stat(self.frame_graph_Burst_CPS, self.controller.view, self.controller, self,
                                           figsize=(2, 2), dpi=75)
 
-
-
         # tests on burst
         ##############
 
@@ -224,41 +197,33 @@ class BurstAnalysis_gui():
         self.frame_test.pack(side="top", fill="both", expand=True)
 
 
-        label = ttk.Label(self.frame_test, text='Num burst')
-        label.grid(row=0, column=0)
-
+        ttk.Label(self.frame_test, text='Num burst').grid(row=0, column=0)
         self.num_burst_sv = tk.StringVar()
         e = ttk.Entry(self.frame_test, textvariable=self.num_burst_sv, justify=tk.CENTER, width=12)
         e.grid(row=0, column=1)
         self.num_burst_sv.set("0")
 
-        b = ttk.Button(self.frame_test, text="previous burst", command=self.previous_burst)
-        b.grid(row=1, column=0)
+        ttk.Button(self.frame_test, text="previous burst", command=self.previous_burst).grid(row=1, column=0)
+        ttk.Button(self.frame_test, text="next burst", command=self.next_burst).grid(row=1, column=1)
 
-        b = ttk.Button(self.frame_test, text="next burst", command=self.next_burst)
-        b.grid(row=1, column=1)
 
-        label = ttk.Label(self.frame_test, text='Nb photon')
-        label.grid(row=2, column=0)
-
+        ttk.Label(self.frame_test, text='Nb photon').grid(row=2, column=0)
         self.nb_photon_burst_sv = tk.StringVar()
         e = ttk.Entry(self.frame_test, textvariable=self.nb_photon_burst_sv, justify=tk.CENTER, width=12)
+        e.config(state=tk.DISABLED)
         e.grid(row=2, column=1)
 
-        label = ttk.Label(self.frame_test, text='length (µs)')
-        label.grid(row=2, column=2)
-
+        ttk.Label(self.frame_test, text='length (µs)').grid(row=2, column=2)
         self.length_burst_sv = tk.StringVar()
         e = ttk.Entry(self.frame_test, textvariable=self.nb_photon_burst_sv, justify=tk.CENTER, width=12)
+        e.config(state=tk.DISABLED)
         e.grid(row=2, column=3)
 
-        label = ttk.Label(self.frame_test, text='CPS')
-        label.grid(row=2, column=4)
-
+        ttk.Label(self.frame_test, text='CPS').grid(row=2, column=4)
         self.cps_burst_sv = tk.StringVar()
         e = ttk.Entry(self.frame_test, textvariable=self.cps_burst_sv, justify=tk.CENTER, width=12)
+        e.config(state=tk.DISABLED)
         e.grid(row=2, column=5)
-
 
         #graph chrono
 
@@ -270,9 +235,7 @@ class BurstAnalysis_gui():
         self.frame_validate = tk.LabelFrame(self.frame_detection, text="g) validate",
                                              borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_validate.pack(side="top", fill="both", expand=True)
-        b = ttk.Button(self.frame_validate, text="validate", command=self.validate)
-        b.grid(row=1, column=1)
-
+        ttk.Button(self.frame_validate, text="validate", command=self.validate).grid(row=1, column=1)
 
         # self.createCallBacks()
         # self.createWidgets()
@@ -360,16 +323,17 @@ class BurstAnalysis_gui():
         self.frame_launch_measurement = tk.LabelFrame(self.frame_analysis, text="Launch Measurement",
                                              borderwidth=self.appearence_param.frameLabelBorderWidth)
         self.frame_launch_measurement.pack(side="top", fill="both", expand=True)
-        b = ttk.Button(self.frame_launch_measurement, text="validate", command=self.launch_measurement)
-        b.grid(row=0, column=0)
+        ttk.Button(self.frame_launch_measurement, text="validate", command=self.launch_measurement).grid(row=0, column=0)
+
+        #TODO scatter graph with fit results. (3D, surface, ...)
 
 
 
     def bin_signal(self):
         bin_in_ms = int(self.binsize_sv.get())
         bin_in_tick = (bin_in_ms /1000.0) / self.burst_measure.exp_param.mAcrotime_clickEquivalentIn_second
-        data = self.controller.current_exp.data
-        timestamps = data.channels[self.burst_measure.num_channel].photons['timestamps']
+        # data = self.controller.current_exp.data
+        # timestamps = data.channels[self.burst_measure.num_channel].photons['timestamps']
         self.PCH = self.burst_measure.bin(bin_in_tick)
 
         #Display PCH on the dedicated graph.

@@ -21,6 +21,7 @@ class Burst():
         self.duration_tick = 0
         self.CPS = 0
         self.measurement = None
+        self.fit_result = None
 
 import numba
 
@@ -53,9 +54,8 @@ def threshold_loop_numba(idx, data, burst_threshold, flank_threshold):
 
 class DetectBurst(Measurements):
     def __init__(self, exps, exp, data, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
-        super().__init__(exp_param, num_channel, start_tick, end_tick, "burst", name, comment)
-        self.exps = exps
-        self.exp = exp
+        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick,  "burst", name, comment)
+
         self.data = data
         self.bursts = []
         self.parameters = None
@@ -66,7 +66,7 @@ class DetectBurst(Measurements):
     def bin(self, bin_in_tick):
         self.bin_in_tick = bin_in_tick
         self.timestamps = self.data.channels[self.num_channel].photons['timestamps']
-        self.chronogram = Chronogram(self.exp_param, self.num_channel, self.start_tick, self.end_tick, self.name + "_chrono", self.comment)
+        self.chronogram = Chronogram(self.exps, self.exp, self.exp_param, self.num_channel, self.start_tick, self.end_tick, self.name + "_chrono", self.comment)
         self.chronogram.create_chronogram(self.timestamps, bin_in_tick)
 
         self.PCH = PCH(self.exp_param, self.num_channel, self.start_tick, self.end_tick, self.name + "_PCH", self.comment)
@@ -91,26 +91,6 @@ class DetectBurst(Measurements):
             if burst.num_bin_start == -1:
                 break
             idx = burst.num_bin_end
-            # while idx < data.size and data[idx] < burst_threshold:
-            #     idx += 1
-            # if idx >= data.size:
-            #     break
-            #
-            # # We are inside a burst, we will know go in the left and right direction until we goes under the flank threshold
-            # idx_center_burst = idx
-            #
-            # #going left
-            # while idx >=0 and data[idx] > flank_threshold:
-            #     idx -=1
-            # burst.num_bin_start = idx + 1
-            #
-            # #going right
-            # idx = idx_center_burst
-            # while idx < data.size and data[idx] > flank_threshold:
-            #     idx += 1
-            # # End of the burst is the start of a bin that is under the flank_threshold
-            # # burst.num_bin_end = idx - 1
-            # burst.num_bin_end = idx
 
             # Look at burst characteristics and see, considering the filter parameters, if we have to put it in the burst list
             burst.nb_bin = burst.num_bin_end - burst.num_bin_start
@@ -212,13 +192,20 @@ class DetectBurst(Measurements):
                 burst.measurement.create_histogramm(nanotimes)
                 num += 1
 
-    def perform_fit_of_measurement(self, model_name=None, fit_params=None, idx_start=0, idx_end=-1):
+    def perform_fit_of_measurement(self, model_name=None, fit_params=None, is_ini_guess=True):
+        self.fit_results = []
         for burst in self.bursts:
             if model_name is not None:
                 burst.measurement.set_model(model_name)
                 burst.measurement.set_params(fit_params)
-                self.fit_results = burst.measurement.fit(idx_start, idx_end)
+                if is_ini_guess:
+                    burst.measurement.guess(fit_params)
+                    burst.fit_result = burst.measurement.fit(fit_params)
 
+
+    def Statistics(self):
+        #TODO
+        pass
 
     def cusum_sprt(self, macrotimes, I0, IB):
         """
