@@ -20,6 +20,7 @@ class Burst():
         self.tick_end = 0
         self.duration_tick = 0
         self.CPS = 0
+        self.is_filtered = False
         self.measurement = None
         self.fit_result = None
 
@@ -166,46 +167,109 @@ class DetectBurst(Measurements):
         #     idx += 1
 
 
-        # From python list to numpy array for statistical analysis
-        self.nb_of_bursts = len(self.bursts)
-        self.bursts_length = np.zeros(len(self.bursts))
-        self.bursts_intensity = np.zeros(len(self.bursts))
-        self.bursts_CPS = np.zeros(len(self.bursts))
-        for i, burst in enumerate(self.bursts):
-            self.bursts_length[i] = burst.duration_tick
-            self.bursts_intensity[i] = burst.nb_photon
-            self.bursts_CPS[i] = burst.CPS
+        self.statistics()
+        # Analyze noise
+        #TODO
+        # self.noise_bins = len(data.size - self.nb_of_bursts)
 
-        self.bursts_length_histogram, self.bin_edges_bursts_length = np.histogram(self.bursts_length*self.exp_param.mAcrotime_clickEquivalentIn_second*1E6, bins="auto")
-        self.bursts_intensity_histogram, self.bin_edges_bursts_intensity = np.histogram(self.bursts_intensity, bins="auto")
-        self.bursts_CPS_histogram, self.bin_edges_bursts_CPS = np.histogram(self.bursts_CPS/(self.exp_param.mAcrotime_clickEquivalentIn_second*1E6),
-                                                                                        bins="auto")
         # self.perform_measurements()
 
     def perform_measurements(self, type="lifetime"):
         if type=="lifetime":
             num = 0
             for burst in self.bursts:
-                #TODO IRF
-                burst.measurement = lifeTimeMeasurements(self.exp_param, self.num_channel, burst.tick_start, burst.tick_end, "burst_" + str(num) + "_lifetime")
-                nanotimes = self.data.channels[self.num_channel].photons['nanotimes'][burst.num_photon_start:burst.num_photon_stop]
-                burst.measurement.create_histogramm(nanotimes)
-                num += 1
+                if burst.is_filtered == False:
+                    #TODO IRF
+                    burst.measurement = lifeTimeMeasurements(self.exp_param, self.num_channel, burst.tick_start, burst.tick_end, "burst_" + str(num) + "_lifetime")
+                    nanotimes = self.data.channels[self.num_channel].photons['nanotimes'][burst.num_photon_start:burst.num_photon_stop]
+                    burst.measurement.create_histogramm(nanotimes)
+                    num += 1
 
-    def perform_fit_of_measurement(self, model_name=None, fit_params=None, is_ini_guess=True):
+    def perform_fit_of_measurement(self, fit_params=None, is_ini_guess=True):
         self.fit_results = []
+        model_name = fit_params["model_name"]
         for burst in self.bursts:
-            if model_name is not None:
-                burst.measurement.set_model(model_name)
-                burst.measurement.set_params(fit_params)
-                if is_ini_guess:
-                    burst.measurement.guess(fit_params)
+            if burst.is_filtered == False:
+                if model_name is not None:
+                    burst.measurement.set_model(model_name)
+                    burst.measurement.set_params(fit_params)
+                    if is_ini_guess:
+                        burst.measurement.guess(fit_params)
                     burst.fit_result = burst.measurement.fit(fit_params)
 
 
-    def Statistics(self):
-        #TODO
-        pass
+    def statistics(self):
+
+        self.nb_of_bursts = len(self.bursts)
+        nb_non_filtered_bursts = 0
+        for burst in self.bursts:
+            if not burst.is_filtered:
+                nb_non_filtered_bursts += 1
+        self.nb_non_filtered_bursts = nb_non_filtered_bursts
+
+        self.bursts_length = np.zeros(nb_non_filtered_bursts)
+        self.bursts_intensity = np.zeros(nb_non_filtered_bursts)
+        self.bursts_CPS = np.zeros(nb_non_filtered_bursts)
+        # print(self.nb_non_filtered_bursts)
+        i = 0
+        for burst in self.bursts:
+            if not burst.is_filtered:
+                self.bursts_length[i] = burst.duration_tick
+                self.bursts_intensity[i] = burst.nb_photon
+                self.bursts_CPS[i] = burst.CPS
+                i += 1
+
+        self.bursts_length_histogram, self.bin_edges_bursts_length = np.histogram(self.bursts_length*self.exp_param.mAcrotime_clickEquivalentIn_second*1E6, bins="auto")
+        self.bursts_intensity_histogram, self.bin_edges_bursts_intensity = np.histogram(self.bursts_intensity, bins="auto")
+        self.bursts_CPS_histogram, self.bin_edges_bursts_CPS = np.histogram(self.bursts_CPS/(self.exp_param.mAcrotime_clickEquivalentIn_second*1E6),
+                                                                                        bins="auto")
+
+
+    def filter(self, low1, high1, type1, bool_op, low2, high2, type2):
+
+        #FIXME inclusive frontiere ?
+
+        def is_to_be_filtered(burst, type, low, high):
+            filter_OK = False
+
+            val = None
+            if type == "duration":
+                val = burst.duration_tick*self.exp_param.mAcrotime_clickEquivalentIn_second*1E6
+            elif type == "nb_photon":
+                val = burst.nb_photon
+            elif type == "CPS":
+                val = burst.CPS
+            elif burst.measurement is not None:
+                if type in burst.measurement.params:
+                    val = burst.measurement.params[type]
+            if val is not None:
+                if val < low or val > high:
+                    filter_OK = True
+            return filter_OK
+
+        for burst in self.bursts:
+            filter1_OK = is_to_be_filtered(burst, type1, low1, high1)
+            filter2_OK = is_to_be_filtered(burst, type2, low2, high2)
+
+            is_burst_filtered = False
+            if bool_op == "and":
+                is_burst_filtered = filter1_OK and filter2_OK
+            elif bool_op == "or":
+                is_burst_filtered = filter1_OK or filter2_OK
+            elif bool_op == "xor":
+                is_burst_filtered = (filter1_OK and not(filter2_OK)) or (not(filter1_OK) and filter2_OK)
+
+            if is_burst_filtered:
+                burst.is_filtered = True
+            else:
+                burst.is_filtered = False
+
+        self.statistics()
+
+
+    def clear_filter(self):
+        for burst in self.bursts:
+            burst.is_filtered = False
 
     def cusum_sprt(self, macrotimes, I0, IB):
         """

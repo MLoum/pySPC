@@ -70,6 +70,7 @@ class Measurements:
         :param idx_end: highest x value of the user selected interval. Default is -1, that is to say latest value
         :return:
         """
+        
         if idx_start != 0:
             self.idx_start = np.searchsorted(self.time_axis, idx_start)
         else:
