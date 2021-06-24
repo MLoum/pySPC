@@ -11,8 +11,8 @@ class Burst():
     """
     def __init__(self):
         self.nb_bin = 0
-        self.num_bin_start = 0
-        self.num_bin_end = 0
+        self.num_bin_start = 0 # This bin IS included in the burst
+        self.num_bin_end = 0 # This bin is NOT included in the burst
         self.nb_photon = 0
         self.num_photon_start = 0
         self.num_photon_stop = 0
@@ -21,6 +21,7 @@ class Burst():
         self.duration_tick = 0
         self.CPS = 0
         self.is_filtered = False
+        self.is_highlighted = False
         self.measurement = None
         self.fit_result = None
 
@@ -53,6 +54,61 @@ def threshold_loop_numba(idx, data, burst_threshold, flank_threshold):
         return num_bin_start, num_bin_end
 
 
+@numba.jit(nopython=True)
+def threshold_numba(data, burst_threshold, flank_threshold, arr_start_burst, arr_end_burst, min_succesive_bin, min_nb_photon, max_succesive_noise_bin):
+    idx = 0
+    idx_burst = 0
+    nb_rejected_burst = 0
+    while idx < data.size:
+        while idx < data.size and data[idx] < burst_threshold:
+            idx += 1
+        if idx >= data.size:
+            return idx_burst, nb_rejected_burst
+        # We are inside a burst, we will know go in the left and right direction until we goes under the flank threshold
+        idx_center_burst = idx
+
+        # going left
+        while idx >= 0 and data[idx] > flank_threshold:
+            idx -= 1
+
+        if idx < 0:
+            num_bin_start = 0
+        else:
+        # arr_start_burst[idx_burst] = idx + 1
+            num_bin_start = idx + 1
+
+        # going right
+        idx = idx_center_burst
+        while idx < data.size and data[idx] > flank_threshold:
+            idx += 1
+        # End of the burst is the start of a bin that is under the flank_threshold
+        #TODO successive noise bin
+        # burst.num_bin_end = idx - 1
+        # arr_end_burst[idx_burst] = idx
+        num_bin_end = idx
+
+        # Test if burst is valid (nb photon etc...)
+        if num_bin_end < num_bin_start:
+            continue
+
+        if num_bin_end - num_bin_start > min_succesive_bin:
+            nb_photon_in_burst = 0
+            for idx_b in range(num_bin_start, num_bin_end):
+                nb_photon_in_burst += data[idx_b]
+            if nb_photon_in_burst > min_nb_photon:
+                arr_start_burst[idx_burst] = num_bin_start
+                arr_end_burst[idx_burst] = num_bin_end
+                idx_burst += 1
+            else:
+                nb_rejected_burst += 1
+
+
+
+
+        # TODO dark count.
+
+    return idx_burst, nb_rejected_burst
+
 class DetectBurst(Measurements):
     def __init__(self, exps, exp, data, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
         super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick,  "burst", name, comment)
@@ -64,11 +120,25 @@ class DetectBurst(Measurements):
         self.threshold = None
         self.bin_in_tick = 0
 
-    def bin(self, bin_in_tick):
+    def bin(self, bin_in_tick, micro_time_gate_low=0, micro_time_gate_high=-1):
         self.bin_in_tick = bin_in_tick
+
+
         self.timestamps = self.data.channels[self.num_channel].photons['timestamps']
+
+        if micro_time_gate_low != 0 or micro_time_gate_high != -1:
+
+            if micro_time_gate_high == -1:
+                micro_time_gate_high = self.exp_param.nb_of_microtime_channel - 1
+
+            nanotimes = self.data.channels[self.num_channel].photons['nanotimes']
+            idx_photons_inside_gate= np.where(np.logical_or(nanotimes > micro_time_gate_low, nanotimes < micro_time_gate_high))
+            timestamps = self.data.channels[self.num_channel].photons['timestamps'][idx_photons_inside_gate]
+        else:
+            timestamps = self.timestamps
+
         self.chronogram = Chronogram(self.exps, self.exp, self.exp_param, self.num_channel, self.start_tick, self.end_tick, self.name + "_chrono", self.comment)
-        self.chronogram.create_chronogram(self.timestamps, bin_in_tick)
+        self.chronogram.create_chronogram(timestamps, bin_in_tick)
 
         self.PCH = PCH(self.exp_param, self.num_channel, self.start_tick, self.end_tick, self.name + "_PCH", self.comment)
         self.PCH.create_histogram(self.chronogram)
@@ -82,40 +152,81 @@ class DetectBurst(Measurements):
 
         data = self.chronogram.data
 
-        self.nb_too_short_burst = 0
-        num_photon = 0
-        idx = 0
-        while idx < data.size:
+        # We allocate memory for the worst case scenario where every bin would be a burst (which is impossible). Memory is cheap and my code bad.
+        arr_start_burst = np.empty(data.size)
+        arr_end_burst = np.empty(data.size)
+        nb_burst, self.nb_too_short_burst = threshold_numba(data, burst_threshold, flank_threshold, arr_start_burst, arr_end_burst, min_succesive_bin, min_nb_photon, max_succesive_noise_bin)
+
+        # Resize the oversized preallocated memory to the actual size - NB : In num of bins
+        arr_start_burst = arr_start_burst[0:nb_burst]
+        arr_end_burst = arr_end_burst[0:nb_burst]
+
+        # In num of photon
+        num_photon_start_burst = np.searchsorted(self.timestamps, arr_start_burst*self.chronogram.bin_in_tick)
+        num_photon_end_burst = np.searchsorted(self.timestamps, arr_end_burst * self.chronogram.bin_in_tick)
+
+        nb_photon_per_burst = num_photon_end_burst - num_photon_start_burst
+
+        # # Find burst with too few photons and delete them -> now done in the numba function
+        # idx_too_few_photons = np.where(nb_photon_per_burst < min_nb_photon)
+        # self.nb_too_short_burst = idx_too_few_photons[0].size
+        # num_photon_start_burst = np.delete(num_photon_start_burst, idx_too_few_photons)
+        # num_photon_end_burst = np.delete(num_photon_end_burst, idx_too_few_photons)
+        # arr_start_burst = np.delete(arr_start_burst, idx_too_few_photons)
+        # arr_end_burst = np.delete(arr_end_burst, idx_too_few_photons)
+        #
+        # nb_photon_per_burst = num_photon_end_burst - num_photon_start_burst
+
+        # Create and fill burst object
+        for num_burst in range(num_photon_start_burst.size):
             burst = Burst()
-            # Delegated to exterior numba pre-compiled function for efficiency purpose
-            burst.num_bin_start, burst.num_bin_end  = threshold_loop_numba(idx, data, burst_threshold, flank_threshold)
-            if burst.num_bin_start == -1:
-                break
-            idx = burst.num_bin_end
-
-            # Look at burst characteristics and see, considering the filter parameters, if we have to put it in the burst list
+            burst.num_bin_start = arr_start_burst[num_burst]
+            burst.num_bin_end = arr_end_burst[num_burst]
             burst.nb_bin = burst.num_bin_end - burst.num_bin_start
-            if burst.nb_bin > min_succesive_bin:
-                # if idx_end_of_burst + 1 < idx_candidate_bin.size:
-                burst.num_photon_start = np.searchsorted(self.timestamps,
-                                                                     burst.num_bin_start * self.chronogram.bin_in_tick)
-                # num_photon = burst.num_photon_start
-                burst.tick_start = self.timestamps[burst.num_photon_start]
-                burst.num_photon_stop = np.searchsorted(self.timestamps, burst.num_bin_end*self.chronogram.bin_in_tick)
-                # else:
-                #     burst.num_photon_stop = num_photon = np.searchsorted(self.timestamps[num_photon:],
-                #                                                          idx_candidate_bin[
-                #                                                              idx_end_of_burst] * self.chronogram.bin_in_tick)
-                # num_photon = burst.num_photon_stop
-                burst.tick_end = self.timestamps[burst.num_photon_stop]
-                burst.duration_tick = burst.tick_end - burst.tick_start
-                burst.nb_photon = burst.num_photon_stop - burst.num_photon_start
-                burst.CPS = burst.nb_photon / (burst.duration_tick*self.exp_param.mAcrotime_clickEquivalentIn_second)
-                if burst.nb_photon > min_nb_photon:
-                    self.bursts.append(burst)
-            else:
-                self.nb_too_short_burst += 1
+            burst.nb_photon = nb_photon_per_burst[num_burst]
+            burst.num_photon_start = num_photon_start_burst[num_burst]
+            burst.num_photon_stop = num_photon_end_burst[num_burst]
+            burst.tick_start = self.timestamps[burst.num_photon_start]
+            burst.tick_end = self.timestamps[burst.num_photon_stop]
+            burst.duration_tick = burst.tick_end - burst.tick_start
+            burst.CPS = burst.nb_photon / (burst.duration_tick*self.exp_param.mAcrotime_clickEquivalentIn_second)
+            self.bursts.append(burst)
 
+
+        # self.nb_too_short_burst = 0
+        # num_photon = 0
+        # idx = 0
+        # while idx < data.size:
+        #     burst = Burst()
+        #     # Delegated to exterior numba pre-compiled function for efficiency purpose
+        #     burst.num_bin_start, burst.num_bin_end = threshold_loop_numba(idx, data, burst_threshold, flank_threshold)
+        #     if burst.num_bin_start == -1:
+        #         break
+        #     idx = burst.num_bin_end
+        #
+        #     # Look at burst characteristics and see, considering the filter parameters, if we have to put it in the burst list
+        #     burst.nb_bin = burst.num_bin_end - burst.num_bin_start
+        #     if burst.nb_bin > min_succesive_bin:
+        #         # if idx_end_of_burst + 1 < idx_candidate_bin.size:
+        #         burst.num_photon_start = np.searchsorted(self.timestamps,
+        #                                                              burst.num_bin_start * self.chronogram.bin_in_tick)
+        #         # num_photon = burst.num_photon_start
+        #         burst.tick_start = self.timestamps[burst.num_photon_start]
+        #         burst.num_photon_stop = np.searchsorted(self.timestamps, burst.num_bin_end*self.chronogram.bin_in_tick)
+        #         # else:
+        #         #     burst.num_photon_stop = num_photon = np.searchsorted(self.timestamps[num_photon:],
+        #         #                                                          idx_candidate_bin[
+        #         #                                                              idx_end_of_burst] * self.chronogram.bin_in_tick)
+        #         # num_photon = burst.num_photon_stop
+        #         burst.tick_end = self.timestamps[burst.num_photon_stop]
+        #         burst.duration_tick = burst.tick_end - burst.tick_start
+        #         burst.nb_photon = burst.num_photon_stop - burst.num_photon_start
+        #         burst.CPS = burst.nb_photon / (burst.duration_tick*self.exp_param.mAcrotime_clickEquivalentIn_second)
+        #         if burst.nb_photon > min_nb_photon:
+        #             self.bursts.append(burst)
+        #     else:
+        #         self.nb_too_short_burst += 1
+        #
 
         # idx = 0
         # while idx < idx_candidate_bin.size - 1:
@@ -180,9 +291,12 @@ class DetectBurst(Measurements):
             for burst in self.bursts:
                 if burst.is_filtered == False:
                     #TODO IRF
-                    burst.measurement = lifeTimeMeasurements(self.exp_param, self.num_channel, burst.tick_start, burst.tick_end, "burst_" + str(num) + "_lifetime")
-                    nanotimes = self.data.channels[self.num_channel].photons['nanotimes'][burst.num_photon_start:burst.num_photon_stop]
-                    burst.measurement.create_histogramm(nanotimes)
+                    # burst.measurement = lifeTimeMeasurements(self.exp_param, self.num_channel, burst.tick_start, burst.tick_end, "burst_" + str(num) + "_lifetime")
+                    burst.measurement = lifeTimeMeasurements(self.exps, self.exp, self.exp_param, self.num_channel, burst.tick_start, burst.tick_end, type_="lifetime", name="burst_" + str(num) + "_lifetime")
+
+                    burst.measurement.calculate()
+                    # nanotimes = self.data.channels[self.num_channel].photons['nanotimes'][burst.num_photon_start:burst.num_photon_stop]
+                    # burst.measurement.create_histogramm(nanotimes)
                     num += 1
 
     def perform_fit_of_measurement(self, fit_params=None, is_ini_guess=True):
@@ -225,7 +339,7 @@ class DetectBurst(Measurements):
                                                                                         bins="auto")
 
 
-    def filter(self, low1, high1, type1, bool_op, low2, high2, type2):
+    def filter(self, low1, high1, type1, not1, bool_op, low2, high2, type2, not2):
 
         #FIXME inclusive frontiere ?
 
@@ -251,6 +365,11 @@ class DetectBurst(Measurements):
             filter1_OK = is_to_be_filtered(burst, type1, low1, high1)
             filter2_OK = is_to_be_filtered(burst, type2, low2, high2)
 
+            if not1 and type1 != "None":
+                filter1_OK = not filter1_OK
+            if not2 and type2 != "None":
+                filter2_OK = not filter2_OK
+
             is_burst_filtered = False
             if bool_op == "and":
                 is_burst_filtered = filter1_OK and filter2_OK
@@ -270,6 +389,7 @@ class DetectBurst(Measurements):
     def clear_filter(self):
         for burst in self.bursts:
             burst.is_filtered = False
+
 
     def cusum_sprt(self, macrotimes, I0, IB):
         """

@@ -137,25 +137,6 @@ class guiForFitOperation():
 
         self.param_frame.pack(side="left", fill="both", expand=True)
 
-    def enable_disable_ui(self, num_end):
-        for i in range(num_end):
-            self.list_entry_param_fit[i].state(['!disabled'])
-            self.list_entry_param_fit_min[i].state(['!disabled'])
-            self.list_entry_param_fit_max[i].state(['!disabled'])
-            self.list_button_plus[i].config(state="normal")
-            self.list_button_minus[i].config(state="normal")
-            self.list_entry_brute_step[i].config(state="normal")
-            self.list_param_is_fixed[i].config(state="normal")
-
-        for i in range(num_end, self.nb_max_param_fit):
-            self.list_label_sv_param[i].set("")
-            self.list_entry_param_fit[i].state(['disabled'])
-            self.list_entry_param_fit_min[i].state(['disabled'])
-            self.list_entry_param_fit_max[i].state(['disabled'])
-            self.list_button_plus[i].config(state=tk.DISABLED)
-            self.list_button_minus[i].config(state=tk.DISABLED)
-            self.list_entry_brute_step[i].state(['disabled'])
-            self.list_param_is_fixed[i].config(state=tk.DISABLED)
 
     def set_fit_formula(self, formula, fontsize=40):
         formula = "$" + formula + "$"

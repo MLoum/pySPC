@@ -50,10 +50,10 @@ class OneSpeDiffusion(Model):
 
         super(OneSpeDiffusion, self).__init__(oneSpeDiffusion, **kwargs)
 
-    def guess(self, data, x=None, **kwargs):
+    def guess(self, t, params):
         G0, tdiff, r, cst = 0., 0., 0., 0.
         #if x is not None:
-        G0 = data[0] - 1 #beware afterpulsing...
+        params["G0"] = G0 = data[0] - 1 #beware afterpulsing...
         cst = np.mean(data[-10:])
         #Searching for position where G0 is divided by 2
         tdiff = np.argmax(data < (float) (G0)/2 + cst)
@@ -62,6 +62,14 @@ class OneSpeDiffusion(Model):
 
         pars = self.make_params(G0=G0, tdiff=tdiff, r=r, cst=cst)
         return update_param_vals(pars, self.prefix, **kwargs)
+
+    def make_params(self):
+        params = Parameters()
+        params.add(name="G0", vary=True, value=1.5, min=0.01, max=np.inf, brute_step=0.1)
+        params.add(name="tdiff", vary=True, value=100, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="r", vary=True, value=1, min=0, max=np.inf, brute_step=0.1)
+        params.add(name="cst", vary=True, value=0, min=-1, max=np.inf, brute_step=0.1)
+        return params
 
     # __init__.__doc__ = COMMON_INIT_DOC
     # guess.__doc__ = COMMON_GUESS_DOC
@@ -520,14 +528,19 @@ class FCSMeasurements(CorrelationMeasurement):
     #         self.params['tdiffb'].set(value=params[5], vary=True, min=0, max=None)
 
 
-    def set_model(self, modelName):
+    def set_model(self, model_name):
         #il existe une  possibilité pour autoriser le passage d’une infinité de paramètres ! Cela se fait avec *
-        if modelName == "1 Diff":
-            self.modelName = modelName
+
+
+
+        if model_name == "1 Diff":
+            self.modelName = model_name
             self.model = OneSpeDiffusion()
-            self.params = self.model.make_params(G0=1.5, tdiff=500, r=1.2, cst=1)
-        if modelName == "2 Diff":
-            self.modelName = modelName
+            self.params = self.model.make_params()
+            self.model.fit_formula = r"amp . G0 . (1/(1+r*t/td) + C"
+        if model_name == "2 Diff":
+            #FIXME new system
+            self.modelName = model_name
             self.model = TwoSpeDiffusion()
             self.params = self.model.make_params(G0a=1.5, tdiffa=500, r=1.2, cst=1, G0b=1.5, tdiffb=500)
 

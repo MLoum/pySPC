@@ -42,8 +42,8 @@ class navigation_area():
         self.frameTimeZoom = tk.LabelFrame(self.master_frame, text="Time Evolution (zoom)", borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameTimeZoom.pack(side="top", fill="both", expand=True)
 
-        self.timeZoom = TimeZoom_gui(self.frameTimeZoom, self.view, self.controller, self.appearenceParam)
-        self.timeZoom.populate()
+        self.time_zoom = TimeZoom_gui(self.frameTimeZoom, self.view, self.controller, self.appearenceParam)
+        self.time_zoom.populate()
 
         self.frame_filter = tk.LabelFrame(self.master_frame, text="Macrotime Filtering", borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frame_filter.pack(side="top", fill="both", expand=True)
@@ -165,7 +165,7 @@ class navigation_area():
         one to the other
         """
         self.graph_navigation.copyData(target.graph_navigation)
-        self.timeZoom.copyData(target.timeZoom)
+        self.time_zoom.copyData(target.timeZoom)
 
 class TimeZoom_gui():
     def __init__(self, masterFrame, view, controller, appearenceParam):
@@ -235,17 +235,26 @@ class TimeZoom_gui():
         self.chronoStart.grid(row=7, column=1)
 
 
-        #TODO les autre commandes necessaire. Redraw ?
+        ttk.Label(self.frameTimeGraphCommand, text='mouse x').grid(row=8, column=0)
+        self.mouse_pos_x = tk.StringVar()
+        ttk.Entry(self.frameTimeGraphCommand, width=10, justify=tk.CENTER, textvariable=self.mouse_pos_x).grid(row=8, column=1)
+
+
+        ttk.Label(self.frameTimeGraphCommand, text='mouse y').grid(row=8, column=2)
+        self.mouse_pos_y = tk.StringVar()
+        ttk.Entry(self.frameTimeGraphCommand, width=10, justify=tk.CENTER, textvariable=self.mouse_pos_y).grid(row=8, column=3)
+
+
 
         b = ttk.Button(self.frameTimeGraphCommand, text="redraw", width=6, command=self.redraw_time_zoom_graph)
-        b.grid(row=8, column=1)
+        b.grid(row=9, column=0)
 
         # mainGraph for time zoom (cf class Graph_timeZoom in Graph_timeZoom.py)
         self.frameTimeGraph = tk.LabelFrame(self.masterFrame, text="Graph", borderwidth=self.appearenceParam.frameLabelBorderWidth)
         self.frameTimeGraph.pack(side=tk.LEFT, fill="both", expand=True)
 
         self.graph_timeZoom = Graph_timeZoom(self.frameTimeGraph, self.view, self.controller,
-                                                 figsize=(17, 5), dpi=50)
+                                                 figsize=(10, 5), dpi=50)
 
         #mini PCH
         self.frameMiniPCH= tk.LabelFrame(self.masterFrame, text="PCH", borderwidth=self.appearenceParam.frameLabelBorderWidth)
@@ -264,9 +273,19 @@ class TimeZoom_gui():
         self.controller.update_navigation()
 
 
+    def set_xy_cursor_position(self, x, y):
+        if x is not None:
+            self.mouse_pos_x.set("{:.3e}".format(x))
+        if y is not None:
+            self.mouse_pos_y.set("{:.3e}".format(y))
 
 
     def copyData(self, target):
+        """
+        ???? TODO document
+        :param target:
+        :return:
+        """
         target.chronoStart_sv.set(self.chronoStart_sv.get())
         target.chronoEnd_sv.set(self.chronoEnd_sv.get())
         target.binSizeMicros_sv.set(self.bin_size_micros_sv.get())

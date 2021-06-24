@@ -69,11 +69,19 @@ class Menu():
 
         self.menuSystem.add_cascade(label="Debug", menu=self.menu_debug)
 
+        self.menu_benchmark = tk.Menu(self.menuSystem, tearoff=0)
+        self.menu_benchmark.add_command(label='Bench Lifetime Fitting', accelerator="Ctrl+b", underline=1, command=self.launch_bench_LF_GUI)
+
+        self.menuSystem.add_cascade(label="Benchmark", menu=self.menu_benchmark)
+
         self.master.config(menu=self.menuSystem)
 
     def get_raw_macrotimes(self):
         self.controller.get_raw_data()
 
+
+    def launch_bench_LF_GUI(self):
+        self.controller.launch_bench_LF_GUI()
 
     def quit(self):
         result = messagebox.askquestion("Quit ?", "Are You Sure ?", icon='warning')

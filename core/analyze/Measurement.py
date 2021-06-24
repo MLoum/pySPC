@@ -179,6 +179,9 @@ class Measurements:
 
         for i, key in enumerate(self.params):
             # self.params[key].set(value=params_["val"][i], min=params_["min"][i], max=params_["max"][i], vary=bool(params_["hold"][i]), brute_step=params_["brute_step"][i])
+            if self.params[key].user_data is not None:
+                if "dontGenerate" in self.params[key].user_data:
+                    continue
             self.params[key].set(value=params_[key]["value"], min=params_[key]["min"], max=params_[key]["max"], vary=params_[key]["vary"], brute_step=params_[key]["b_step"])
 
 

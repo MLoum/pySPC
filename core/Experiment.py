@@ -4,7 +4,7 @@ from core import Results
 import os
 import numpy as np
 
-from core.analyze import lifetime, FCS, DLS, chronogram, PCH, burstDetection, phosphorescence
+from core.analyze import lifetime, FCS, DLS, chronogram, PCH, burstDetection, phosphorescence, PTOFS
 
 """
 Test Experiment
@@ -130,7 +130,7 @@ class Experiment(object):
                 self.store_measurement(chrono)
             return chrono
         elif type_ == "lifetime":
-            lifetime_ = lifetime.lifeTimeMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, name, comment)
+            lifetime_ = lifetime.lifeTimeMeasurements(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment)
             if is_store:
                 self.store_measurement(lifetime_)
             return lifetime_
@@ -154,6 +154,11 @@ class Experiment(object):
             if is_store:
                 self.store_measurement(phospho)
             return phospho
+        elif type_ == "PTOFS":
+            ptofs = PTOFS.PTOFS(self.exps, self, self.exp_param, num_channel, start_tick, end_tick, type_="PTOFS",  name=name, comment=comment)
+            if is_store:
+                self.store_measurement(ptofs)
+            return ptofs
 
 
     def del_measurement(self, name):

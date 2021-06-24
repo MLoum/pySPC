@@ -25,11 +25,14 @@ from core import Results
 from core import Data
 from core import Experiment, Experiments
 from core.analyze.lifetime import IRF
+from core.liftetimeBenchmark.benchmark import LifeTimeBenchmark
 
-from GUI import View, burst_analysis
+from GUI import View, burst_analysis, LifetimeBench
 from GUI import guiForFitOperation
 
 import shelve
+
+
 
 # from IPython import embed
 
@@ -114,6 +117,7 @@ class Controller:
             start_tick = self.current_exp.convert_seconds_in_ticks(self.view.currentTimeWindow[0] / 1E6)
             end_tick = self.current_exp.convert_seconds_in_ticks(self.view.currentTimeWindow[1] / 1E6)
         elif selection_mode == "Time Zoom":
+            #FIXME false after filtering
             start_tick = self.current_exp.convert_seconds_in_ticks(self.view.current_time_zoom_window[0] / 1E6)
             end_tick = self.current_exp.convert_seconds_in_ticks(self.view.current_time_zoom_window[1] / 1E6)
 
@@ -182,11 +186,11 @@ class Controller:
             if type_ in ["lifetime", "FCS"]:
                 if self.view.archi.analyze_area.analyze_gui.is_overlay_on_time_zoom.get():
                     x1, x2 = self.view.archi.analyze_area.gui_for_fit_operation.get_lim_for_fit()
-                    if x1 !=0 and x2 != -1:
+                    if x1 != 0 and x2 != -1:
                         overlay = self.current_measurement.create_chronogram_overlay(time_zoom_chronograms, x1, x2)
 
 
-        self.view.archi.navigation_area.timeZoom.graph_timeZoom.plot(self.current_exp.time_zoom_chronograms, overlay)
+        self.view.archi.navigation_area.time_zoom.graph_timeZoom.plot(self.current_exp.time_zoom_chronograms, overlay)
 
         if is_draw_burst:
             self.view.archi.navigation_area.graph_navigation.bursts = bursts
@@ -200,18 +204,18 @@ class Controller:
                                                               self.view.currentTimeWindow[0],
                                                               self.view.currentTimeWindow[1])
 
-        self.view.archi.navigation_area.timeZoom.chronoStart_sv.set(str(int(self.view.currentTimeWindow[0] / 1000)))
-        self.view.archi.navigation_area.timeZoom.chronoEnd_sv.set(str(int(self.view.currentTimeWindow[1] / 1000)))
+        self.view.archi.navigation_area.time_zoom.chronoStart_sv.set(str(int(self.view.currentTimeWindow[0] / 1000)))
+        self.view.archi.navigation_area.time_zoom.chronoEnd_sv.set(str(int(self.view.currentTimeWindow[1] / 1000)))
 
         self.view.archi.navigation_area.filtre_t1_sv.set(str(self.view.current_time_zoom_window[0]))
         self.view.archi.navigation_area.filtre_t2_sv.set(str(self.view.current_time_zoom_window[1]))
 
         self.current_exp.create_mini_PCH()
-        self.view.archi.navigation_area.timeZoom.graph_miniPCH.plot(self.current_exp.mini_PCHs)
+        self.view.archi.navigation_area.time_zoom.graph_miniPCH.plot(self.current_exp.mini_PCHs)
 
     def set_chrono_bin_size_s(self, binSize_s):
-        self.view.archi.navigation_area.timeZoom.bin_size_micros_sv.set(str(binSize_s * 1E6))
-        self.view.timezoom_bin_size_s = binSize_s
+        self.view.archi.navigation_area.time_zoom.bin_size_micros_sv.set(str(binSize_s * 1E6))
+        self.view.time_zoom = binSize_s
 
     # Measurement management
     def create_measurement(self, type_, name, comment, additional_params=None):
@@ -221,6 +225,11 @@ class Controller:
         # for key, value in additional_params.items():
         #     params[key] = value
         return self.current_exp.create_measurement(num_channel, start_tick, end_tick, type_, name, comment, is_store=True)
+
+
+    def createBench(self, type_="lifetime", name="", comment="", additional_params=None):
+        if type_=="lifetime":
+            return LifeTimeBenchmark
 
     def get_measurement(self, measurement_name):
         return self.current_exp.get_measurement(measurement_name)
@@ -292,6 +301,7 @@ class Controller:
             params = [num_c1, num_c2, start_correlTime_ms, max_correlTime_ms, is_multi_proc, precision, algo]
         elif measurement.type == "lifetime":
             # TODO create Entry
+            # FIXME multichannel
             channel = 0
             self.current_exp.set_measurement_channel(measurement, channel)
             params = None
@@ -302,6 +312,21 @@ class Controller:
             min_time_micros = float(gui.min_time_micros_sv.get())
             max_time_ms = float(gui.max_time_ms_sv.get())
             params = [num_channel_start, num_channel_stop, time_step_micros, min_time_micros, max_time_ms]
+
+        elif measurement.type == "TOFPS":
+            if gui.radio_micro_spec_sv.get() == "m":
+                # Plot microtime
+                channel = 0
+                self.current_exp.set_measurement_channel(measurement, channel)
+                params = None
+            else:
+                params = {}
+                # plot spectrum
+                params["wl_min"] = float(gui.wl_min_sv.get())
+                params["wl_max"] = float(gui.wl_max_sv.get())
+                params["fiber_length"] = float(gui.fiber_length_sv.get())
+                params["microtime_calib"] = int(gui.microtime_calib_sv.get())
+                params["wl_calib"] = float(gui.wl_calib_sv.get())
 
         self.view.archi.log_area.master_frame.focus_set()
         self.view.archi.log_area.logger.info("starting measurement calculation\n")
@@ -364,9 +389,9 @@ class Controller:
         self.update_all(is_full_update=True)
 
     def set_macrotime_filter_threshold(self, threshold):
-        self.view.archi.navigation_area.timeZoom.graph_timeZoom.threshold = threshold
-        self.view.archi.navigation_area.timeZoom.graph_timeZoom.threshold_flank = None
-        self.view.archi.navigation_area.timeZoom.graph_miniPCH.threshold = threshold
+        self.view.archi.navigation_area.time_zoom.graph_timeZoom.threshold = threshold
+        self.view.archi.navigation_area.time_zoom.graph_timeZoom.threshold_flank = None
+        self.view.archi.navigation_area.time_zoom.graph_miniPCH.threshold = threshold
 
         self.view.archi.navigation_area.filter_threshold_sv.set(str(threshold))
         self.update_navigation()
@@ -472,6 +497,18 @@ class Controller:
 
         self.view.burst_analysis_gui = burst_analysis.BurstAnalysis_gui(self.root, self, self.view.appearenceParam, burst_measurement)
 
+
+    def launch_bench_LF_GUI(self):
+        self.life_time_benchmark = LifeTimeBenchmark()
+        self.view.bench_LF_fitting = LifetimeBench.LifetimeBench_gui(self.root, self, self.view.appearenceParam, self.life_time_benchmark)
+
+
+    def launch_bench(self, params):
+        #TODO new thread and feedback from algorithm
+        if self.life_time_benchmark is not None:
+            self.life_time_benchmark.create_data(params)
+
+
     def validate_burst_selection(self, bursts_measurement):
         self.add_measurement(bursts_measurement)
         self.view.archi.status_area.insert_measurement(bursts_measurement)
@@ -489,7 +526,7 @@ class Controller:
         burst_end_micro_s = burst.num_bin_end * self.current_exp.convert_ticks_in_seconds(measurement.bin_in_tick)*1E6
         burst_duration_micro = burst_end_micro_s - burst_start_micro_s
 
-        # Wa want at least 20 (?) bins on screen
+        # Wa want at least 50 (?) bins on screen
 
         min_nb_of_bin_to_display = 50
         coeff_visualization = 1
@@ -504,9 +541,9 @@ class Controller:
         self.view.current_time_zoom_window[0] = burst_start_micro_s
         self.view.current_time_zoom_window[1] = burst_end_micro_s
 
-        self.view.archi.navigation_area.timeZoom.graph_timeZoom.threshold = measurement.burst_threshold
-        self.view.archi.navigation_area.timeZoom.graph_timeZoom.threshold_flank = measurement.flank_threshold
-        self.view.archi.navigation_area.timeZoom.graph_miniPCH.threshold = measurement.burst_threshold
+        self.view.archi.navigation_area.time_zoom.graph_timeZoom.threshold = measurement.burst_threshold
+        self.view.archi.navigation_area.time_zoom.graph_timeZoom.threshold_flank = measurement.flank_threshold
+        self.view.archi.navigation_area.time_zoom.graph_miniPCH.threshold = measurement.burst_threshold
 
         self.view.archi.navigation_area.filter_threshold_sv.set(str(measurement.threshold))
 

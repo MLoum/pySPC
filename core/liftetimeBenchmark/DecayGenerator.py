@@ -4,69 +4,59 @@ import multiprocessing as mp
 from core.analyze.lifetime import IRF
 import shelve
 from scipy.ndimage.interpolation import shift as shift_scipy
+from core.analyze.lifetime import lifeTimeMeasurements
 
-class Decay:
-    """
-    A very simple and basic object to store the data of a decay and its parameter (lifetimes, amplitudes, ...)
-    """
-
-    def __init__(self, data, fitted_params_dict, aux_params_dict):
-        self.data = data
-        # paramater obtained from fit (tau, amplitude)
-        self.fitted_params_dict = fitted_params_dict
-        # parameter used to generate the data (noise, etc)
-        self.aux_params_dict = aux_params_dict
 
 class DecayGenerator():
-    def __init__(self, nb_decay=100, time_nbins=4096, time_step_ns=0.01, model="single_exp", params_dict={}):
-        self.nb_decay = nb_decay
+    def __init__(self, params_dict):
+        self.nb_decay = params_dict["nb_decays"]
         #FIXME
-        self.time_nbins = time_nbins
-        self.time_step_ns = time_step_ns
-        self.model = model
+        self.time_nbins = params_dict["nb_time_bins"]
+        self.time_step_ns = params_dict["time_bins_duration"]/1000.0    #user interface is in ps
+        self.model = params_dict["model_name"]
         self.params_dict = params_dict
 
         self.time_idx = np.arange(self.time_nbins)  # time axis in index units
         self.time_ns = self.time_idx * self.time_step_ns  # time axis in nano-seconds
 
         self.decays = []
+
+        #TODO as many meseauremnt as workers.
+        self.lifetime_measurement = lifeTimeMeasurements()
         self.irf = None
 
-    def generate_data(self):
-        decay_data = []
-        if self.model == "single_exp":
-            min_tau = self.params_dict["tau"][0]
-            max_tau = self.params_dict["tau"][1]
-            t0 = self.params_dict["t0"][0]
-            noise_min = self.params_dict["noise"][0]
-            noise_max = self.params_dict["noise"][1]
-            nb_photon_min = self.params_dict["nb_photon"][0]
-            nb_photon_max = self.params_dict["nb_photon"][1]
-            tau_irf = self.params_dict["tau_irf"][0]
-            shift_irf = self.params_dict["shift_irf"][0]
+    def generate_data(self, params_dict):
+        self.lifetime_measurement.set_model(params_dict["model_name"])
 
-            # Tirer au hasard les parametres
-            taus = np.random.uniform(min_tau, max_tau, size=self.nb_decay)
-            noises = np.random.uniform(noise_min, noise_max, size=self.nb_decay)
-            nb_photons = np.random.uniform(nb_photon_min, nb_photon_max, size=self.nb_decay).astype(np.int)
+        dict_random_parameters = {}
+        for key in self.lifetime_measurement.params.keys():
+            if self.lifetime_measurement.params[key].user_data is not None:
+                if "dontGenerate" in self.lifetime_measurement.params[key].user_data:
+                    continue
+            dict_random_parameters[key] = np.random.uniform(params_dict[key]["min_gen"], params_dict[key]["max_gen"], size=self.nb_decay)
 
-            is_multi_core = False
-            if is_multi_core:
-                # def generate_single_exp_decay_fct(tau, t0, noise, nb_photons):
-                #     return self.generate_single_exp_decay(tau, t0, noise, nb_photons)
+        for key in ["nb_photon", "noise", "irf_length", "irf_shift"]:
+            dict_random_parameters[key] = np.random.uniform(params_dict[key]["min_gen"], params_dict[key]["max_gen"],
+                                                            size=self.nb_decay)
+        is_multi_core = False
+        if is_multi_core:
+            # def generate_single_exp_decay_fct(tau, t0, noise, nb_photons):
+            #     return self.generate_single_exp_decay(tau, t0, noise, nb_photons)
 
-                #FIXME
-                nb_of_workers = 4
-                p = mp.Pool(nb_of_workers)
-                self.decays = [
-                    p.apply(self.generate_single_exp_decay, args=(taus[i], t0, noises[i], nb_photons[i], tau_irf))
-                    for i in range(self.nb_decay)]
-            else:
-                # Single core
-                self.decays = []
-                for i in range(self.nb_decay):
-                    # TODO vectorization ? Mais avec des parametres tous differents ?
-                    self.decays.append(self.generate_single_exp_decay(taus[i], t0, noises[i], nb_photons[i], tau_irf))
+            # FIXME
+            nb_of_workers = 4
+            p = mp.Pool(nb_of_workers)
+            self.decays = [
+                p.apply(self.generate_single_exp_decay, args=(taus[i], t0, noises[i], nb_photons[i], tau_irf))
+                for i in range(self.nb_decay)]
+        else:
+            # Single core
+            self.decays = []
+            for i in range(self.nb_decay):
+                # TODO vectorization ? Mais avec des parametres tous differents ?
+                self.decays.append(self.lifetime_measurement.model.generate(self.time_ns, self.time_idx, dict_random_parameters, i))
+
+
 
 
     def generate_single_exp_decay(self, tau, t0, noise, nb_of_generated_photon, tau_irf=None, irf_shift=None):
@@ -104,6 +94,37 @@ class DecayGenerator():
         aux_params_dict["nb_photon"] = nb_of_generated_photon
 
         return Decay(decay_data, fitted_params_dict, aux_params_dict)
+
+
+    def generate_simplest_single_exp_decay(self, tau, t0, noise, nb_of_generated_photon):
+        decay = np.exp(-(self.time_ns - t0) / tau)
+        decay[self.time_ns < t0] = 0
+        decay /= decay.sum()
+
+        decay_obj = rv_discrete(name='mono_exp', values=(self.time_idx, decay))
+        photons = decay_obj.rvs(size=nb_of_generated_photon)
+        decay_data = np.bincount(photons)
+        nb_of_pad_data = self.time_idx.size - decay_data.size
+        zeros = np.zeros(nb_of_pad_data)
+        decay_data = np.concatenate((decay_data, zeros))
+
+        fitted_params_dict = {}
+        fitted_params_dict["amp"] = np.max(decay_data)  # NB : before adding noise
+
+        # Adding noise
+        decay_data += np.random.random(self.time_idx.size) * noise
+        decay_data = decay_data.astype(np.int)
+        aux_params_dict = {}
+
+        fitted_params_dict["tau"] = tau
+        fitted_params_dict["t0"] = t0
+        aux_params_dict["noise"] = noise
+        aux_params_dict["nb_photon"] = nb_of_generated_photon
+
+        return Decay(decay_data, fitted_params_dict, aux_params_dict)
+
+
+
 
     def generate_double_exp_decay(self, a1, a2, tau1, tau2, t0, noise, nb_of_generated_photon):
         C = 1 / (a1 * tau1 + a2 * tau2)

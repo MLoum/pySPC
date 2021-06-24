@@ -378,7 +378,6 @@ class Graph_Results:
         self.view.archi.analyze_area.resultArea_gui.set_xy_cursor_position(event.xdata, event.ydata)
 
     def scrollEvent(self, event):
-
         if event.button == 'up':
             if self.alt_is_held or self.controller.view.alt_is_held:
                 # on y axis

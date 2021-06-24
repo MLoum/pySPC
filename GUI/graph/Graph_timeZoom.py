@@ -101,7 +101,7 @@ class Graph_timeZoom():
                 chrono_plot_x = chrono.time_axis[idx]
 
                 if overlay is not None:
-                    #FIXME overlay broken
+                    #FIXME overlay broken with multichannel
                     overlay = overlay[idx]
 
 
@@ -113,7 +113,10 @@ class Graph_timeZoom():
                 max_data = max(chrono_y)
 
             self.ax.plot(chrono_plot_x, chrono_y, self.view.appearenceParam.channels_trace_color[num_channel])
-            self.ax.fill_between(chrono_plot_x, 0, chrono_y, alpha=self.view.appearenceParam.channels_trace_alpha[num_channel])
+            self.ax.fill_between(chrono_plot_x, 0, chrono_y,
+                                 alpha=self.view.appearenceParam.channels_trace_alpha[num_channel])
+            # self.ax.bar(chrono_plot_x, chrono_y, width=0.8, color=self.view.appearenceParam.channels_trace_color[num_channel], linewidth=5)
+
 
         # TODO fix this pythonic one line tentative
         # self.ax.set_xlim(min(chronos, key=lambda x: x.time_axis[-1]), max(chronos, key=lambda x: x.time_axis[-1]))
@@ -159,7 +162,8 @@ class Graph_timeZoom():
         if overlay is not None:
             # Overlay is a 1D array
             nb_y_point = 10
-            y = np.linspace(0, chronos.data.max(), nb_y_point)
+            # FIXME multi channel
+            y = np.linspace(0, chronos[0].data.max(), nb_y_point)
             # z = np.repeat(overlay, nb_y_point, axis=0)
             z = np.tile(overlay, (nb_y_point, 1))
             self.ax.contourf(chrono_plot_x, y, z, 30, alpha=0.3, cmap=plt.cm.hot)
@@ -225,7 +229,7 @@ class Graph_timeZoom():
         self.figure.canvas.mpl_connect('scroll_event', self.scrollEvent)
         self.figure.canvas.mpl_connect('button_press_event', self.button_press_event)
         self.figure.canvas.mpl_connect('button_release_event', self.button_release_event)
-        # self.figure.canvas.mpl_connect('motion_notify_event', self.motion_notify_event)
+        self.figure.canvas.mpl_connect('motion_notify_event', self.motion_notify_event)
 
     def button_release_event(self, event):
         if event.button == 1:
@@ -269,6 +273,8 @@ class Graph_timeZoom():
         # self.setOnOffCursors(True)
 
 
+    def motion_notify_event(self, event):
+        self.view.archi.navigation_area.time_zoom.set_xy_cursor_position(event.xdata, event.ydata)
 
     def cursorMove(self, event):
         print('Cursor move')

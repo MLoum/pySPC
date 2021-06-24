@@ -7,6 +7,7 @@ from .analyze_Lifetime import lifeTimeAnalyze_gui
 from .analyze_DLS import DLS_Analyze_gui
 from .analyze_FCS import FCS_Analyze_gui
 from .analyze_phospho import PhosphoAnalyze_gui
+from .analyze_PTOFS import PTOFS_Analyze_gui
 
 from .resultsArea import Results_area
 
@@ -103,6 +104,9 @@ class Analyze_area():
             self.gui_for_fit_operation = None
         elif measurement.type == "PCH":
             self.gui_for_fit_operation = None
+        elif measurement.type == "PTOFS":
+            self.analyze_gui = PTOFS_Analyze_gui(self.frame_operation, self.controller, self.appearence_param)
+            self.analyze_gui.populate()
 
         self.frame_operation.pack(side="top", fill="both", expand=True)
 
@@ -117,6 +121,11 @@ class Analyze_area():
         elif measurement.type == "lifetime":
             self.life_time_analyze_gui = lifeTimeAnalyze_gui(self.frame_operation, self.controller, self.appearence_param)
             self.life_time_analyze_gui.populate()
+
+        elif measurement.type == "PTOFS":
+            self.ptofs_analyze_gui = PTOFS_Analyze_gui(self.frame_operation, self.controller, self.appearence_param)
+            self.ptofs_analyze_gui.populate()
+
         elif measurement.type == "DLS":
             pass
 

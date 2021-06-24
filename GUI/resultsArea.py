@@ -44,6 +44,8 @@ class Results_area():
         self.y_cursor_sv = tk.StringVar()
         ttk.Entry(self.frame_cmd_graph, width=12, justify=tk.CENTER, font=self.appearence_param.font_xy_coordinate, textvariable=self.y_cursor_sv).grid(row=1, column=1)
 
+
+
         ttk.Button(self.frame_cmd_graph, text="to x Selec", width=15, command=self.zoom_to_x_selec).grid(row=0, column=2)
         ttk.Button(self.frame_cmd_graph, text="Full", width=15, command=self.zoom_full).grid(row=1, column=2)
 

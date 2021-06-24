@@ -305,9 +305,11 @@ class BurstAnalysis_gui():
         self.tree_view.heading("p8", text="p8")
 
         #FIXME only change text color to light gray
-        self.tree_view.tag_configure('filtered', foreground='#333')
-        self.tree_view.tag_configure('filtered', background='green')
+        self.tree_view.tag_configure('filtered', foreground='gray50')
+        self.tree_view.tag_configure('filtered', background='gray20')
 
+        self.tree_view.tag_configure('highlighted', background='gray90')
+        self.tree_view.tag_configure('highlighted', foreground='gold3')
 
         ysb = ttk.Scrollbar(self.frame_burst_list, orient='vertical', command=self.tree_view.yview)
         self.tree_view.grid(row=0, column=0, sticky='nsew')
@@ -320,8 +322,8 @@ class BurstAnalysis_gui():
         self.frame_tree_params = tk.Frame(self.frame_burst_list)
         self.frame_tree_params.grid(row=0, column=2, sticky='nsew')
 
-        self.check_show_filtered_iv = tk.IntVar()
-        tk.Checkbutton(self.frame_tree_params, text='show Filtered as gray', variable=self.check_show_filtered_iv, onvalue=1, offvalue=0).grid(row=0, column=0, columnspan=2)
+        self.check_show_filtered_iv = tk.IntVar(value=0)
+        # tk.Checkbutton(self.frame_tree_params, text='show Filtered as gray', variable=self.check_show_filtered_iv, command=self.update_ui(), onvalue=1, offvalue=0).grid(row=0, column=0, columnspan=2)
 
         ttk.Label(self.frame_tree_params, text='Nb filtered burst').grid(row=1, column=0)
         self.nb_filtered_burst_sv = tk.StringVar()
@@ -334,6 +336,13 @@ class BurstAnalysis_gui():
         e.config(state=tk.DISABLED)
         e.grid(row=1, column=3)
 
+        ttk.Button(self.frame_tree_params, text="Toggle Filtered", command=self.toggle_filter_burst).grid(row=2, column=0)
+        ttk.Button(self.frame_tree_params, text="Toggle Highlighted", command=self.toggle_highlight_burst).grid(row=3,
+                                                                                                          column=0)
+
+
+
+
 
         # Filter burst
         self.frame_filter_burst = tk.LabelFrame(self.frame_filter, text="Filter Burst",
@@ -342,63 +351,81 @@ class BurstAnalysis_gui():
 
         pad_filter = 5
 
-        ttk.Label(self.frame_filter_burst, text='Filter 1 ', background="white").grid(row=0, column=0,  columnspan=5, padx=pad_filter)
-        ttk.Label(self.frame_filter_burst, text='Filter 2 ', background="white").grid(row=0, column=6,  columnspan=5, padx=pad_filter)
+        ttk.Label(self.frame_filter_burst, text='           Filter 1           ', background="white").grid(row=0, column=0,  columnspan=6, padx=pad_filter)
+        ttk.Label(self.frame_filter_burst, text='           Filter 2           ', background="white").grid(row=0, column=7,  columnspan=6, padx=pad_filter)
+
+        self.is_not_f1 = True
+        self.button_not_f1 = tk.Button(self.frame_filter_burst, text="not", width=3, command=self.toggle_not_f1)
+        self.button_not_f1.grid(row=1, column=0, padx=pad_filter)
+
+        # So that not start as false
+        self.toggle_not_f1()
+
 
         self.filter_1_low_sv = tk.StringVar()
-        ttk.Entry(self.frame_filter_burst, textvariable=self.filter_1_low_sv, justify=tk.CENTER, width=12).grid(row=1, column=0, padx=pad_filter)
-        ttk.Label(self.frame_filter_burst, text=' < ').grid(row=1, column=1, padx=pad_filter)
+        ttk.Entry(self.frame_filter_burst, textvariable=self.filter_1_low_sv, justify=tk.CENTER, width=12).grid(row=1, column=1, padx=pad_filter)
+        ttk.Label(self.frame_filter_burst, text=' < ').grid(row=1, column=2, padx=pad_filter)
 
         self.cb_value_filter_1_sv = tk.StringVar()
         self.cb_value_filter_1 = ttk.Combobox(self.frame_filter_burst, width=25, justify=tk.CENTER, textvariable=self.cb_value_filter_1_sv, values='')
         self.cb_value_filter_1['values'] = ["None", "duration", "nb_photon", "CPS", "p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"]
         self.cb_value_filter_1.set('None')
         self.cb_value_filter_1.bind('<<ComboboxSelected>>', self.change_filter1_type)
-        self.cb_value_filter_1.grid(row=1, column=2, padx=pad_filter)
+        self.cb_value_filter_1.grid(row=1, column=3, padx=pad_filter)
 
-        ttk.Label(self.frame_filter_burst, text=' < ').grid(row=1, column=3, padx=pad_filter)
+        ttk.Label(self.frame_filter_burst, text=' < ').grid(row=1, column=4, padx=pad_filter)
         self.filter_1_high_sv = tk.StringVar()
-        ttk.Entry(self.frame_filter_burst, textvariable=self.filter_1_high_sv, justify=tk.CENTER, width=12).grid(row=1, column=4, padx=pad_filter)
+        ttk.Entry(self.frame_filter_burst, textvariable=self.filter_1_high_sv, justify=tk.CENTER, width=12).grid(row=1, column=5, padx=pad_filter)
 
         self.cb_value_filter_bool_op_sv = tk.StringVar()
         self.cb_value_filter_bool_op = ttk.Combobox(self.frame_filter_burst, width=25, justify=tk.CENTER, textvariable=self.cb_value_filter_bool_op_sv, values='')
         self.cb_value_filter_bool_op['values'] = ["and", "or", "xor"]
         self.cb_value_filter_bool_op.set('or')
 
-        self.cb_value_filter_bool_op.grid(row=1, column=5, padx=pad_filter)
+        self.cb_value_filter_bool_op.grid(row=1, column=6, padx=pad_filter)
+
+        self.is_not_f2 = True
+        self.button_not_f2 = tk.Button(self.frame_filter_burst, text="not", width=3, command=self.toggle_not_f2)
+        self.button_not_f2.grid(row=1, column=7, padx=pad_filter)
+        # So that not start as false
+        self.toggle_not_f2()
+
+
+
 
         self.filter_2_low_sv = tk.StringVar()
-        ttk.Entry(self.frame_filter_burst, textvariable=self.filter_2_low_sv, justify=tk.CENTER, width=12).grid(row=1, column=6, padx=pad_filter)
-        ttk.Label(self.frame_filter_burst, text=' < ').grid(row=1, column=7, padx=pad_filter)
+        ttk.Entry(self.frame_filter_burst, textvariable=self.filter_2_low_sv, justify=tk.CENTER, width=12).grid(row=1, column=8, padx=pad_filter)
+        ttk.Label(self.frame_filter_burst, text=' < ').grid(row=1, column=9, padx=pad_filter)
 
         self.cb_value_filter_2_sv = tk.StringVar()
         self.cb_value_filter_2 = ttk.Combobox(self.frame_filter_burst, width=25, justify=tk.CENTER, textvariable=self.cb_value_filter_2_sv, values='')
         self.cb_value_filter_2['values'] = ["None", "duration", "nb_photon", "CPS", "p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"]
         self.cb_value_filter_2.set('None')
         self.cb_value_filter_2.bind('<<ComboboxSelected>>', self.change_filter2_type)
-        self.cb_value_filter_2.grid(row=1, column=8, padx=pad_filter)
+        self.cb_value_filter_2.grid(row=1, column=10, padx=pad_filter)
 
-        ttk.Label(self.frame_filter_burst, text=' < ').grid(row=1, column=9, padx=pad_filter)
+        ttk.Label(self.frame_filter_burst, text=' < ').grid(row=1, column=11, padx=pad_filter)
 
         self.filter_2_high_sv = tk.StringVar()
-        ttk.Entry(self.frame_filter_burst, textvariable=self.filter_2_high_sv, justify=tk.CENTER, width=12).grid(row=1, column=10, padx=pad_filter)
+        ttk.Entry(self.frame_filter_burst, textvariable=self.filter_2_high_sv, justify=tk.CENTER, width=12).grid(row=1, column=12, padx=pad_filter)
 
 
         self.frame_vs_plot_f1_grid = tk.Frame(self.frame_filter_burst)
-        self.frame_vs_plot_f1_grid.grid(row=2, column=0, columnspan=5)
+        self.frame_vs_plot_f1_grid.grid(row=2, column=0, columnspan=6)
 
         self.frame_vs_plot_f1 = tk.Frame(self.frame_vs_plot_f1_grid)
         self.frame_vs_plot_f1.pack(side="top", fill="both", expand=True)
 
-        self.filter_1_graph = Graph_filter(self.frame_vs_plot_f1, self.controller.view, self.controller, self.filter_1_low_sv, self.filter_1_high_sv, figsize=(6,2), dpi=75)
+        self.filter_1_graph = Graph_filter(self.frame_vs_plot_f1, self.controller.view, self.controller, self.filter_1_low_sv, self.filter_1_high_sv, figsize=(7,2), dpi=75)
 
         self.frame_vs_plot_f2_grid = tk.Frame(self.frame_filter_burst)
-        self.frame_vs_plot_f2_grid.grid(row=2, column=6, columnspan=5)
+        self.frame_vs_plot_f2_grid.grid(row=2, column=6, columnspan=6)
 
         self.frame_vs_plot_f2 = tk.Frame(self.frame_vs_plot_f2_grid)
         self.frame_vs_plot_f2.pack(side="top", fill="both", expand=True)
 
-        self.filter_2_graph = Graph_filter(self.frame_vs_plot_f2, self.controller.view, self.controller, self.filter_2_low_sv, self.filter_2_high_sv, figsize=(6,2), dpi=75)
+        self.filter_2_graph = Graph_filter(self.frame_vs_plot_f2, self.controller.view, self.controller, self.filter_2_low_sv, self.filter_2_high_sv, figsize=(7,2), dpi=75)
+
 
 
         ttk.Button(self.frame_filter_burst, text="Filter", command=self.filter_burst).grid(row=3, column=0, columnspan=6,  padx=pad_filter)
@@ -473,7 +500,10 @@ class BurstAnalysis_gui():
         self.toolbar_plotvs = NavigationToolbar2Tk(self.canvas_plotvs, self.frame_vs_plot)
         self.canvas_plotvs.get_tk_widget().pack(side='top', fill='both', expand=1)
 
-
+        #FIXME
+        # NB it is here because its callback need the existence of self.filter_1_graph
+        # tk.Checkbutton(self.frame_tree_params, text='show Filtered as gray', variable=self.check_show_filtered_iv,
+        #                command=self.update_ui(), onvalue=1, offvalue=0).grid(row=0, column=0, columnspan=2)
 
 
     def bin_signal(self):
@@ -487,6 +517,22 @@ class BurstAnalysis_gui():
         self.pch_graph.plot(self.PCH)
 
 
+    def toggle_not_f1(self):
+        if self.is_not_f1:
+            self.button_not_f1.config(font=('courier', 12, 'normal'), foreground='black', fg='gray50')
+            self.is_not_f1 = False
+        else:
+            self.button_not_f1.config(font=('courier', 12, 'bold'), foreground='black', fg='gray0')
+            self.is_not_f1 = True
+
+    def toggle_not_f2(self):
+        if self.is_not_f2:
+            self.button_not_f2.config(font=('courier', 12, 'normal'), foreground='black', fg='gray50')
+            self.is_not_f2 = False
+        else:
+            self.button_not_f2.config(font=('courier', 12, 'bold'), foreground='black', fg='gray0')
+            self.is_not_f2 = True
+
     def change_model(self):
         pass
 
@@ -496,11 +542,47 @@ class BurstAnalysis_gui():
     def change_y_plot(self, event=None):
         pass
 
-    def clear_filter(self):
-        self.burst_measure.clear_filter()
+    def update_ui(self):
         self.insert_measurement_tree_view(self.burst_measure)
         self.filter_1_graph.replot()
         self.filter_2_graph.replot()
+        self.plot()
+
+    def clear_filter(self):
+        self.burst_measure.clear_filter()
+        self.update_ui()
+
+    def get_selected_burst_from_treeview(self):
+        id_selected_item = self.tree_view.focus()
+        parent_iid = self.tree_view.parent(id_selected_item)
+        selected_item = self.tree_view.item(id_selected_item)
+
+        #Have we clicked on a burst measurement or a burst ?
+        if parent_iid=="":
+            # This is a measure
+            return None
+        else:
+            # This is a burst
+            # Burst are retreived via their id(). See insert method
+            num_burst = 0
+            for id_burst, iid_tk in self.burst_iid_dict.items():
+                if iid_tk == id_selected_item:
+                    for burst in self.burst_measure.bursts:
+                        if id_burst == id(burst):
+                            break
+                        else:
+                            num_burst += 1
+            return self.burst_measure.bursts[num_burst]
+
+    def toggle_filter_burst(self):
+        burst = self.get_selected_burst_from_treeview()
+        burst.is_filtered = not burst.is_filtered
+        self.update_ui()
+
+    def toggle_highlight_burst(self):
+        burst = self.get_selected_burst_from_treeview()
+        burst.is_highlighted = not burst.is_highlighted
+        self.update_ui()
 
 
     def filter_burst(self):
@@ -521,11 +603,9 @@ class BurstAnalysis_gui():
         type2 = self.cb_value_filter_2_sv.get()
         low2 = convert_sv_float(self.filter_2_low_sv)
         high2 = convert_sv_float(self.filter_2_high_sv)
-        self.burst_measure.filter(low1, high1, type1, bool_op, low2, high2, type2)
+        self.burst_measure.filter(low1, high1, type1, self.is_not_f1, bool_op, low2, high2, type2, self.is_not_f2)
 
-        self.insert_measurement_tree_view(self.burst_measure)
-        self.filter_1_graph.replot()
-        self.filter_2_graph.replot()
+        self.update_ui()
 
     def plot(self):
         self.ax_plotvs.clear()
@@ -682,6 +762,7 @@ class BurstAnalysis_gui():
 
 
     def insert_measurement_tree_view(self, burst_measurement):
+        #FIXME j'ai melangé deux methodes pour inserer UN burst et tous les bursts ?
         self.clear_treeview()
 
 
@@ -697,8 +778,13 @@ class BurstAnalysis_gui():
             tags_ = []
             if burst.is_filtered:
                 tags_.append("filtered")
+                if not self.check_show_filtered_iv.get():
+                    continue
                 #TODO depend on checkbox
                 # continue
+            if burst.is_highlighted:
+                tags_.append("highlighted")
+
             if burst.measurement is None:
                 type = "None"
                 p1,p2,p3,p4,p5,p6,p7,p8 = "","","","","","","",""
@@ -717,32 +803,12 @@ class BurstAnalysis_gui():
 
 
     def treeview_measurement_select(self, event):
-        id_selected_item = self.tree_view.focus()
-        parent_iid = self.tree_view.parent(id_selected_item)
-        selected_item = self.tree_view.item(id_selected_item)
-
-        #Have we clicked on a burst measurement or a burst ?
-        if parent_iid=="":
-            # This is a measure
-            pass
-        else:
-            # This is a burst
-            num_burst = 0
-            for id_burst, iid_tk in self.burst_iid_dict.items():
-                if iid_tk == id_selected_item:
-                    for burst in self.burst_measure.bursts:
-                        if id_burst==id(burst):
-                            break
-                        else:
-                            num_burst += 1
-            self.current_burst = self.controller.current_burst = self.burst_measure.bursts[num_burst]
-            self.controller.display_burst(self.current_burst, self.burst_measure)
+        self.current_burst = self.controller.current_burst = self.get_selected_burst_from_treeview()
+        self.controller.display_burst(self.current_burst, self.burst_measure)
 
         # item_num_burst = selected_item["values"][1]
         # item_name_mes = selected_item["values"][2]
         # item_name_burst = selected_item["values"][1]
-
-
 
         # if item_name_exp in self.controller.model.experiments:
         #     # this is an experiment

@@ -13,6 +13,23 @@ from scipy.integrate import cumtrapz
 import copy
 from .histogram import histogram
 
+
+
+from scipy.stats import rv_discrete
+
+
+class Decay:
+    """
+    A very simple and basic object to store the data of a generated decay and its parameter (lifetimes, amplitudes, ...)
+    """
+
+    def __init__(self, data, fitted_params_dict, aux_params_dict):
+        self.data = data
+        # paramater obtained from fit (tau, amplitude)
+        self.fitted_params_dict = fitted_params_dict
+        # parameter used to generate the data (noise, etc)
+        self.aux_params_dict = aux_params_dict
+
 def update_param_vals(pars, prefix, **kwargs):
     """Update parameter values with keyword arguments."""
     for key, val in kwargs.items():
@@ -24,6 +41,9 @@ def update_param_vals(pars, prefix, **kwargs):
 
 
 class lifetimeModelClass():
+    """
+    We create a new class instead of derivating from lmfit model because we want to use miminize in ordre to minimize the Maximum Likelyhood Estimator and not the chi
+    """
     def __init__(self, IRF=None):
         self.IRF = IRF
         # self.x_range = None
@@ -42,8 +62,95 @@ class lifetimeModelClass():
     def eval(self, t, params):
         pass
 
+    def generate(self, t, t_idx, params, num_generation):
+        pass
+
+
+def Jacquemin(x, y, pos_t0=0):
+    """
+
+    :param x: microtime (in ns)
+    :param y: non normalized decay
+    :param pos_t0:
+    :return:
+    """
+    x -= x[pos_t0]
+    x = x[pos_t0:]
+    y = y[pos_t0:]
+    max_y = np.max(y)
+    y /= y.sum()
+
+
+    S = np.empty_like(y)
+    S[0] = 0
+    S[1:] = np.cumsum(0.5 * (y[1:] + y[:-1]) * np.diff(x))
+
+    SS = np.empty_like(y)
+    SS[0] = 0
+    SS[1:] = np.cumsum(0.5 * (S[1:] + S[:-1]) * np.diff(x))
+
+    x2 = x * x
+    x3 = x2 * x
+    x4 = x2 * x2
+
+    M = [[sum(SS * SS), sum(SS * S), sum(SS * x2), sum(SS * x), sum(SS)],
+         [sum(SS * S), sum(S * S), sum(S * x2), sum(S * x), sum(S)],
+         [sum(SS * x2), sum(S * x2), sum(x4), sum(x3), sum(x2)],
+         [sum(SS * x), sum(S * x), sum(x3), sum(x2), sum(x)],
+         [sum(SS), sum(S), sum(x2), sum(x), len(x)]]
+
+    Ycol = np.array([sum(SS * y), sum(S * y), sum(x2 * y), sum(x * y), sum(y)])
+
+    (A, B, C, D, E), residues, rank, singulars = list(lstsq(M, Ycol))
+
+    '''
+    Minv = np.linalg.inv(M)    
+    A,B,C,D,E = list( np.matmul(Minv,Ycol) )
+    '''
+    if B * B + 4 * A > 0:
+        p = (1 / 2.) * (B + np.sqrt(B * B + 4 * A))
+        q = (1 / 2.) * (B - np.sqrt(B * B + 4 * A))
+    else:
+        return None
+
+    beta = np.exp(p * x)
+    eta = np.exp(q * x)
+
+    betaeta = beta * eta
+
+    L = [[len(x), sum(beta), sum(eta)],
+         [sum(beta), sum(beta * beta), sum(betaeta)],
+         [sum(eta), sum(betaeta), sum(eta * eta)]]
+
+    Ycol = np.array([sum(y), sum(beta * y), sum(eta * y)])
+
+    (a, b, c), residues, rank, singulars = list(lstsq(L, Ycol))
+
+    '''
+    Linv = np.linalg.inv(L)
+    a,b,c = list( np.matmul( Linv, Ycol ) )
+    '''
+    # sort in ascending order (fastest negative rate first)
+    (b, p), (c, q) = sorted([[b, p], [c, q]], key=lambda x: x[1])
+
+    # return a, b, c, p, q
+
+    ratio = b / c
+    b = max_y / (1 / ratio + 1)
+    c = max_y / (ratio + 1)
+
+    bckgnd = a
+
+    A1 = b
+    A2 = c
+
+    tau1 = -1.0 / p
+    tau2 = -1.0 / q
+
+    return(A1, tau1, A2, tau2, bckgnd)
+
 class OneExpDecay(lifetimeModelClass):
-    """A normalized exponential decay with a shift in time, with two Parameters ``tau``, ''shift, and a fixed ``bckgnd``.
+    """A normalized exponential decay with a shift in time, with two Parameters ``tau``, ''shift, and a typically fixed ``bckgnd``.
 
     Defined as:
 
@@ -58,31 +165,47 @@ class OneExpDecay(lifetimeModelClass):
         super().__init__(IRF)
 
     def guess(self, t, params):
+        # don't try to guess the backgouend and rely on user input.
+        bckgnd = params['bckgnd']["value"]
 
-        # if x is not None:
-        # cst is the background and is taken, as a first guess, as the minimum of the lifetime curve
-        # We trim the last point because the TAC tipycally has some problem here.
-        # cst = np.min(self.data[np.nonzero(data[:-10])])
-        amp = np.max(self.data)
+        data_wo_bckgnd = self.data - bckgnd
+        data_wo_bckgnd[data_wo_bckgnd < 0] = 0
 
-        # if we don't take into account the IR, t0 is simply the max of the lifetime curve
-        idx_t0 = idx_max = np.argmax(self.data)
+        #Guessing the amplitude from the maximum, can be really wrong with noisy data. Indeed, due to poissonnian noise
+        # the error in \sqt{N}
+        amp = np.max(data_wo_bckgnd)
 
-        t0 = t[idx_t0]
-
-        # Searching for position where amp is divided by e=2.71
-        subarray = self.data[idx_max:]
-        x_subarray = t[idx_max:]
-        # tau = np.where(subarray < amp/np.exp(1))[0]
-        idx_tau = np.argmax(subarray < (float)(amp) / np.exp(1))
-        params['tau'].value = x_subarray[idx_tau] - t0
-        self.ini_params['tau'] = params['tau'].value
-
-        # Mean
         dt = t[1] - t[0]
-        tau = np.sum(subarray)/amp*dt
-        params['tau'].value = tau
+        # The integral of the decay is equal to amp * tau
+        area = np.sum(data_wo_bckgnd)
+        tau = area/amp*dt
+        #params['tau'].value = tau
+        params['tau']["value"] = tau
         self.ini_params['tau'] = tau
+
+        # Shift is in micro-channel and represent the difference between the onset of the decay an the onset of the IRF
+        # We consider thath the onset of the decay is the index where the amplitude is different
+        # from noise for the next 10 values
+
+        threshold = 10
+        shift_is_found = False
+        for i in range(self.data.size):
+            if shift_is_found:
+                break
+            if self.data[i] > bckgnd:
+                j = i + 1
+                cnt = 0
+                while (i < self.data.size and self.data[j] > bckgnd):
+                    cnt += 1
+                    j += 1
+                    if cnt == threshold:
+                        self.ini_params['IRF_shift'] = i - self.IRF.onset_microtime_channel
+                        params['IRF_shift']["value"] = i - self.IRF.onset_microtime_channel
+                        shift_is_found = True
+                        break
+
+
+
 
     def eval(self, t,  params):
         tau = params['tau'].value
@@ -90,6 +213,9 @@ class OneExpDecay(lifetimeModelClass):
         self.data_bckgnd = params['bckgnd'].value
         bckgnd_corrected_data = self.data - self.data_bckgnd
         bckgnd_corrected_data[bckgnd_corrected_data < 0] = 0
+
+        # The area under the cuyrve, i.e. the total number of photon, must not incorporate noise.
+        # Consequently, we have substracted it.
         self.observed_count = (bckgnd_corrected_data).sum()
         # self.observed_count = (self.data - self.data_bckgnd).sum()
         self.non_convoluted_decay = np.exp(-(t) / tau)
@@ -97,7 +223,7 @@ class OneExpDecay(lifetimeModelClass):
 
         if self.IRF is not None:
             IR = shift_scipy(self.IRF.processed_data, shift, mode='wrap')
-            # IR = np.roll(self.IR, shift)
+
             conv = np.convolve(self.non_convoluted_decay, IR)[0:np.size(self.non_convoluted_decay)]
             # Test if sum is different from zero ?
             conv /= conv.sum()
@@ -109,10 +235,137 @@ class OneExpDecay(lifetimeModelClass):
 
     def make_params(self):
         params = Parameters()
-        params.add(name="tau", value=1, min=0.01, max=np.inf, brute_step=0.1)
-        params.add(name="IRF_shift", value=0, min=-np.inf, max=np.inf, brute_step=0.1)
-        params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
+        params.add(name="tau", value=1, min=0.01, max=np.inf, brute_step=0.1, user_data=[])
+        params.add(name="IRF_shift", value=0, min=-np.inf, max=np.inf, brute_step=0.1, user_data=[])
+        params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1, user_data=[])
         return params
+
+    def generate(self, t, t_idx, params, num_generation):
+        #TODO
+        pass
+
+
+
+
+class OneExpDecay_Amp(lifetimeModelClass):
+    """An exponential decay  with four Parameters ''amp'', ``tau``, ''t0'' and a  ``bckgnd``.
+
+    Defined as:
+
+    .. math::
+
+        f(t; , tau, shift) = amp exp(-(t-t0) / tau) + bckgnd
+
+    """
+    def __init__(self, IRF=None):
+        super().__init__(IRF)
+
+    def guess(self, t, params):
+
+        # if x is not None:
+        # cst is the background and is taken, as a first guess, as the minimum of the lifetime curve
+        # We trim the last point because the TAC tipycally has some problem here.
+        bckgnd = np.min(self.data[np.nonzero(self.data[:-10])])
+
+        params['bckgnd'].value = bckgnd
+        self.ini_params['bckgnd'] = params['bckgnd'].value
+
+
+        data_bckgnd_corrected = self.data - bckgnd
+        amp = np.max(data_bckgnd_corrected)
+
+        params['amp'].value = amp
+        self.ini_params['amp'] = params['amp'].value
+
+        # if we don't take into account the IR, t0 is simply the max of the lifetime curve
+        if params['t0'].vary:
+            idx_t0  = np.argmax(data_bckgnd_corrected)
+
+            t0 = t[idx_t0]
+            params['t0'].value = t0
+            self.ini_params['t0'] = params['t0'].value
+        else:
+            idx_t0 = np.searchsorted(t, params['t0'].value)
+            t0 = self.ini_params['t0'] = params['t0'].value
+
+
+
+        # Searching for position where amp is divided by e=2.71
+        subarray = data_bckgnd_corrected[idx_t0:]
+        x_subarray = t[idx_t0:]
+        # tau = np.where(subarray < amp/np.exp(1))[0]
+        idx_tau = np.argmax(subarray < (float)(amp) / np.exp(1))
+        params['tau'].value = x_subarray[idx_tau] - t0
+        self.ini_params['tau'] = params['tau'].value
+
+        return params
+
+
+        # Mean
+        # dt = t[1] - t[0]
+        # tau = np.sum(subarray)/amp*dt
+        #TODO tester ce qui est le mieux comme guess la moyenne où 1/e
+        # params['tau'].value = tau
+        # self.ini_params['tau'] = tau
+
+    def eval(self, t,  params):
+        tau = params['tau'].value
+        amp = params['amp'].value
+        t0 = params['t0'].value
+        bckgnd = params['bckgnd'].value
+
+        decay = amp*np.exp(-(t-t0) / tau)
+        decay[t < t0] = 0
+        decay += bckgnd
+
+        return decay
+
+    def make_params(self):
+        params = Parameters()
+        #FIXME - IMPORTANT - J'ai modifié la lib lmfit pour forcer le user_data dans la methode add
+        #FIXME, on pourrait le faire par un appel direct au champ user_data
+        params.add(name="tau", value=1, min=0.01, max=np.inf, brute_step=0.1, user_data=[0.2, 10])
+        params.add(name="amp", value=100, min=0, max=np.inf, brute_step=0.1, user_data=["dontGenerate"])
+        params.add(name="t0", value=0, min=0, max=np.inf, brute_step=0.1, user_data=[1, 1])
+        params.add(name="bckgnd", vary=True, value=0, min=0, max=np.inf, brute_step=0.1, user_data=["dontGenerate"])
+        return params
+
+
+    def generate(selft, t, t_idx, params, i):
+        """
+        NB params are NOT lmfit dict params
+        :param t:
+        :param params:
+        i : num_generation
+        :return:
+        """
+        decay = np.exp(-(t - params["t0"][i]) / params["tau"][i])
+        decay[t < params["t0"][i]] = 0
+        decay /= decay.sum()
+
+        decay_obj = rv_discrete(name='mono_exp', values=(t_idx, decay))
+        photons = decay_obj.rvs(size=int(params["nb_photon"][i]))
+        decay_data = np.bincount(photons)
+        nb_of_pad_data = t_idx.size - decay_data.size
+        zeros = np.zeros(nb_of_pad_data)
+        decay_data = np.concatenate((decay_data, zeros))
+
+        fitted_params_dict = {}
+        fitted_params_dict["amp"] = np.max(decay_data)  # NB : before adding noise
+
+        # Adding noise
+        decay_data += np.random.random(t_idx.size) * params["noise"][i]/100.0 * np.max(decay_data)
+        decay_data = decay_data.astype(np.int)
+        aux_params_dict = {}
+
+        fitted_params_dict["tau"] = params["tau"][i]
+        fitted_params_dict["t0"] = params["t0"][i]
+        aux_params_dict["noise"] = params["noise"][i]
+        aux_params_dict["nb_photon"] = params["nb_photon"][i]
+        aux_params_dict["irf_length"] = 0
+        aux_params_dict["irf_shift"] = 0
+
+        return Decay(decay_data, fitted_params_dict, aux_params_dict)
 
 
 class OneExpDecay_tail(lifetimeModelClass):
@@ -181,7 +434,7 @@ class OneExpDecay_tail(lifetimeModelClass):
         return params
 
 class TwoExpDecay(lifetimeModelClass):
-    """A normalized exponential decay with a shift in time, with two Parameters ``tau``, ''shift, and a fixed ``bckgnd``.
+    """A normalized exponential decay with a shift in time, with three Parameters ``tau``, ''a1'', ''shift, and a fixed ``bckgnd``.
 
     Defined as:
 
@@ -190,13 +443,47 @@ class TwoExpDecay(lifetimeModelClass):
         f(t; , tau1, a1, tau2, shift) = IRF(shift) x (a1 . exp(-t / tau1) + (1-a1) . exp(-t / tau2) ) + bckgnd
 
     The area under the decay curves obtained from the observed counts Cexp and from the predicted counts Ĉtheo must be
-    conserved during optimization of the fitting parameters. Hence, the exponential does'nt have a amplitude parameter
+    conserved during optimization of the fitting parameters. Hence, the exponentials do not have a amplitude parameter
     """
     def __init__(self, IRF=None):
         super().__init__(IRF)
 
-    def guess(self):
-        pass
+    def guess(self, t, params):
+        #Jacquemin
+        x = np.array(t)
+
+        bckgnd = params['bckgnd']["value"]
+
+        data_wo_bckgnd = self.data - bckgnd
+        data_wo_bckgnd[data_wo_bckgnd < 0] = 0
+
+        y = np.array(data_wo_bckgnd, dtype=np.float64)
+
+        # find t0 (crudely) Starting from the maximum, we go back microtime per microtime until the previous microtime is smaller than the precedent
+        pos_max = np.argmax(y)
+        pos_t0 = pos_max
+        if bckgnd < 1 :
+            while y[pos_t0] - y[pos_t0 - 1] > 0:
+                pos_t0 -= 1
+            if pos_t0 < 0:
+                pos_t0 = 0
+        else:
+            while y[pos_t0] > bckgnd and pos_t0 > 0:
+                pos_t0 -= 1
+            if pos_t0 < 0:
+                pos_t0 = 0
+
+
+        self.ini_params['shift'] = pos_t0 - self.IRF.onset_microtime_channel
+        params['shift']["value"] = pos_t0 - self.IRF.onset_microtime_channel
+
+        A1, tau1, A2, tau2, bckgnd = Jacquemin(x, y, pos_t0)
+
+        params['tau1']["value"] = tau1
+        params['tau2']["value"] = tau2
+        params['bckgnd']["value"] = bckgnd
+        params['a1']["value"] = A1*tau1/(A1*tau1 + A2*tau2)
+        #params['a2']["value"] = A2*tau2/(A1*tau1 + A2*tau2)
 
     def eval(self, t,  params):
         tau1 = params['tau1'].value
@@ -230,8 +517,12 @@ class TwoExpDecay(lifetimeModelClass):
         params.add(name="a1", value=1, min=0, max=np.inf, brute_step=0.1)
         params.add(name="tau2", value=1, min=0, max=np.inf, brute_step=0.1)
         params.add(name="shift", value=0, min=-np.inf, max=np.inf, brute_step=0.1)
-        params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
+        params.add(name="bckgnd", vary=False, value=0, min=0, max=np.inf, brute_step=0.1)
         return params
+
+
+    def generate(self, t, t_idx, params, i):
+        pass
 
 class TwoExpDecay_a1a2(lifetimeModelClass):
     """A normalized exponential decay with a shift in time, with two Parameters ``tau``, ''shift, and a fixed ``bckgnd``.
@@ -240,7 +531,7 @@ class TwoExpDecay_a1a2(lifetimeModelClass):
 
     .. math::
 
-        f(t; , tau1, a1, tau2, shift) = IRF(shift) x (a1 . exp(-t / tau1) + (1-a1) . exp(-t / tau2) ) + bckgnd
+        f(t; , tau1, a1, tau2, a2, shift) = IRF(shift) x (a1 . exp(-t / tau1) + a2 . exp(-t / tau2) ) + bckgnd
 
     The area under the decay curves obtained from the observed counts Cexp and from the predicted counts Ĉtheo must be
     conserved during optimization of the fitting parameters. Hence, the exponential does'nt have a amplitude parameter
@@ -249,7 +540,40 @@ class TwoExpDecay_a1a2(lifetimeModelClass):
         super().__init__(IRF)
 
     def guess(self, t, params):
-        pass
+        x = np.array(t)
+
+        bckgnd = params['bckgnd']["value"]
+
+        data_wo_bckgnd = self.data - bckgnd
+        data_wo_bckgnd[data_wo_bckgnd < 0] = 0
+
+        y = np.array(data_wo_bckgnd, dtype=np.float64)
+
+        # find t0 (crudely) Starting from the maximum, we go back microtime per microtime until the previous microtime is smaller than the precedent
+        pos_max = np.argmax(y)
+        pos_t0 = pos_max
+        if bckgnd < 1 :
+            while y[pos_t0] - y[pos_t0 - 1] > 0:
+                pos_t0 -= 1
+            if pos_t0 < 0:
+                pos_t0 = 0
+        else:
+            while y[pos_t0] > bckgnd and pos_t0 > 0:
+                pos_t0 -= 1
+            if pos_t0 < 0:
+                pos_t0 = 0
+
+
+        self.ini_params['shift'] = pos_t0 - self.IRF.onset_microtime_channel
+        params['shift']["value"] = pos_t0 - self.IRF.onset_microtime_channel
+
+        A1, tau1, A2, tau2, bckgnd = Jacquemin(x, y, pos_t0)
+
+        params['tau1']["value"] = tau1
+        params['tau2']["value"] = tau2
+        params['bckgnd']["value"] = bckgnd
+        params['a1']["value"] = A1
+        params['a2']["value"] = A2
 
     def eval(self, t,  params):
         tau1 = params['tau1'].value
@@ -282,13 +606,13 @@ class TwoExpDecay_a1a2(lifetimeModelClass):
         return params
 
 class TwoExpDecay_tail(lifetimeModelClass):
-    """A normalized exponential two decays with a shift in time, with two Parameters ``tau``, ''shift, and a fixed ``bckgnd``.
+    """A normalized exponential two decays with a shift in time, with two Parameters ``tau1``, ''a1'', ''tau2'', ''a2'' ''t0'', and a fixed ``bckgnd``.
 
     Defined as:
 
     .. math::
 
-        f(t; , tau, t0, bckgnd) =  exp(-(t-t0) / tau) + bckgnd
+        f(t; tau1, a1, tau2, t0, bckgnd) = a1 . exp(-(t -t0)/ tau1) + (1-a1) . exp(-(t -t0)/ tau2)  + bckgnd
 
     The area under the decay curves obtained from the observed counts Cexp and from the predicted counts Ĉtheo must be
     conserved during optimization of the fitting parameters. Hence, the exponential does'nt have a amplitude parameter
@@ -298,7 +622,43 @@ class TwoExpDecay_tail(lifetimeModelClass):
         super().__init__(IRF)
 
     def guess(self, t, params):
-        pass
+        #Jacquemin
+        x = np.array(t)
+
+        bckgnd = params['bckgnd']["value"]
+
+        data_wo_bckgnd = self.data - bckgnd
+        data_wo_bckgnd[data_wo_bckgnd < 0] = 0
+
+        y = np.array(data_wo_bckgnd, dtype=np.float64)
+
+        # find t0 (crudely) Starting from the maximum, we go back microtime per microtime until the previous microtime is smaller than the precedent
+        pos_max = np.argmax(y)
+        pos_t0 = pos_max
+        if bckgnd < 1 :
+            while y[pos_t0] - y[pos_t0 - 1] > 0:
+                pos_t0 -= 1
+            if pos_t0 < 0:
+                pos_t0 = 0
+        else:
+            while y[pos_t0] > bckgnd and pos_t0 > 0:
+                pos_t0 -= 1
+            if pos_t0 < 0:
+                pos_t0 = 0
+
+
+        self.ini_params['shift'] = pos_t0 - self.IRF.onset_microtime_channel
+        params['shift']["value"] = pos_t0 - self.IRF.onset_microtime_channel
+
+        A1, tau1, A2, tau2, bckgnd = Jacquemin(x, y, pos_t0)
+
+        params['tau1']["value"] = tau1
+        params['tau2']["value"] = tau2
+        params['bckgnd']["value"] = bckgnd
+        params['a1']["value"] = A1*tau1/(A1*tau1 + A2*tau2)
+        # params['a2']["value"] = A2
+
+        return params
 
 
 
@@ -383,7 +743,7 @@ class ThreeExpDecay_tail_a1a2a3(lifetimeModelClass):
         a1 = params['a1'].value
         tau2 = params['tau2'].value
         a2 = params['a2'].value
-        tau3 = params['tau3a'].value
+        tau3 = params['tau3'].value
         a3 = params['a3'].value
         t0 = params['t0'].value
         self.data_bckgnd = params['bckgnd'].value
@@ -401,7 +761,7 @@ class ThreeExpDecay_tail_a1a2a3(lifetimeModelClass):
         params.add(name="tau3", value=5, min=0.01, max=np.inf, brute_step=0.1)
         params.add(name="a3", value=0.5, min=0, max=np.inf, brute_step=0.1)
         params.add(name="t0", value=0, min=0, max=np.inf, brute_step=0.1)
-        params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
+        params.add(name="bckgnd", vary=False, value=0, min=0, max=np.inf, brute_step=0.1)
         return params
 
 
@@ -450,102 +810,49 @@ class TwoExpDecay_tail_a1a2(lifetimeModelClass):
         """
 
 
-
-
-
+        #Jacquemin
         x = np.array(t)
 
+        bckgnd = params['bckgnd']["value"]
 
-        y = np.array(self.data, dtype=np.float64)
-        max_y = np.max(y)
-        y /= y.sum()
+        data_wo_bckgnd = self.data - bckgnd
+        data_wo_bckgnd[data_wo_bckgnd < 0] = 0
+
+        y = np.array(data_wo_bckgnd, dtype=np.float64)
 
         # find t0 (crudely) Starting from the maximum, we go back microtime per microtime until the previous microtime is smaller than the precedent
-        pos_max = np.argmax(y)
-        pos_t0 = pos_max
-        while y[pos_t0] - y[pos_t0-1] > 0:
-            pos_t0 -= 1
-        if pos_t0 < 0:
-            pos_t0 = 0
+        # pos_max = np.argmax(y)
+        # pos_t0 = pos_max
+        # if bckgnd < 1 :
+        #     while y[pos_t0] - y[pos_t0 - 1] > 0:
+        #         pos_t0 -= 1
+        #     if pos_t0 < 0:
+        #         pos_t0 = 0
+        # else:
+        #     while y[pos_t0] > bckgnd and pos_t0 > 0:
+        #         pos_t0 -= 1
+        #     if pos_t0 < 0:
+        #         pos_t0 = 0
 
-        x -= x[pos_t0]
-        x = x[pos_t0:]
-        y = y[pos_t0:]
-
-        # plt.plot(x, y)
-        # plt.show()
-
-        S = np.empty_like(y)
-        S[0] = 0
-        S[1:] = np.cumsum(0.5 * (y[1:] + y[:-1]) * np.diff(x))
-
-        # plt.plot(x, S)
-        # plt.show()
-
-        SS = np.empty_like(y)
-        SS[0] = 0
-        SS[1:] = np.cumsum(0.5 * (S[1:] + S[:-1]) * np.diff(x))
-
-        # plt.plot(x, SS)
-        # plt.show()
-
-        x2 = x * x
-        x3 = x2 * x
-        x4 = x2 * x2
-
-        M = [[sum(SS * SS), sum(SS * S), sum(SS * x2), sum(SS * x), sum(SS)],
-             [sum(SS * S), sum(S * S), sum(S * x2), sum(S * x), sum(S)],
-             [sum(SS * x2), sum(S * x2), sum(x4), sum(x3), sum(x2)],
-             [sum(SS * x), sum(S * x), sum(x3), sum(x2), sum(x)],
-             [sum(SS), sum(S), sum(x2), sum(x), len(x)]]
-
-        Ycol = np.array([sum(SS * y), sum(S * y), sum(x2 * y), sum(x * y), sum(y)])
-
-        (A, B, C, D, E), residues, rank, singulars = list(lstsq(M, Ycol))
-
-        '''
-        Minv = np.linalg.inv(M)    
-        A,B,C,D,E = list( np.matmul(Minv,Ycol) )
-        '''
-        if B*B + 4*A > 0:
-            p = (1 / 2.) * (B + np.sqrt(B * B + 4 * A))
-            q = (1 / 2.) * (B - np.sqrt(B * B + 4 * A))
-        else:
-            return None
-
-        beta = np.exp(p * x)
-        eta = np.exp(q * x)
-
-        betaeta = beta * eta
-
-        L = [[len(x), sum(beta), sum(eta)],
-             [sum(beta), sum(beta * beta), sum(betaeta)],
-             [sum(eta), sum(betaeta), sum(eta * eta)]]
-
-        Ycol = np.array([sum(y), sum(beta * y), sum(eta * y)])
-
-        (a, b, c), residues, rank, singulars = list(lstsq(L, Ycol))
-
-        '''
-        Linv = np.linalg.inv(L)
-        a,b,c = list( np.matmul( Linv, Ycol ) )
-        '''
-
-        # sort in ascending order (fastest negative rate first)
-        (b, p), (c, q) = sorted([[b, p], [c, q]], key=lambda x: x[1])
-
-        #return a, b, c, p, q
-
-        ratio = b/c
-        b = max_y / (1/ratio + 1)
-        c = max_y / (ratio + 1)
+        # Sepcialized for burst where background is close to zero.
+        # We search for the ten consecutive microchannel with non zero value
+        threshold = 10
+        nonzero_idx = np.nonzero(y)
+        consecutive_non_zero = np.diff(nonzero_idx)
+        pos_t0 = np.where(consecutive_non_zero > threshold)[0]
+        params['t0'].value = x[pos_t0]
 
 
-        params['tau1']["value"]= -1.0/p
-        params['tau2']["value"]= -1.0/q
-        params['bckgnd']["value"] = a
-        params['a1']["value"] = b
-        params['a2']["value"] = c
+        # self.ini_params['shift'] = pos_t0 - self.IRF.onset_microtime_channel
+        # params['shift']["value"] = pos_t0 - self.IRF.onset_microtime_channel
+
+        A1, tau1, A2, tau2, bckgnd = Jacquemin(x, y, pos_t0)
+
+        params['tau1']["value"] = tau1
+        params['tau2']["value"] = tau2
+        params['bckgnd']["value"] = bckgnd
+        params['a1']["value"] = A1
+        params['a2']["value"] = A2
 
         return params
 
@@ -568,7 +875,7 @@ class TwoExpDecay_tail_a1a2(lifetimeModelClass):
         params.add(name="tau2", value=3, min=0.01, max=np.inf, brute_step=0.1)
         params.add(name="a2", value=0.5, min=0, max=np.inf, brute_step=0.1)
         params.add(name="t0", value=0, min=0, max=np.inf, brute_step=0.1)
-        params.add(name="bckgnd", vary=False, value=0, min=-np.inf, max=np.inf, brute_step=0.1)
+        params.add(name="bckgnd", vary=False, value=0, min=0, max=np.inf, brute_step=0.1)
         return params
 
 class IRF_Becker(lifetimeModelClass):
@@ -712,8 +1019,8 @@ class ExpConvGauss(Model):
 #TODO creer une classe mère pour les analyses.
 class lifeTimeMeasurements(Measurements):
 
-    def __init__(self, exps=None, exp=None, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, name="", comment=""):
-        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, "lifetime", name, comment)
+    def __init__(self, exps=None, exp=None, exp_param=None, num_channel=0, start_tick=0, end_tick=-1, type_="lifetime", name="", comment=""):
+        super().__init__(exps, exp, exp_param, num_channel, start_tick, end_tick, type_, name, comment)
         self.IRF = None
         self.is_plot_log = True
         self.use_IR = False
@@ -739,7 +1046,12 @@ class lifeTimeMeasurements(Measurements):
 
         self.create_histogramm(nanotimes)
         # TODO check validity
-        self.error_bar = np.sqrt(self.data + 1)
+        # The signal follows a poissonian statistics. Therefore the statistics on uncertainties is well known
+        #self.error_bar = np.sqrt(self.data + 1)
+        # 1. / np.sqrt(decay_hist)
+        self.error_bar = np.ones(self.data.size)
+        idx_non_zero = np.nonzero(self.data)
+        self.error_bar[idx_non_zero] = 1. / np.sqrt(self.data[idx_non_zero])
         return self
 
     def create_histogramm(self, nanotimes):
@@ -783,6 +1095,9 @@ class lifeTimeMeasurements(Measurements):
 
         self.model.observed_count = (self.data - self.params['bckgnd'].value).sum()
 
+        idx_non_zeros = np.nonzero(self.data)
+
+
         threshold_MLE = 5
 
         if self.qty_to_min == "auto":
@@ -811,26 +1126,35 @@ class lifeTimeMeasurements(Measurements):
                 The weight is sqrt(N).
                 """
                 ymodel = self.model.eval(x, params)
-                return (y[self.idx_start:self.idx_end] - ymodel[self.idx_start:self.idx_end])/weights[self.idx_start:self.idx_end]
+                return (y[self.idx_start:self.idx_end] - ymodel[self.idx_start:self.idx_end])*weights[self.idx_start:self.idx_end]
 
 
             def chi2(params, x, y, weights):
                 """
                 Returns the array of residuals for the current parameters.
+                wieghts is sqrt (cj) so that the chi 2 is the Pearson'one.
                 """
                 ymodel = self.model.eval(x, params)
-                return (y[self.idx_start:self.idx_end] - ymodel[self.idx_start:self.idx_end])**2 / weights[self.idx_start:self.idx_end]**2
+                # return (y[self.idx_start:self.idx_end] - ymodel[self.idx_start:self.idx_end]) ** 2 / y[self.idx_start:self.idx_end]
+                # return (y[self.idx_start:self.idx_end] - ymodel[self.idx_start:self.idx_end])**2 / weights[self.idx_start:self.idx_end]**2
+
+                return np.sum((y[self.idx_start:self.idx_end] - ymodel[self.idx_start:self.idx_end]) ** 2 / (weights[self.idx_start:self.idx_end] ** 2))
 
 
-            def loglike(params, x, ydata):
+            def loglike(params, x, ydata, is_return_array=True):
                 """
                 return loglike of model vs data
                 """
                 # tau, baseline, offset, ampl = params
                 ymodel = self.model.eval(x, params)
-                return (ymodel - ydata * np.log(ymodel)).sum()
+                if is_return_array:
+                    return (ymodel - ydata * np.log(ymodel)).sum()
+                else:
+                    return ymodel - ydata * np.log(ymodel)
 
-            def maximum_likelihood_method(params, x, ydata):
+
+
+            def maximum_likelihood_method(params, x, ydata, is_return_array=True):
                 """
                 Return a scalar.
                 :param params:
@@ -844,8 +1168,24 @@ class lifeTimeMeasurements(Measurements):
                 ymodel = self.model.eval(x, params)
                 ymodel = ymodel[self.idx_start:self.idx_end]
                 ydata_reduc = ydata[self.idx_start:self.idx_end]
-                likelyhood = 2 * (ydata_reduc*np.log(ydata_reduc/ymodel)).sum()
-                # likelyhood = -2*(ydata_reduc * np.log(ymodel)).sum()
+                # likelyhood = 2 * (ydata_reduc*np.log(ydata_reduc/ymodel)).sum()
+
+                idx_non_zero_model = np.nonzero(ymodel)
+                idx_non_zero_data = np.nonzero(ydata_reduc)
+                idx_non_zero = np.intersect1d(idx_non_zero_model, idx_non_zero_data)
+
+                # Lawerence (Nature) :
+                # likelyhood = 2*np.sum(ymodel - ydata_reduc) - 2 * np.sum(ydata_reduc[idx_non_zero] * np.log(ymodel[idx_non_zero]/ydata_reduc[idx_non_zero]))
+
+                # Petrich first form
+                # likelyhood = - 2 * np.sum(ydata_reduc[idx_non_zero] * np.log(ymodel[idx_non_zero]))
+
+                # Petrich second form
+                if is_return_array:
+                    likelyhood = 2 * np.sum(ydata_reduc[idx_non_zero] * np.log(ydata_reduc[idx_non_zero] / ymodel[idx_non_zero]))
+                else:
+                    likelyhood = 2 * (ydata_reduc[idx_non_zero] * np.log(ydata_reduc[idx_non_zero] /ymodel[idx_non_zero]))
+
                 return likelyhood
 
             def callback_iteration(params, iter, resid, *args, **kws):
@@ -925,11 +1265,16 @@ class lifeTimeMeasurements(Measurements):
 
 
             if qty_to_min == "chi2":
+                # When method is ‘leastsq’ or ‘least_squares’, the objective function should return an array of residuals (difference between model and data)
                 self.fit_results = minimize(weighted_residuals, self.params, args=(self.time_axis, self.data, self.error_bar), method=self.fitting_method1,
                                             iter_cb=callback_iteration, nan_policy='propagate')
+
             elif qty_to_min == "max. likelyhood (MLE)":
-                self.fit_results = minimize(maximum_likelihood_method, self.params, args=(self.time_axis, self.data), method=self.fitting_method1,
-                                            iter_cb=callback_iteration, nan_policy='propagate')
+                if self.fitting_method1 in ["leastsq", "least_squares"]:
+                    #loglike
+                    self.fit_results = minimize(maximum_likelihood_method, self.params, args=(self.time_axis, self.data, False), method=self.fitting_method1, iter_cb=callback_iteration, nan_policy='propagate')
+                else:
+                    self.fit_results = minimize(maximum_likelihood_method, self.params, args=(self.time_axis, self.data), method=self.fitting_method1, iter_cb=callback_iteration, nan_policy='propagate')
 
 
 
@@ -968,11 +1313,11 @@ class lifeTimeMeasurements(Measurements):
         # y = self.data[self.idx_start:self.idx_end]
         # x_eval_range = self.time_axis[self.idx_start:self.idx_end]
 
-        result= self.model.guess(params=params_, t=self.time_axis)
+        self.model.guess(params=params_, t=self.time_axis)
 
-        if result is not None:
-            self.set_params(result)
-            self.eval(params_)
+
+        self.set_params(params_)
+        self.eval(params_)
 
 
 
@@ -1114,7 +1459,18 @@ class lifeTimeMeasurements(Measurements):
 
         return self.canonic_fig
 
-    def create_chronogram_overlay(self, chronogram, micro_1, micro_2, photon_threshold=5):
+    def create_chronogram_overlay(self, chronograms, micro_1, micro_2, photon_threshold=5):
+        """
+
+        :param chronograms: List of chronogram, one for each channel
+        :param micro_1:
+        :param micro_2:
+        :param photon_threshold:
+        :return:
+        """
+        # FIXME crude (temporar ?) hack
+        chronogram = chronograms[0]
+
         if micro_1 > micro_2:
             micro_1, micro_2 = micro_2, micro_1
         micro_1 = int(micro_1 / (self.exp_param.mIcrotime_clickEquivalentIn_second*1E9))
@@ -1150,6 +1506,13 @@ class lifeTimeMeasurements(Measurements):
             self.model = OneExpDecay(self.IRF)
             self.params = self.model.make_params()
             self.model.fit_formula = r"f(t; \tau, shift) = IRF(shift) \times (e^{-t/\tau}) + bckgnd"
+
+
+        elif model_name == "One Decay Tail A1":
+            self.modelName = model_name
+            self.model = OneExpDecay_Amp()
+            self.params = self.model.make_params()
+            self.model.fit_formula = r"amp . e^{-(t-t_0)/\tau} + bckgnd"
 
         elif model_name == "One Decay Tail":
             self.modelName = model_name
@@ -1219,6 +1582,7 @@ class IRF:
         self.bckgnd = 0
         self.shift = None
         self.time_axis, self.time_axis_processed = None, None
+        self.onset_microtime_channel = None
         if file_path is not None:
             self.get_data(file_path)
 
@@ -1227,6 +1591,9 @@ class IRF:
             tau = params_dict["tau"]
             t0 = params_dict["t0"]
             irf_shift = params_dict["irf_shift"]
+
+            self.tau = tau
+            self.t0 = t0
 
             if "time_step_ns" in params_dict:
                 time_step_ns = params_dict["time_step_ns"]
@@ -1245,11 +1612,17 @@ class IRF:
             self.raw_data = (self.time_axis - t0) / tau * np.exp(-(self.time_axis - t0) / tau) + non_zero_cst
             self.raw_data[self.raw_data < 0] = 0
             if irf_shift is not None:
+                self.irf_shift = irf_shift
                 self.raw_data = shift_scipy(self.raw_data, irf_shift, mode='wrap')
 
             self.raw_data /= self.raw_data.sum()
             #FIXME
             nb_of_photon_irf = 1e6
+
+            self.onset_microtime_channel = np.searchsorted(self.time_axis, t0)
+            if irf_shift is not None:
+                self.onset_microtime_channel += irf_shift
+
 
             self.raw_data *= nb_of_photon_irf
             self.raw_data[self.raw_data < 0.1] = 0.1
